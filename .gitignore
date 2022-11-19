@@ -1,0 +1,11 @@
+*.zip
+*.log
+*.pdf
+*.xls
+*.xlsx
+*.json
+*.env
+
+/parameters_test/*
+/venv/*
+/.idea/*
