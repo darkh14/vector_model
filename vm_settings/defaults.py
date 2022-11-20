@@ -18,6 +18,7 @@ DB_USER = ''
 DB_PASSWORD = ''
 DB_AUTH_SOURCE = ''
 DB_TYPE = 'mongo_db'
+PYTHON_VENV_PATH = ''
 
 
 def get_keys() -> list[str]:
