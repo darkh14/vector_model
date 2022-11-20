@@ -16,7 +16,6 @@ from .controller import get_var, set_var
 def action(check_fields: Optional[list[str]] = None) -> Callable:
     """ Decorator. Adds checking required field in request parameters.
         Fields for checking define in "check_fields" parameter
-        Also this decorator converts result to dict {'status': 'OK', 'error_text': '', 'result': result}
     """
     def action_with_check(func: Callable):
         @wraps(func)
@@ -33,7 +32,7 @@ def action(check_fields: Optional[list[str]] = None) -> Callable:
 
             result = func(parameters, *args, *kwargs)
 
-            return {'status': 'OK', 'error_text': '', 'result': result}
+            return result
 
         return wrapper
 
