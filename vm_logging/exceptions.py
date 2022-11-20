@@ -37,6 +37,10 @@ class VMBaseException(Exception):
         result = self._get_full_error_message()
         return result
 
+    @property
+    def message(self):
+        return self._get_full_error_message()
+
     def _get_full_error_message(self) -> str:
 
         if self._message:
