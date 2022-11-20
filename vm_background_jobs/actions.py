@@ -16,9 +16,9 @@ def get_actions() -> dict[str, Callable]:
 
 def _get_jobs_info(parameters: dict[str, Any]) -> dict[str, Any]:
     """ Returning background jobs info (id, status, start_date, end_date, pid) according to filter """
-    return {'result': ''}
+    return {'id': ''}
 
 
-def _delete_background_job(parameters: dict[str, Any]) -> dict[str, Any]:
+def _delete_background_job(parameters: dict[str, Any]) -> str:
     """ Deletes background job from db and kills process, connected with current job """
-    return {'result': 'Background job is deleted'}
+    return 'Background job is deleted'
