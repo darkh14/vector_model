@@ -106,7 +106,7 @@ class Processor(ABC):
 
         result = method(parameters)
 
-        return result
+        return {'status': 'OK', 'error': '', 'result': result}
 
     @staticmethod
     def _transform_output_parameters_to_str(output: dict[str, Any]) -> list:
