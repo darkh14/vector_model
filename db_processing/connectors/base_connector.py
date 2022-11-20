@@ -109,6 +109,10 @@ class Connector(ABC):
         """ for getting db path from inner _db_path value"""
         return self._db_path
 
+    @property
+    def db_name(self):
+        return self._db_name
+
     def _get_db_name_by_path(self) -> str:
         """ Gets db name by db path. USES DB_NAMES setting"""
 
