@@ -1,1 +1,1 @@
-""" Module for working with background jobs. """
+""" Module for working with background jobs """

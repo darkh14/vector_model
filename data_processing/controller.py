@@ -18,6 +18,7 @@ from typing import Any
 from vm_logging.exceptions import RequestProcessException
 from db_processing import get_connector
 from .loader import Loading, delete_all_data
+from vm_background_jobs.decorators import execute_in_background
 
 __all__ = ['initialize_loading', 'load_package', 'drop_loading', 'set_loading_status', 'get_loading_info']
 
@@ -29,6 +30,7 @@ def initialize_loading(parameters: dict[str, Any]) -> dict[str, Any]:
     return {'result': 'Loading is initialized'}
 
 
+@execute_in_background
 def load_package(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For loading package data """
     loading = _get_loading(parameters)

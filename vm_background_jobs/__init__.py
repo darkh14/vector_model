@@ -5,6 +5,8 @@
             controller - for working with background_job objects
             launcher - for running background job in subprocess
             background_jobs - defines BackgroundJob class
+            decorators - for defining decorators to execute function in background mode
+            job_types - for defining enums of job sattuses
 """
 
 from .actions import get_actions

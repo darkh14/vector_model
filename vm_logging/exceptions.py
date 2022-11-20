@@ -13,7 +13,8 @@ __all__ = ['VMBaseException',
            'SettingsControlException',
            'ParameterNotFoundException',
            'DBConnectorException',
-           'LoadingProcessException']
+           'LoadingProcessException',
+           'BackgroundJobException']
 
 
 class VMBaseException(Exception):
@@ -95,6 +96,12 @@ class LoadingProcessException(VMBaseException):
     def _get_full_error_message(self) -> str:
         default_message = super()._get_full_error_message()
         return 'Loading error! ' + default_message
-    
-    def get_message(self):
-        return self._message
+
+
+class BackgroundJobException(VMBaseException):
+    """Custom exception class for background jobs """
+    def _get_full_error_message(self) -> str:
+        default_message = super()._get_full_error_message()
+        return 'Error in background job! ' + default_message
+
+
