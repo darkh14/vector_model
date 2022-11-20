@@ -22,8 +22,8 @@ def get_actions() -> dict[str, Callable]:
     return dict({'test': _test, 'get_version': _get_version})
 
 
-def _get_version(parameters: dict[str, Any]) -> dict[str, Any]:
-    return {'result': get_version()}
+def _get_version(parameters: dict[str, Any]) -> str:
+    return get_version()
 
 
 def _test(parameters: dict[str, Any]) -> dict[str, Any]:
