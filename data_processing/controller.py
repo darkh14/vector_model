@@ -23,50 +23,50 @@ from vm_background_jobs.decorators import execute_in_background
 __all__ = ['initialize_loading', 'load_package', 'drop_loading', 'set_loading_status', 'get_loading_info']
 
 
-def initialize_loading(parameters: dict[str, Any]) -> dict[str, Any]:
+def initialize_loading(parameters: dict[str, Any]) -> str:
     """ For initializing new loading """
     loading = _get_loading(parameters)
     loading.initialize()
-    return {'result': 'Loading is initialized'}
+    return 'Loading is initialized'
 
 
 @execute_in_background
-def load_package(parameters: dict[str, Any]) -> dict[str, Any]:
+def load_package(parameters: dict[str, Any]) -> str:
     """ For loading package data """
     loading = _get_loading(parameters)
     loading.load_package(parameters['loading'].get('package'))
-    return {'result': 'Package is loaded'}
+    return 'Package is loaded'
 
 
-def drop_loading(parameters: dict[str, Any]) -> dict[str, Any]:
+def drop_loading(parameters: dict[str, Any]) -> str:
     """ For deleting loading object and its packages """
     loading = _get_loading(parameters)
     loading.drop(need_to_delete_data=parameters['loading'].get('delete_data'))
-    return {'result': 'Loading is dropped'}
+    return 'Loading is dropped'
 
 
-def set_loading_status(parameters: dict[str, Any]) -> dict[str, Any]:
+def set_loading_status(parameters: dict[str, Any]) -> str:
     """ For setting status of loading (for administrators) """
     loading = _get_loading(parameters)
     loading.set_status(parameters['loading'].get('status'), set_for_packages=True)
-    return {'result': 'Loading status is set'}
+    return 'Loading status is set'
 
 
-def set_package_status(parameters: dict[str, Any]) -> dict[str, Any]:
+def set_package_status(parameters: dict[str, Any]) -> str:
     """ For setting status of package (for administrators) """
     loading = _get_loading(parameters)
     loading.set_package_status(parameters['loading'].get('package'))
-    return {'result': 'Status is set'}
+    return 'Status is set'
 
 
 def get_loading_info(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For getting info of loading and packages """
     loading = _get_loading(parameters)
     info = loading.get_loading_info()
-    return {'result': info}
+    return info
 
 
-def delete_data(parameters: dict[str, Any]) -> dict[str, Any]:
+def delete_data(parameters: dict[str, Any]) -> str:
     """ For deleting data by loading or by filter.
     If loading is in parameters data deletes by loading, else by filter
     """
@@ -79,7 +79,7 @@ def delete_data(parameters: dict[str, Any]) -> dict[str, Any]:
         loading = _get_loading(parameters)
         loading.delete_data()
 
-    return {'result': 'Data are deleted'}
+    return 'Data are deleted'
 
 
 def _get_loading(parameters: dict[str | Any]) -> Loading:
