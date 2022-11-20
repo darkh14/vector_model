@@ -38,13 +38,17 @@ class Connector(ABC):
     type: ClassVar = ''
     """type of db. empty for base class"""
 
-    def __init__(self, db_path: str = ''):
+    def __init__(self, db_path: str = '', db_name: str = ''):
 
-        if not db_path:
-            raise DBConnectorException('DB path must be set!')
+        if not db_path and not db_name:
+            raise DBConnectorException('DB path or DB name must be set!')
 
-        self._db_path: str = db_path
-        self._db_name: str = self._get_db_name_by_path()
+        if db_name:
+            self._db_path = ''
+            self._db_name = db_name
+        else:
+            self._db_path: str = db_path
+            self._db_name: str = self._get_db_name_by_path()
 
         self._connection_string: str = self._form_connection_string()
         self._connect()
@@ -102,7 +106,7 @@ class Connector(ABC):
     """
 
     def get_db_path(self) -> str:
-        """ for getting db path in inner _db_path value"""
+        """ for getting db path from inner _db_path value"""
         return self._db_path
 
     def _get_db_name_by_path(self) -> str:
