@@ -21,10 +21,10 @@ def execute_in_background(func: Callable) -> Callable:
                 raise ParameterNotFoundException('"db" parameter is not found in parameters')
 
             background_job = BackgroundJob(db_path=wrapper_parameters['db'], subprocess_mode=False)
-            result = background_job.execute_function(func, wrapper_parameters, **kwargs)
+            result = background_job.execute_function(func, wrapper_parameters)
         else:
             result = func(wrapper_parameters, **kwargs)
 
-        return {'status': 'OK', 'error': '', 'result': result}
+        return result
 
     return wrapper
