@@ -21,6 +21,23 @@ class JobContextLoggerManager:
         self._out_file = open(self._out_file_path, 'w')
         self._err_file = open(self._err_file_path, 'w')
 
+        self._file_access_error: str = ''
+
+    def read_logs(self) -> [str, str]:
+
+        out_file_name, err_file_name = self._get_log_file_names()
+
+        out = ''
+        if os.path.isfile(out_file_name):
+            with open(out_file_name, 'r') as f:
+                out = f.read()
+        err = ''
+        if os.path.isfile(err_file_name):
+            with open(err_file_name, 'r') as f:
+                err = f.read()
+
+        return out, err
+
     def _create_dir_if_not_exist(self):
         path_to_log_dir = Path(self._dir_name)
         if not path_to_log_dir.is_dir():
@@ -39,22 +56,10 @@ class JobContextLoggerManager:
         file_list = os.listdir(self._dir_name)
 
         for file_path in file_list:
-            os.remove(os.path.join(self._dir_name, file_path))
-
-    def read_logs(self) -> [str, str]:
-
-        out_file_name, err_file_name = self._get_log_file_names()
-
-        out = ''
-        if os.path.isfile(out_file_name):
-            with open(out_file_name, 'r') as f:
-                out = f.read()
-        err = ''
-        if os.path.isfile(err_file_name):
-            with open(err_file_name, 'r') as f:
-                err = f.read()
-
-        return out, err
+            try:
+                os.remove(os.path.join(self._dir_name, file_path))
+            except PermissionError as ex:
+                self._file_access_error = str(ex)
 
     def __enter__(self):
         return self._out_file, self._err_file
