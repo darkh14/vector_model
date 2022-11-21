@@ -1,15 +1,33 @@
 """ Module for classes for logging
     Classes:
+        JobContextLoggerManager - class for logging in subprocess. It uses in context with ...
+        to write data from stdout and stderr streams to files
 
 """
+
+from typing import Optional
 from pathlib import Path
 import os
 import sys
+import io
 
 
 class JobContextLoggerManager:
-    def __init__(self, job_id: str, context_mode: bool = False) -> None:
+    """ Class for logging data in subprocess. Writes data from stdout stream and stderr stream to log files
+        Using:
+        With JobContextLoggerManager(job_id, context_mode=True) as (out_file, err_file)
+            ... do smth with out_file, err_file
 
+    """
+    def __init__(self, job_id: str, context_mode: bool = False) -> None:
+        """ Fields:
+            _job_id - unique id for job object
+            _dir_name - name of dir, where are log files
+            _out_file_path, _err_file_path - paths of out and err log files
+            _context_mode - True if object uses as a context manager, else False
+            _out_file, _err_file - io wrapper objects for writes streams into files
+            _file_access_error - for saving error text of permission error while accessing to file
+        """
         self._job_id: str = job_id
         self._dir_name: str = 'logs/background_jobs'
         self._create_dir_if_not_exist()
@@ -17,6 +35,9 @@ class JobContextLoggerManager:
         self._out_file_path: str = out_path
         self._err_file_path: str = err_path
         self._context_mode = context_mode
+
+        self._out_file: Optional[io.TextIOWrapper] = None
+        self._err_file: Optional[io.TextIOWrapper] = None
 
         if self._context_mode:
             self._clear_old_logs()
@@ -27,7 +48,7 @@ class JobContextLoggerManager:
         self._file_access_error: str = ''
 
     def read_logs(self) -> [str, str]:
-
+        """ Method to read logs from files. Using in non _context_mode"""
         sys.stdout.flush()
         sys.stderr.flush()
 
@@ -44,12 +65,14 @@ class JobContextLoggerManager:
 
         return out, err
 
-    def _create_dir_if_not_exist(self):
+    def _create_dir_if_not_exist(self) -> None:
+        """ Creates log directory if not exist """
         path_to_log_dir = Path(self._dir_name)
         if not path_to_log_dir.is_dir():
             path_to_log_dir.mkdir(parents=True)
 
-    def _get_log_file_names(self):
+    def _get_log_file_names(self) -> [str, str]:
+        """ Returns out and err log file names - creates from job id """
         out_file_name = 'out_' + self._job_id + '.log'
         out_file_name = os.path.join(self._dir_name, out_file_name)
         err_file_name = 'err_' + self._job_id + '.log'
@@ -57,7 +80,8 @@ class JobContextLoggerManager:
 
         return out_file_name, err_file_name
 
-    def _clear_old_logs(self):
+    def _clear_old_logs(self) -> None:
+        """ Deletes all files in log directory """
 
         file_list = os.listdir(self._dir_name)
 
@@ -67,10 +91,12 @@ class JobContextLoggerManager:
             except PermissionError as ex:
                 self._file_access_error = str(ex)
 
-    def __enter__(self):
+    def __enter__(self) -> [io.TextIOWrapper, io.TextIOWrapper]:
+        """ For context manager. Returns out and err file objects """
         return self._out_file, self._err_file
 
-    def __exit__(self, ex_type, ex_val, ex_trace):
+    def __exit__(self, ex_type, ex_val, ex_trace) -> bool:
+        """ For context manager. Closes out and err files """
         self._out_file.close()
         self._err_file.close()
         return True
