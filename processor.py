@@ -22,6 +22,7 @@ import vm_models
 import vm_settings
 import data_processing
 import db_processing
+import vm_background_jobs
 import actions
 
 import general
