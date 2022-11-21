@@ -41,6 +41,22 @@ class JobContextLoggerManager:
         for file_path in file_list:
             os.remove(os.path.join(self._dir_name, file_path))
 
+    def read_logs(self):
+
+        out_file_name, err_file_name = self._get_log_file_names()
+
+        out = ''
+        if os.path.isfile(out_file_name):
+            with open(out_file_name, 'r') as f:
+                out = f.read()
+        err = ''
+        if os.path.isfile(err_file_name):
+            with open(err_file_name, 'r') as f:
+                err = f.read()
+
+        return out, err
+
+
     def __enter__(self):
         return self._out_file, self._err_file
 
