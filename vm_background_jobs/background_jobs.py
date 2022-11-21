@@ -88,7 +88,7 @@ class BackgroundJob:
 
         python_command, python_path = self._get_path_command()
 
-        with JobContextLoggerManager(self._id) as (f_out, f_err):
+        with JobContextLoggerManager(self._id, context_mode=True) as (f_out, f_err):
 
             job_process = subprocess.Popen([python_command,
                                             python_path,
@@ -108,8 +108,7 @@ class BackgroundJob:
         if self._status != JobStatuses.ERROR:
 
             try:
-                result = self._execute_function()
-                self._result = result
+                self._execute_function()
             except VMBaseException as exc:
                 self._error = str(exc)
                 self._status = JobStatuses.ERROR
@@ -152,12 +151,19 @@ class BackgroundJob:
 
         self._add_temp_to_parameters()
 
+        print('{} - start background job ""{}" id "{}"'.format(self._start_date.strftime('%d.%m.%Y %H:%M:%S'),
+                                                               self._job_name, self._id))
         result = imported_function(self._parameters)
+
+        self._result = result
 
         self._delete_temp_from_parameters()
 
         self._status = JobStatuses.FINISHED
         self._end_date = datetime.utcnow()
+
+        print('{} - finish background job ""{}" id "{}"'.format(self._end_date.strftime('%d.%m.%Y %H:%M:%S'),
+                                                                self._job_name, self._id))
 
         log_manager = JobContextLoggerManager(self._id)
 
