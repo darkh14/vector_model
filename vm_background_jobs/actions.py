@@ -6,7 +6,7 @@
 """
 
 from typing import Callable, Any
-
+from . import controller
 __all__ = ['get_actions']
 
 
@@ -16,7 +16,7 @@ def get_actions() -> dict[str, Callable]:
 
 def _get_jobs_info(parameters: dict[str, Any]) -> dict[str, Any]:
     """ Returning background jobs info (id, status, start_date, end_date, pid) according to filter """
-    return {'id': ''}
+    return controller.get_jobs_info(parameters)
 
 
 def _delete_background_job(parameters: dict[str, Any]) -> str:

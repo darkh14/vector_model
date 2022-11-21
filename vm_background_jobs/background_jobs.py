@@ -10,7 +10,7 @@ import sys
 import subprocess
 import os
 import traceback
-import copy
+
 
 import db_processing.connectors.base_connector
 from vm_logging.exceptions import BackgroundJobException, VMBaseException, DBConnectorException
@@ -304,3 +304,22 @@ class BackgroundJob:
     @job_name.setter
     def job_name(self, value: str) -> None:
         self._job_name = value
+
+    @classmethod
+    def get_jobs_info(cls, job_filter:  dict[str, Any], db_path: str) -> list[dict[str, Any]]:
+
+        db_connector = get_connector(db_path)
+        job_list = db_connector.get_lines('background_jobs', job_filter)
+
+        fields = ['id', 'name', 'status', 'pid', 'error', 'output']
+
+        result = []
+
+        for el in job_list:
+            c_job = {key: value for key, value in el.items() if key in fields}
+            c_job['start_date'] = el['start_date'].strftime('%d.%m.%Y %H:%M:%S')
+            c_job['end_date'] = el['end_date'].strftime('%d.%m.%Y %H:%M:%S')
+
+            result.append(c_job)
+
+        return result

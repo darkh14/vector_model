@@ -157,7 +157,13 @@ class Processor(ABC):
     @staticmethod
     def _get_requests_methods():
 
-        imported_modules = ['data_processing', 'db_processing', 'vm_logging', 'vm_models', 'vm_settings', 'actions']
+        imported_modules = ['data_processing',
+                            'db_processing',
+                            'vm_logging',
+                            'vm_models',
+                            'vm_settings',
+                            'vm_background_jobs',
+                            'actions']
 
         methods = dict()
 
