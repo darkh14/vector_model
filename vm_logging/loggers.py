@@ -40,7 +40,7 @@ class JobContextLoggerManager:
         self._err_file: Optional[io.TextIOWrapper] = None
 
         if self._context_mode:
-            self._clear_old_logs()
+            self.clear_old_logs()
 
             self._out_file = open(self._out_file_path, 'w')
             self._err_file = open(self._err_file_path, 'w')
@@ -84,7 +84,7 @@ class JobContextLoggerManager:
 
         return out_file_name, err_file_name
 
-    def _clear_old_logs(self) -> None:
+    def clear_old_logs(self) -> None:
         """ Deletes all files in log directory """
 
         file_list = os.listdir(self._dir_name)
