@@ -1,8 +1,9 @@
 """ Module for run function in background job in subprocess
-
-
-
-
+        Creates background job object based on script parameters:
+            1 - -background_job
+            2 - job id
+            3 - name of function for launching
+            4 - path to db for db_connector
 """
 
 import sys
