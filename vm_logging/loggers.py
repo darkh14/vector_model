@@ -41,7 +41,7 @@ class JobContextLoggerManager:
         for file_path in file_list:
             os.remove(os.path.join(self._dir_name, file_path))
 
-    def read_logs(self):
+    def read_logs(self) -> [str, str]:
 
         out_file_name, err_file_name = self._get_log_file_names()
 
@@ -55,7 +55,6 @@ class JobContextLoggerManager:
                 err = f.read()
 
         return out, err
-
 
     def __enter__(self):
         return self._out_file, self._err_file
