@@ -25,9 +25,46 @@ __all__ = ['BackgroundJob']
 
 
 class BackgroundJob:
-    """ Class for executing functions in background, controlling execution and kill process if necessary """
-    def __init__(self, job_id: str = '',  db_path: str = '', subprocess_mode: bool = False):
+    """ Class for executing functions in background, controlling execution function.
+        Also provides getting jobs info from db and deleting job with killing process if necessary
+            Methods:
+                execute_function - for executing functions; in initial mode (not in subprocess mode)
+                execute_in_subprocess - for executing functions; in subprocess mode; executes from
+                    execute_function method
+                delete - for deleting job object from db and killing process if necessary
+                get_jobs_info - class method for getting jobs info
+                _initialize - for reading job data from db or writing new job to db
+                _execute_function - executes function in subprocess mode in try-except block
+                _get_path_command - returns path to launcher script file and python and command (perhaps in venv)
+                _read_from_db - for reading job parameters from db
+                _write_to_db  - writes job parameters to db
+                _write_parameters_to_temp - writes data from parameters to temp db
+                _add_temp_to_parameters - adds temp data tu parameters for function
+                _delete_temp_from_parameters - for deleting temp data from parameters for function
+                _get_parameters_from_temp - for getting temp data from db
+                _drop_temp - drops temp collection for current job
+                _get_module_function_from_name - gets module name and function name from job name
+                _get_temp_parameters_settings - defines data in function parameters to be set in temp
 
+                job_name - property for _job_name
+    """
+    def __init__(self, job_id: str = '',  db_path: str = '', subprocess_mode: bool = False):
+        """ Fields:
+                _id - unique job id
+                _job_name - name of job - match to name executing function
+                _subprocess_mode - if True - background_job executes in subprocess, else in initial mode
+                _error - contains error text of executing background job
+                _db_connector - object for working with db
+                _status - status of job executing - "new", "registered", "in_process", "finished", "error"
+                _start_date - date of beginning of executing job
+                _end_date - date of ending of executing job
+                _parameters - parameters of executing function
+                _result - result of executing function
+                _pid - executed process id
+                _output - info from stdout of executing function
+                _temp_name - name of temp collection. filled when collection contains data
+                _temp_settings - defines what data saves in temp collection
+        """
         self._subprocess_mode = subprocess_mode
 
         self._error: str = ''
@@ -60,6 +97,7 @@ class BackgroundJob:
         self._initialize()
 
     def _initialize(self) -> None:
+        """ For reading job fields from db or writing to db if new job """
         if self._id:
             temp_id = self._id
             self._read_from_db()
@@ -70,6 +108,14 @@ class BackgroundJob:
             self._write_to_db()
 
     def execute_function(self, func, wrapper_parameters: dict[str, Any]) -> dict[str, str]:
+        """ For executing function in initial mode
+                Parameters:
+                    func - function object to execute
+                    wrapper_parameters - parameters to be trs=ansmitted to function
+                Returns:
+                    description of execiting function
+        """
+
         if self._subprocess_mode:
             raise BackgroundJobException('For executing function in background "subprocess_mode" must be False ')
 
@@ -109,7 +155,9 @@ class BackgroundJob:
                                                        'is started'.format(self._job_name, self._id)}
 
     def execute_in_subprocess(self) -> None:
-
+        """ For execution unction in subprocess mode. Without parameters.
+            All parameters in self._parameters which is read from db
+        """
         if self._status != JobStatuses.ERROR:
 
             try:
@@ -137,7 +185,7 @@ class BackgroundJob:
                 self._write_to_db()
 
     def delete(self):
-
+        """ For deleting job from db. Also kills process, drops temp collections and clears logs"""
         if self._pid and self._status == JobStatuses.IN_PROCESS:
             try:
                 process = psutil.Process(self._pid)
@@ -151,8 +199,27 @@ class BackgroundJob:
         job_logger.clear_old_logs()
         self._db_connector.delete_lines('background_jobs', {'id': self._id})
 
-    def _execute_function(self) -> Any:
+    @classmethod
+    def get_jobs_info(cls, job_filter:  dict[str, Any], db_path: str) -> list[dict[str, Any]]:
+        """ Class method for getting jobs inf. Can get info of many job according to filter """
+        db_connector = get_connector(db_path)
+        job_list = db_connector.get_lines('background_jobs', job_filter)
 
+        fields = ['id', 'name', 'status', 'pid', 'error', 'output']
+
+        result = []
+
+        for el in job_list:
+            c_job = {key: value for key, value in el.items() if key in fields}
+            c_job['start_date'] = el['start_date'].strftime('%d.%m.%Y %H:%M:%S')
+            c_job['end_date'] = el['end_date'].strftime('%d.%m.%Y %H:%M:%S')
+
+            result.append(c_job)
+
+        return result
+
+    def _execute_function(self) -> Any:
+        """ Executes function in subprocess inside try-except block """
         if not self._subprocess_mode:
             raise BackgroundJobException('For executing function in background "subprocess_mode" must be True ')
 
@@ -203,7 +270,9 @@ class BackgroundJob:
         return result
 
     def _get_path_command(self) -> [str, str]:
-
+        """ Gets path to launcher script and pythin command. Python command may be
+            in venv (saves in PYTHON_VENV_PATH)
+        """
         venv_python = get_var('PYTHON_VENV_PATH')
         if not venv_python:
             python_command = 'python'
@@ -220,6 +289,8 @@ class BackgroundJob:
         return python_command, python_path
 
     def _read_from_db(self) -> None:
+        """ For reading job fields from db """
+
         job_from_db = self._db_connector.get_line('background_jobs', {'id': self._id})
         if job_from_db:
             self._job_name = job_from_db['job_name']
@@ -235,6 +306,7 @@ class BackgroundJob:
             self._id = ''
 
     def _write_to_db(self) -> None:
+        """ For writing job fields to db """
         job_to_db = {
             'id': self._id,
             'job_name': self._job_name,
@@ -251,7 +323,7 @@ class BackgroundJob:
         self._db_connector.set_line('background_jobs', job_to_db, {'id': self._id})
 
     def _write_parameters_to_temp(self) -> None:
-
+        """ For writing temp data to temp collection """
         temp_parameters_path = self._temp_settings.get(self._parameters.get('request_type'))
 
         if temp_parameters_path:
@@ -267,7 +339,7 @@ class BackgroundJob:
             self._db_connector.set_lines(self._temp_name, temp_data)
 
     def _add_temp_to_parameters(self) -> None:
-
+        """ Adds temp data to function parameters """
         temp_parameters_path = self._temp_settings.get(self._parameters.get('request_type'))
 
         if temp_parameters_path:
@@ -286,7 +358,7 @@ class BackgroundJob:
             self._drop_temp()
 
     def _delete_temp_from_parameters(self) -> None:
-
+        """ Removes temp data from function parameters """
         temp_parameters_path = self._temp_settings.get(self._parameters.get('request_type'))
 
         if temp_parameters_path:
@@ -301,14 +373,18 @@ class BackgroundJob:
             temp_data[path_list[-1]] = None
 
     def _get_parameters_from_temp(self) -> list[dict[str, Any]]:
+        """ Gets emp data from db """
         return self._db_connector.get_lines(self._temp_name)
 
     def _drop_temp(self) -> None:
+        """ Drops temp collection """
         if self._temp_name:
             self._db_connector.delete_lines(self._temp_name)
             self._temp_name = ''
 
     def _get_module_function_from_name(self) -> [str, str]:
+        """ Gets module name and function name to execute from self._job_name """
+
         name_list = self._job_name.split('.')
         module_name = '.'.join(name_list[:-1])
         function_name = name_list[-1]
@@ -317,6 +393,7 @@ class BackgroundJob:
 
     @staticmethod
     def _get_temp_parameters_settings() -> dict[str, str]:
+        """ Define what data will be saved to temp """
         return {'data_load_package': 'loading.package.data'}
 
     @property
@@ -326,22 +403,3 @@ class BackgroundJob:
     @job_name.setter
     def job_name(self, value: str) -> None:
         self._job_name = value
-
-    @classmethod
-    def get_jobs_info(cls, job_filter:  dict[str, Any], db_path: str) -> list[dict[str, Any]]:
-
-        db_connector = get_connector(db_path)
-        job_list = db_connector.get_lines('background_jobs', job_filter)
-
-        fields = ['id', 'name', 'status', 'pid', 'error', 'output']
-
-        result = []
-
-        for el in job_list:
-            c_job = {key: value for key, value in el.items() if key in fields}
-            c_job['start_date'] = el['start_date'].strftime('%d.%m.%Y %H:%M:%S')
-            c_job['end_date'] = el['end_date'].strftime('%d.%m.%Y %H:%M:%S')
-
-            result.append(c_job)
-
-        return result
