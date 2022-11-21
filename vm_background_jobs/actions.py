@@ -20,5 +20,6 @@ def _get_jobs_info(parameters: dict[str, Any]) -> dict[str, Any]:
 
 
 def _delete_background_job(parameters: dict[str, Any]) -> str:
-    """ Deletes background job from db and kills process, connected with current job """
-    return 'Background job is deleted'
+    """ Removing job line from db"""
+    result = controller.delete_background_job(parameters)
+    return result

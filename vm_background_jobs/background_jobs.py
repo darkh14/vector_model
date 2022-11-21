@@ -10,6 +10,7 @@ import sys
 import subprocess
 import os
 import traceback
+import psutil
 
 
 import db_processing.connectors.base_connector
@@ -26,6 +27,7 @@ __all__ = ['BackgroundJob']
 class BackgroundJob:
     """ Class for executing functions in background, controlling execution and kill process if necessary """
     def __init__(self, job_id: str = '',  db_path: str = '', subprocess_mode: bool = False):
+
         self._subprocess_mode = subprocess_mode
 
         self._error: str = ''
@@ -59,7 +61,10 @@ class BackgroundJob:
 
     def _initialize(self) -> None:
         if self._id:
+            temp_id = self._id
             self._read_from_db()
+            if not self._id:
+                raise BackgroundJobException('background job with id "{}" is not found'.format(temp_id))
         else:
             self._id = IdGenerator.get_random_id()
             self._write_to_db()
@@ -130,6 +135,21 @@ class BackgroundJob:
 
             if self._db_connector:
                 self._write_to_db()
+
+    def delete(self):
+
+        if self._pid and self._status == JobStatuses.IN_PROCESS:
+            try:
+                process = psutil.Process(self._pid)
+                process.terminate()
+                self._pid = 0
+            except psutil.Error as ex:
+                self._error = str(ex)
+
+        self._drop_temp()
+        job_logger = JobContextLoggerManager(self._id, context_mode=False)
+        job_logger.clear_old_logs()
+        self._db_connector.delete_lines('background_jobs', {'id': self._id})
 
     def _execute_function(self) -> Any:
 
@@ -211,6 +231,8 @@ class BackgroundJob:
             self._pid = job_from_db['pid']
             self._error = job_from_db['error']
             self._output = job_from_db['output']
+        else:
+            self._id = ''
 
     def _write_to_db(self) -> None:
         job_to_db = {
