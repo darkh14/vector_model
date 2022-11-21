@@ -122,6 +122,12 @@ class BackgroundJob:
             if self._temp_name:
                 self._drop_temp()
 
+            log_manager = JobContextLoggerManager(self._id)
+            out, err = log_manager.read_logs()
+
+            self._output = out
+            self._error = err
+
             if self._db_connector:
                 self._write_to_db()
 
