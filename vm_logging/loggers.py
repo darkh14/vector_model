@@ -55,13 +55,17 @@ class JobContextLoggerManager:
         out_file_name, err_file_name = self._get_log_file_names()
 
         out = ''
-        if os.path.isfile(out_file_name):
-            with open(out_file_name, 'r') as f:
-                out = f.read()
         err = ''
-        if os.path.isfile(err_file_name):
-            with open(err_file_name, 'r') as f:
-                err = f.read()
+        try:
+            if os.path.isfile(out_file_name):
+                with open(out_file_name, 'r') as f:
+                    out = f.read()
+
+            if os.path.isfile(err_file_name):
+                with open(err_file_name, 'r') as f:
+                    err = f.read()
+        except PermissionError as ex:
+            self._file_access_error = str(ex)
 
         return out, err
 
