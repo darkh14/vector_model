@@ -1,4 +1,9 @@
-""" Module for working with background jobs """
+""" Module for working with background jobs. Provides getting jobs info and deleting job
+        Functions:
+            get_jobs_info - for getting jobs info. return info of jobs according to filter
+            delete_background_job - deleting one job from id
+
+"""
 
 from typing import Any
 from vm_logging.exceptions import ParameterNotFoundException
@@ -6,6 +11,7 @@ from .background_jobs import BackgroundJob
 
 
 def get_jobs_info(parameters: dict[str, Any]) -> dict[str, Any]:
+    """ For getting jobs info. return info of jobs according to filter"""
     job_filter = parameters.get('filter')
     db_path = parameters.get('db')
 
@@ -16,7 +22,7 @@ def get_jobs_info(parameters: dict[str, Any]) -> dict[str, Any]:
 
 
 def delete_background_job(parameters: dict[str, Any]) -> str:
-
+    """ Deleting one job from id """
     db_path = parameters.get('db')
 
     if not db_path:
