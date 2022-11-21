@@ -4,10 +4,11 @@
 """
 from pathlib import Path
 import os
+import sys
 
 
 class JobContextLoggerManager:
-    def __init__(self, job_id: str) -> None:
+    def __init__(self, job_id: str, context_mode: bool = False) -> None:
 
         self._job_id: str = job_id
         self._dir_name: str = 'logs/background_jobs'
@@ -15,15 +16,20 @@ class JobContextLoggerManager:
         out_path, err_path = self._get_log_file_names()
         self._out_file_path: str = out_path
         self._err_file_path: str = err_path
+        self._context_mode = context_mode
 
-        self._clear_old_logs()
+        if self._context_mode:
+            self._clear_old_logs()
 
-        self._out_file = open(self._out_file_path, 'w')
-        self._err_file = open(self._err_file_path, 'w')
+            self._out_file = open(self._out_file_path, 'w')
+            self._err_file = open(self._err_file_path, 'w')
 
         self._file_access_error: str = ''
 
     def read_logs(self) -> [str, str]:
+
+        sys.stdout.flush()
+        sys.stderr.flush()
 
         out_file_name, err_file_name = self._get_log_file_names()
 
