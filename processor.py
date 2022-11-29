@@ -91,8 +91,9 @@ class Processor(ABC):
             Determines method according to request type and executes it
         """
         if parameters.get('service_name') != SERVICE_NAME:
-            raise RequestProcessException('"service name" is not allowed. ' +
-                                          'correct service name is {}'.format(SERVICE_NAME))
+            raise RequestProcessException('Service name "{}" is not allowed. ' +
+                                          'correct service name is "{}"'.format(parameters.get('service_name'),
+                                                                                SERVICE_NAME))
 
         request_type = parameters.get('request_type')
 
@@ -149,10 +150,6 @@ class Processor(ABC):
     @staticmethod
     def _parameters_from_json(json_string: str) -> dict[str, Any]:
 
-        # if ord(json_string[0]) == 65279:
-        #     json_string = json_string[1:]
-
-        # json_string = json_string.encode('utf-8-sig')
         json_string = json_string.decode('utf-8-sig')
         return json.loads(json_string)
 
