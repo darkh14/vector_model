@@ -91,9 +91,8 @@ class Processor(ABC):
             Determines method according to request type and executes it
         """
         if parameters.get('service_name') != SERVICE_NAME:
-            raise RequestProcessException('Service name "{}" is not allowed. ' +
-                                          'correct service name is "{}"'.format(parameters.get('service_name'),
-                                                                                SERVICE_NAME))
+            raise RequestProcessException('Service name "{}" is not allowed. '.format(parameters.get('service_name')) +
+                                          'correct service name is "{}"'.format(SERVICE_NAME))
 
         request_type = parameters.get('request_type')
 
