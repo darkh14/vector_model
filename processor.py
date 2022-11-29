@@ -127,14 +127,12 @@ class Processor(ABC):
         if environ.get('REQUEST_METHOD') == 'POST':
 
             content_length = int(environ.get('CONTENT_LENGTH')) if 'CONTENT_LENGTH' in environ else 0
-            print(content_length)
+
             par_string = ''
 
             if content_length:
                 par_string = environ['wsgi.input'].read(content_length)
-                print(111111)
             else:
-                print(222222)
                 par_list = environ.get('wsgi.input')
                 if par_list:
                     for par_element in par_list:
@@ -150,7 +148,8 @@ class Processor(ABC):
 
     @staticmethod
     def _parameters_from_json(json_string: str) -> dict[str, Any]:
-
+        print(json_string)
+        print(json_string[0])
         if ord(json_string[0]) == 65279:
             json_string = json_string[1:]
 
