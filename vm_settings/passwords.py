@@ -9,6 +9,9 @@
 
 import keyring
 
+from keyring.backends import Windows
+keyring.set_keyring(Windows.WinVaultKeyring())
+
 __all__ = ['set_password', 'get_password']
 
 CACHE = {}
