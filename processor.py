@@ -148,7 +148,7 @@ class Processor(ABC):
 
     @staticmethod
     def _parameters_from_json(json_string: str) -> dict[str, Any]:
-
+        print(json_string)
         if ord(json_string[0]) == 65279:
             json_string = json_string[1:]
 
