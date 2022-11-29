@@ -147,9 +147,16 @@ class Processor(ABC):
         return request_parameters
 
     @staticmethod
-    def _parameters_from_json(json_string: str) -> dict[str, Any]:
+    def _parameters_from_json(json_string: str|bytes) -> dict[str, Any]:
 
-        json_string = json_string.decode('utf-8-sig')
+        if type(json_string) == bytes:
+            json_string = json_string.decode('utf-8-sig')
+        else:
+            if ord(json_string[0]) == 65279:
+                json_string = json_string[1:]
+
+            json_string = json_string.encode('utf-8-sig')
+
         return json.loads(json_string)
 
     @staticmethod
