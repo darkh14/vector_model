@@ -12,14 +12,14 @@ from functools import wraps
 from typing import Optional, Callable, Any
 from vm_logging.exceptions import ParameterNotFoundException
 from vm_versions import get_version
-from general import test
+from general import test, ping
 
 __all__ = ['get_actions']
 
 
 def get_actions() -> dict[str, Callable]:
     """ forms general actions dict"""
-    return dict({'test': _test, 'get_version': _get_version})
+    return dict({'test': _test, 'get_version': _get_version, 'ping': _ping})
 
 
 def _get_version(parameters: dict[str, Any]) -> str:
@@ -29,3 +29,8 @@ def _get_version(parameters: dict[str, Any]) -> str:
 def _test(parameters: dict[str, Any]) -> dict[str, Any]:
     """ Action for testing and debugging """
     return test(parameters)
+
+
+def _ping(parameters: dict[str, Any]) -> dict[str, Any]:
+    """ Action for testing connection with service """
+    return ping(parameters)

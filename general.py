@@ -1,9 +1,9 @@
 """Module for general functions and classes
     functions:
-    get_id - for getting random id string
+    test - for testing and debugging
+    ping - for testing connection
 """
-
-import uuid
+from datetime import datetime
 from typing import Any
 from db_processing.controller import get_connector
 
@@ -46,3 +46,8 @@ def test(parameters: dict[str, Any]) -> dict[str, Any]:
 
     print('Test!')
     return {'result': data}
+
+
+def ping(parameters: dict[str, Any]) -> dict[str, Any]:
+    """ For testing connection """
+    return {'description': 'ping OK', 'current_date': datetime.utcnow().strftime('%d.%m.%Y %H:%M:%S')}
