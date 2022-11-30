@@ -147,6 +147,7 @@ class BackgroundJob:
                                             self._id,
                                             self._job_name,
                                             self._db_connector.db_path], stdout=f_out, stderr=f_err)
+            print(job_process)
 
         self._pid = job_process.pid
         self._write_to_db()
