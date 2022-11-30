@@ -13,7 +13,6 @@ from _datetime import datetime
 
 import db_processing.connectors.base_connector
 from vm_logging.exceptions import LoadingProcessException
-from .controller import get_loading_info
 from .loading_engines import BaseEngine, get_engine_class
 from .loading_types import LoadingTypes, LoadingStatuses
 
