@@ -7,7 +7,7 @@
         Functions:
             delete_all_data - to delete all data according to filter
 """
-from enum import property
+
 from typing import Any, Optional, Set, Dict, List
 from _datetime import datetime
 
