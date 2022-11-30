@@ -160,7 +160,9 @@ class MongoConnector(Connector):
     def _get_connection(self) -> pymongo.MongoClient:
         """ Gets db connection object from pymongo """
         try:
+            print(self._connection_string)
             result = pymongo.MongoClient(self._connection_string)
+            print(result)
         except ConfigurationError as conf_ex:
             raise ConfigurationError('Configuration error! ' + str(conf_ex))
 
