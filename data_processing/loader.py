@@ -121,6 +121,7 @@ class Package:
 
         self._check_data(data)
 
+        self._status = LoadingStatuses.IN_PROCESS
         self._start_date = datetime.utcnow()
         self._end_date = None
         self.write_to_db()
