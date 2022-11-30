@@ -35,7 +35,7 @@ def load_package(parameters: dict[str, Any]) -> str:
     """ For loading package data """
     loading = _get_loading(parameters)
     loading.load_package(parameters['loading'].get('package'))
-    return 'Package is loaded'
+    return 'Package loading is started' if parameters.get('background_job') else 'Package is loaded'
 
 
 def drop_loading(parameters: dict[str, Any]) -> dict[str, Any]:
