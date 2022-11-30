@@ -333,7 +333,7 @@ class Loading:
             raise LoadingProcessException('Some packages are missing. Initially number of packages is {} '
                                           'but real number is {}'.format(self._number_of_packages, len(self._packages)))
 
-    def initialize(self) -> bool:
+    def initialize(self) -> dict[str, Any]:
         """ For initializing NEW loading"""
         self._check_before_initializing()
 
@@ -346,7 +346,7 @@ class Loading:
             package.type = self._type
             package.initialize()
 
-        return True
+        return {'loading': self.get_loading_info()}
 
     def drop(self, need_to_delete_data: bool = False) -> bool:
         """ For deleting loading object from db. Provides deleting previously loaded data together
