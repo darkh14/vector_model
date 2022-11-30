@@ -23,11 +23,11 @@ from vm_background_jobs.decorators import execute_in_background
 __all__ = ['initialize_loading', 'load_package', 'drop_loading', 'set_loading_status', 'get_loading_info']
 
 
-def initialize_loading(parameters: dict[str, Any]) -> str:
+def initialize_loading(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For initializing new loading """
     loading = _get_loading(parameters)
-    loading.initialize()
-    return 'Loading is initialized'
+    result = loading.initialize()
+    return result
 
 
 @execute_in_background
