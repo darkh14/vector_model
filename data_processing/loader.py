@@ -7,8 +7,8 @@
         Functions:
             delete_all_data - to delete all data according to filter
 """
-
-from typing import Any, Optional
+from enum import property
+from typing import Any, Optional, Set, Dict, List
 from _datetime import datetime
 
 import db_processing.connectors.base_connector
@@ -333,7 +333,8 @@ class Loading:
             raise LoadingProcessException('Some packages are missing. Initially number of packages is {} '
                                           'but real number is {}'.format(self._number_of_packages, len(self._packages)))
 
-    def initialize(self) -> dict[str, Any]:
+    def initialize(self) -> set[str | dict[str, str | None | int | LoadingTypes | LoadingStatuses |
+                                           list[dict[str, str | None | int | LoadingTypes | LoadingStatuses]]]]:
         """ For initializing NEW loading"""
         self._check_before_initializing()
 
@@ -346,9 +347,11 @@ class Loading:
             package.type = self._type
             package.initialize()
 
-        return {'loading': self.get_loading_info()}
+        return self.get_loading_info()
 
-    def drop(self, need_to_delete_data: bool = False) -> dict[str, Any]:
+    def drop(self, need_to_delete_data: bool = False) -> set[str | dict[
+        str, str | None | int | LoadingTypes | LoadingStatuses | list[
+            dict[str, str | None | int | LoadingTypes | LoadingStatuses]]]]:
         """ For deleting loading object from db. Provides deleting previously loaded data together
             Parameters:
                 need_to_delete_data - deletes previously loaded data if True
@@ -369,7 +372,7 @@ class Loading:
         self._start_date = None
         self._end_date = None
 
-        return {'loading': loading_info}
+        return loading_info
 
     def load_package(self, package_parameters: dict[str, Any]) -> bool:
         """ For loading package data to db.
@@ -438,7 +441,8 @@ class Loading:
 
         return True
 
-    def get_loading_info(self):
+    def get_loading_info(self) -> set[str | dict[str, str | None | int | LoadingTypes | LoadingStatuses |
+                                                 list[dict[str, str | None | int | LoadingTypes | LoadingStatuses]]]]:
         """ For getting loading info.
             Contains:
                 id: - loading id,
@@ -463,7 +467,7 @@ class Loading:
 
         loading_info['packages'] = packages_info
 
-        return loading_info
+        return {'loading', loading_info}
 
     def set_status(self, status_parameter: LoadingStatuses | str, set_for_packages: bool = False) -> bool:
         """ For setting loading status.
