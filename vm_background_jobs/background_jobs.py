@@ -139,15 +139,15 @@ class BackgroundJob:
 
         python_command, python_path = self._get_path_command()
 
-        with JobContextLoggerManager(self._id, context_mode=True) as (f_out, f_err):
-            print('test_test')
-            job_process = subprocess.Popen([python_command,
-                                            python_path,
-                                            '-background_job',
-                                            self._id,
-                                            self._job_name,
-                                            self._db_connector.db_path], stdout=f_out, stderr=f_err)
-            print('job-process - {}'.format(job_process))
+        # with JobContextLoggerManager(self._id, context_mode=True) as (f_out, f_err):
+        print('test_test')
+        job_process = subprocess.Popen([python_command,
+                                        python_path,
+                                        '-background_job',
+                                        self._id,
+                                        self._job_name,
+                                        self._db_connector.db_path]) #, stdout=f_out, stderr=f_err)
+        print('job-process - {}'.format(job_process))
 
         self._pid = job_process.pid
         self._write_to_db()
