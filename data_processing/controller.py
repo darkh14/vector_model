@@ -38,11 +38,11 @@ def load_package(parameters: dict[str, Any]) -> str:
     return 'Package is loaded'
 
 
-def drop_loading(parameters: dict[str, Any]) -> str:
+def drop_loading(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For deleting loading object and its packages """
     loading = _get_loading(parameters)
-    loading.drop(need_to_delete_data=parameters['loading'].get('delete_data'))
-    return 'Loading is dropped'
+    result = loading.drop(need_to_delete_data=parameters['loading'].get('delete_data'))
+    return result
 
 
 def set_loading_status(parameters: dict[str, Any]) -> str:
