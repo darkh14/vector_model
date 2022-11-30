@@ -154,7 +154,12 @@ class SettingsController:
         elif type_str == 'float':
             result = float(str_value)
         elif type_str == 'bool':
-            result = bool(str_value)
+            if str_value.lower() == 'true':
+                result = True
+            elif str_value.lower() == 'false':
+                result = False
+            else:
+                result = bool(str_value)
         else:
             raise SettingsControlException('Unsupported var type {}'.format(type_str))
 

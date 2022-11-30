@@ -38,6 +38,7 @@ def get_var_special_types() -> dict[str, str]:
     result = dict()
     result['DB_NAMES'] = 'dict'
     result['DB_PORT'] = 'int'
+    result['TEST_MODE'] = 'bool'
 
     return result
 
