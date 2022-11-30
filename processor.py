@@ -292,7 +292,7 @@ def process(environ: Optional[dict[str, any]] = None,
         try:
             if not PROCESSOR:
                 PROCESSOR = _get_processor(environ)
-
+            s = 1/0
             output = PROCESSOR.process(environ, start_response)
         except RequestProcessException as request_ex:
             error_text = str(request_ex)
