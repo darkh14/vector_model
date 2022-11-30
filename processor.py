@@ -67,8 +67,18 @@ class Processor(ABC):
             start_response = self.t_start_response
 
         request_parameters = self._get_request_parameters_from_environ(environ)
+        if TEST_MODE:
+            output_dict = self._process_with_parameters(request_parameters)
+        else:
+            try:
+                output_dict = self._process_with_parameters(request_parameters)
+            except RequestProcessException as request_ex:
+                error_text = str(request_ex)
+                output = {'status': 'error', 'error_text': error_text}
+            except Exception as base_ex:
+                error_text = 'Error!\n' + traceback.format_exc()
+                output = {'status': 'error', 'error_text': error_text}
 
-        output_dict = self._process_with_parameters(request_parameters)
         output_list = self.transform_output_parameters_to_str(output_dict)
         output_len = len(output_list[0])
 
@@ -282,25 +292,10 @@ def process(environ: Optional[dict[str, any]] = None,
     """
     global PROCESSOR
 
-    if TEST_MODE:
-        # in test mode it is not need to intercept exceptions
-        if not PROCESSOR:
-            PROCESSOR = _get_processor(environ)
+    if not PROCESSOR:
+        PROCESSOR = _get_processor(environ)
 
-        output = PROCESSOR.process(environ, start_response)
-    else:
-        try:
-            if not PROCESSOR:
-                PROCESSOR = _get_processor(environ)
-            s = 1/0
-            output = PROCESSOR.process(environ, start_response)
-        except RequestProcessException as request_ex:
-            error_text = str(request_ex)
-            output = PROCESSOR.transform_output_parameters_to_str({'status': 'error', 'error_text': error_text})
-        except Exception as base_ex:
-
-            error_text = 'Error!\n' + traceback.format_exc()
-            output = PROCESSOR.transform_output_parameters_to_str({'status': 'error', 'error_text': error_text})
+    output = PROCESSOR.process(environ, start_response)
 
     print(output)
     return output
