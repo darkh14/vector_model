@@ -22,7 +22,7 @@ from vm_logging.exceptions import SettingsControlException
 
 CONTROLLER = None
 
-__all__ = ['SettingsController', 'get_var', 'set_var']
+__all__ = ['SettingsController', 'get_var', 'get_secret_var', 'set_var']
 
 
 class SettingsController:
@@ -55,18 +55,24 @@ class SettingsController:
         dotenv.load_dotenv(self._dotenv_path)
 
         for key in self._keys:
-            if self.get_var(key) is None:
+
+            if key in self._secret_keys:
+                c_var = self.get_secret_var(key)
+            else:
+                c_var = self.get_var(key)
+
+            if c_var is None:
                 value = getattr(defaults, key)
                 self.set_var(key, value)
 
     def get_var(self, key: str) -> Any:
-        """ For getting value. Supports non str types and passwords"""
+        """ For getting value. Supports non str types"""
 
         if key not in self._keys:
             raise SettingsControlException('Key "{}" is not available'.format(key))
 
         if key in self._secret_keys:
-            result = self._get_secret_value(key)
+            raise SettingsControlException('Key "{}" is secret key (password)'.format(key))
         else:
             if key in self._cache:
                 result = self._cache[key]
@@ -76,6 +82,16 @@ class SettingsController:
                 if result is not None and key in self._special_type_keys:
                     result = self._str_to_special_type(result, self._special_type_keys[key])
                 self._cache[key] = result
+
+        return result
+
+    def get_secret_var(self, key: str) -> str:
+        """ For getting secret value."""
+
+        if key not in self._secret_keys:
+            raise SettingsControlException('Key "{}" is not secret key (password)'.format(key))
+        else:
+            result = self._get_secret_value(key)
 
         return result
 
@@ -157,6 +173,11 @@ class SettingsController:
 def get_var(key: str) -> Any:
     settings_controller = _get_settings_controller()
     return settings_controller.get_var(key)
+
+
+def get_secret_var(key: str) -> str:
+    settings_controller = _get_settings_controller()
+    return settings_controller.get_secret_var(key)
 
 
 def set_var(key: str, value: Any) -> bool:

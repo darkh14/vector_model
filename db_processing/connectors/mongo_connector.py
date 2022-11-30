@@ -43,7 +43,7 @@ class MongoConnector(Connector):
 
         """
         user = vm_settings.get_var('DB_USER')
-        password = vm_settings.get_var('DB_PASSWORD')
+        password = vm_settings.get_secret_var('DB_PASSWORD')
         host = vm_settings.get_var('DB_HOST')
         port = vm_settings.get_var('DB_PORT')
         auth_source = vm_settings.get_var('DB_AUTH_SOURCE')
