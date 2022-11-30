@@ -55,6 +55,8 @@ class MongoConnector(Connector):
         else:
             result = 'mongodb://{host}:{port}/'.format(host=host, port=port)
 
+        print(result)
+
         return result
 
     @staticmethod
