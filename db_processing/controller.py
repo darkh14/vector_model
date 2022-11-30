@@ -7,13 +7,13 @@
 
 from . import connectors
 import vm_settings
-from typing import Type
-from vm_logging.exceptions import DBConnectorException
+from typing import Type, Any
+from vm_logging.exceptions import DBConnectorException, ParameterNotFoundException
 
 CONNECTORS: list[connectors.base_connector.Connector] = []
 DB_TYPE = ''
 
-__all__ = ['get_connector']
+__all__ = ['get_connector', 'check_connection']
 
 
 def get_connector(db_path: str):
@@ -47,3 +47,22 @@ def _get_connector_class() -> Type[connectors.base_connector.Connector]:
         raise DBConnectorException('Can not find correct class for creating db connector. DB_TYPE -{}'.format(DB_TYPE))
 
     return cls_list[0]
+
+
+def check_connection(parameters: dict[str, Any]) -> str:
+
+    if not parameters.get('db'):
+        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
+
+    connector = get_connector(parameters['db'])
+    line = {'test_field_1': 13, 'test_field_2': 666}
+    connector.set_line('test', line.copy())
+
+    line2 = connector.get_line('test', {'test_field_1': 13})
+
+    if line != line2:
+        raise DBConnectorException('Read/write error. Read and written lines is not equal')
+
+    connector.delete_lines('test')
+
+    return 'DB connection is OK'

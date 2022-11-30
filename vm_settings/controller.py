@@ -131,6 +131,7 @@ class SettingsController:
         """
         if type_str in ('dict', 'list'):
             result = json.dumps(value)
+            result = result.replace('\\', '\\\\')
         elif type_str in ('int', 'float', 'bool'):
             result = str(value)
         else:
