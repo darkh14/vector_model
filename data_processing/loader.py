@@ -13,6 +13,7 @@ from _datetime import datetime
 
 import db_processing.connectors.base_connector
 from vm_logging.exceptions import LoadingProcessException
+from .controller import get_loading_info
 from .loading_engines import BaseEngine, get_engine_class
 from .loading_types import LoadingTypes, LoadingStatuses
 
@@ -348,11 +349,14 @@ class Loading:
 
         return {'loading': self.get_loading_info()}
 
-    def drop(self, need_to_delete_data: bool = False) -> bool:
+    def drop(self, need_to_delete_data: bool = False) -> dict[str, Any]:
         """ For deleting loading object from db. Provides deleting previously loaded data together
             Parameters:
                 need_to_delete_data - deletes previously loaded data if True
         """
+
+        loading_info = self.get_loading_info()
+
         if self._status == LoadingStatuses.NEW:
             raise LoadingProcessException('Loading id - "{}" is not initialized'.format(self._id))
 
@@ -366,7 +370,7 @@ class Loading:
         self._start_date = None
         self._end_date = None
 
-        return True
+        return {'loading': loading_info}
 
     def load_package(self, package_parameters: dict[str, Any]) -> bool:
         """ For loading package data to db.
