@@ -333,8 +333,7 @@ class Loading:
             raise LoadingProcessException('Some packages are missing. Initially number of packages is {} '
                                           'but real number is {}'.format(self._number_of_packages, len(self._packages)))
 
-    def initialize(self) -> set[str | dict[str, str | None | int | LoadingTypes | LoadingStatuses |
-                                           list[dict[str, str | None | int | LoadingTypes | LoadingStatuses]]]]:
+    def initialize(self) -> dict[str, Any]:
         """ For initializing NEW loading"""
         self._check_before_initializing()
 
@@ -349,9 +348,7 @@ class Loading:
 
         return self.get_loading_info()
 
-    def drop(self, need_to_delete_data: bool = False) -> set[str | dict[
-        str, str | None | int | LoadingTypes | LoadingStatuses | list[
-            dict[str, str | None | int | LoadingTypes | LoadingStatuses]]]]:
+    def drop(self, need_to_delete_data: bool = False) -> dict[str, Any]:
         """ For deleting loading object from db. Provides deleting previously loaded data together
             Parameters:
                 need_to_delete_data - deletes previously loaded data if True
@@ -441,8 +438,7 @@ class Loading:
 
         return True
 
-    def get_loading_info(self) -> set[str | dict[str, str | None | int | LoadingTypes | LoadingStatuses |
-                                                 list[dict[str, str | None | int | LoadingTypes | LoadingStatuses]]]]:
+    def get_loading_info(self) -> dict[str, Any]:
         """ For getting loading info.
             Contains:
                 id: - loading id,
@@ -467,7 +463,7 @@ class Loading:
 
         loading_info['packages'] = packages_info
 
-        return {'loading', loading_info}
+        return {'loading': loading_info}
 
     def set_status(self, status_parameter: LoadingStatuses | str, set_for_packages: bool = False) -> bool:
         """ For setting loading status.
