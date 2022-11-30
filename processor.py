@@ -69,7 +69,7 @@ class Processor(ABC):
         request_parameters = self._get_request_parameters_from_environ(environ)
 
         output_dict = self._process_with_parameters(request_parameters)
-        output_list = self._transform_output_parameters_to_str(output_dict)
+        output_list = self.transform_output_parameters_to_str(output_dict)
         output_len = len(output_list[0])
 
         start_response('200 OK', [('Content-type', 'text/html'), ('Content-Length', str(output_len))])
@@ -110,7 +110,7 @@ class Processor(ABC):
         return {'status': 'OK', 'error': '', 'result': result}
 
     @staticmethod
-    def _transform_output_parameters_to_str(output: dict[str, Any]) -> list:
+    def transform_output_parameters_to_str(output: dict[str, Any]) -> list:
         """Transform output from dict to list with one element contains bytes using json"""
         output_str = json.dumps(output, ensure_ascii=False).encode()
 
@@ -296,11 +296,11 @@ def process(environ: Optional[dict[str, any]] = None,
             output = PROCESSOR.process(environ, start_response)
         except RequestProcessException as request_ex:
             error_text = str(request_ex)
-            output = {'status': 'error', 'error_text': error_text}
+            output = PROCESSOR.transform_output_parameters_to_str({'status': 'error', 'error_text': error_text})
         except Exception as base_ex:
 
             error_text = 'Error!\n' + traceback.format_exc()
-            output = {'status': 'error', 'error_text': error_text}
+            output = PROCESSOR.transform_output_parameters_to_str({'status': 'error', 'error_text': error_text})
 
     print(output)
     return output
