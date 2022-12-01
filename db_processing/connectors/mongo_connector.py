@@ -145,6 +145,16 @@ class MongoConnector(Connector):
 
         return result
 
+    @safe_db_action
+    @Connector.filter_processing_method
+    def get_count(self, collection_name: str, db_filter: Optional[db_filter_type] = None) -> int:
+        """ See base method docs """
+        c_filter = db_filter if db_filter else {}
+
+        collection = self._get_collection(collection_name)
+
+        return collection.count_documents(c_filter)
+
     def _connect(self) -> bool:
         """Doing nothing. In mongo DB connection actually occurs when acting with a collection.
            Before doing this, you need to define the connection object and the db object (in __init__)

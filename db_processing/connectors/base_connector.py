@@ -105,6 +105,10 @@ class Connector(ABC):
             Collection will be dropped    
     """
 
+    @abstractmethod
+    def get_count(self, collection_name: str, db_filter: Optional[db_filter_type] = None) -> int:...
+    """ Returns number of documents in collection. Supports filter """
+
     def get_db_path(self) -> str:
         """ for getting db path from inner _db_path value"""
         return self._db_path

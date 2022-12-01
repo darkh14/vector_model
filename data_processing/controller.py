@@ -81,6 +81,10 @@ def delete_data(parameters: dict[str, Any]) -> str:
 
     return 'Data are deleted'
 
+def get_data_count(parameters: dict[str, Any]) -> int:
+    data_filter = parameters.get('filter') or {}
+    db_connector = get_connector(parameters.get('db'))
+    return db_connector.get_count('raw_data', data_filter)
 
 def _get_loading(parameters: dict[str | Any]) -> Loading:
     """ Gets loading object. Sets db connector to loading """

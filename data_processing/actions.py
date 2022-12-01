@@ -19,7 +19,8 @@ def get_actions() -> dict[str, Callable]:
         'data_set_loading_status': _data_set_loading_status,
         'data_set_package_status': _data_set_package_status,
         'data_get_loading_info': _data_get_loading_info,
-        'data_delete': _data_delete
+        'data_delete': _data_delete,
+        'data_get_count': _get_data_count
             }
 
 
@@ -56,3 +57,8 @@ def _data_set_package_status(parameters: dict[str, Any]) -> dict[str, Any]:
 def _data_delete(parameters: dict[str, Any]) -> dict[str, Any]:
     """ Deletes data, loaded by loading or by filter """
     return controller.delete_data(parameters)
+
+
+def _get_data_count(parameters: dict[str, Any]) -> int:
+    """ Returns general number of lines in raw_data"""
+    return controller.get_data_count(parameters)
