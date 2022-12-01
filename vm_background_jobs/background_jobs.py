@@ -210,8 +210,8 @@ class BackgroundJob:
 
         for el in job_list:
             c_job = {key: value for key, value in el.items() if key in fields}
-            c_job['start_date'] = el['start_date'].strftime('%d.%m.%Y %H:%M:%S') if el else None
-            c_job['end_date'] = el['end_date'].strftime('%d.%m.%Y %H:%M:%S') if el else None
+            c_job['start_date'] = el['start_date'].strftime('%d.%m.%Y %H:%M:%S') if el['start_date'] else None
+            c_job['end_date'] = el['end_date'].strftime('%d.%m.%Y %H:%M:%S') if el['end_date'] else None
 
             result.append(c_job)
 
