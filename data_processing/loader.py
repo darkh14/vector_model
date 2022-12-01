@@ -505,9 +505,14 @@ class Loading:
 
         if self._status != LoadingStatuses.LOADED:
             self._end_date = None
+        else:
+            self._end_date = datetime.utcnow()
+            if not self._start_date:
+                self._start_date = datetime.utcnow()
 
         if self._status in [LoadingStatuses.NEW, LoadingStatuses.REGISTERED]:
             self._start_date = None
+            self._end_date = None
 
         if set_for_packages:
             for package in self._packages:
