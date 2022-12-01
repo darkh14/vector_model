@@ -204,7 +204,7 @@ class BackgroundJob:
         db_connector = get_connector(db_path)
         job_list = db_connector.get_lines('background_jobs', job_filter)
 
-        fields = ['id', 'name', 'status', 'pid', 'error', 'output']
+        fields = ['id', 'job_name', 'status', 'pid', 'error', 'output']
 
         result = []
 
