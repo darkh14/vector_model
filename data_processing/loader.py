@@ -466,11 +466,13 @@ class Loading:
 
         return {'loading': loading_info}
 
-    def set_status(self, status_parameter: LoadingStatuses | str, set_for_packages: bool = False) -> bool:
+    def set_status(self, status_parameter: LoadingStatuses | str, set_for_packages: bool = False,
+                   from_outside: bool = False) -> bool:
         """ For setting loading status.
             Parameters:
                 status_parameter: str | loadingStatuses - value of setting status
                 set_for_packages: - bool - set this status for all packages in loading if True
+                from_outside: bool - True when status is set directly from http request, else False
         """
         if not status_parameter:
             raise LoadingProcessException('Status parameter is not defined')
@@ -480,11 +482,15 @@ class Loading:
         else:
             self._status = status_parameter
 
-        if self._status not in [LoadingStatuses.REGISTERED, LoadingStatuses.LOADED,
-                                LoadingStatuses.PARTIALLY_LOADED, LoadingStatuses.ERROR]:
-            raise LoadingProcessException('Status "{}" is not supported. Statuses allowed to set are - "registered", '
-                                          '"loaded", "partially loaded", "error"'.format(self._status))
+        supported_statuses = [LoadingStatuses.REGISTERED, LoadingStatuses.LOADED, LoadingStatuses.ERROR]
 
+        if not from_outside:
+            supported_statuses.append(LoadingStatuses.PARTIALLY_LOADED)
+
+        if self._status not in supported_statuses:
+            raise LoadingProcessException('Status "{}" is not supported. Statuses allowed to set are - '
+                                          '{}'.format(self._status,  ', '.join(['"{}"'.format(st) for st
+                                                                                in supported_statuses])))
         if self._status == LoadingStatuses.ERROR:
             self._error = 'Error status was set directly'
         else:
@@ -533,6 +539,14 @@ class Loading:
             current_status = LoadingStatuses(status_parameter)
         else:
             current_status = status_parameter
+
+        supported_statuses = [LoadingStatuses.REGISTERED, LoadingStatuses.LOADED, LoadingStatuses.IN_PROCESS,
+                              LoadingStatuses.ERROR]
+
+        if current_status not in supported_statuses:
+            raise LoadingProcessException('Status "{}" is not supported. Statuses allowed to set are - '
+                                          '{}'.format(self._status,  ', '.join(['"{}"'.format(st) for st
+                                                                                in supported_statuses])))
 
         current_package.status = current_status
 

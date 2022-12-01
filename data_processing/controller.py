@@ -48,7 +48,7 @@ def drop_loading(parameters: dict[str, Any]) -> dict[str, Any]:
 def set_loading_status(parameters: dict[str, Any]) -> str:
     """ For setting status of loading (for administrators) """
     loading = _get_loading(parameters)
-    loading.set_status(parameters['loading'].get('status'), set_for_packages=True)
+    loading.set_status(parameters['loading'].get('status'), set_for_packages=True, from_outside=True)
     return 'Loading status is set'
 
 
