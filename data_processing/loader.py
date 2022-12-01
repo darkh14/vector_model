@@ -198,8 +198,15 @@ class Package:
         if self._status == LoadingStatuses.REGISTERED:
             self._start_date = None
 
+        if self._status == LoadingStatuses.IN_PROCESS:
+            self._start_date = datetime.utcnow()
+
         if self._status != LoadingStatuses.LOADED:
             self._end_date = None
+        else:
+            self._end_date = datetime.utcnow()
+            if not self._start_date:
+                self._start_date = datetime.utcnow()
 
         self.write_to_db()
 
