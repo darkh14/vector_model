@@ -15,6 +15,8 @@ __all__ = ['get_actions']
 
 from typing import Callable, Any
 
+from . import controller
+
 
 def get_actions() -> dict[str, Callable]:
     """ forms actions dict available for vm_models"""
@@ -41,17 +43,17 @@ def _predict(parameters: dict[str, Any]) -> dict[str, Any]:
 
 def _initialize(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For initializing new model """
-    pass
+    return controller.initialize(parameters)
 
 
 def _drop(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For deleting model from db """
-    pass
+    return controller.drop(parameters)
 
 
 def _get_info(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For getting model info """
-    pass
+    return controller.get_info(parameters)
 
 
 def _drop_fitting(parameters: dict[str, Any]) -> dict[str, Any]:

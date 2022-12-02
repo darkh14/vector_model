@@ -8,13 +8,34 @@
 
 """
 
-from typing import Any
+from typing import Any, Callable
+from functools import wraps
 
-from model import Model, get_model
+from .model import Model, get_model
+from vm_logging.exceptions import ModelException, ParameterNotFoundException
 
 MODELS: list[Model] = list()
 
 
+__all__ = ['fit', 'predict', 'initialize', 'drop', 'update', 'get_info', 'drop_fitting']
+
+
+def _check_input_parameters(func: Callable):
+    @wraps(func)
+    def wrapper(parameters: dict[str, Any]):
+
+        if not parameters.get('model'):
+            raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
+
+        if not parameters.get('db'):
+            raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
+
+        result = func(parameters)
+        return result
+
+    return wrapper
+
+@_check_input_parameters
 def fit(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For fitting model """
     pass
@@ -24,43 +45,70 @@ def predict(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For predicting data with model """
     pass
 
-
+@_check_input_parameters
 def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For initializing new model """
     if not parameters.get('model'):
-        raise
-    model = _get_model()
-    result = model.initialize(parameters.get('model'))
+        raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
+
+    if not parameters.get('db'):
+        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
+
+    model = _get_model(parameters['model'], parameters['db'])
+
+    result = model.initialize(parameters['model'])
+
     return result
 
 
-def _drop(parameters: dict[str, Any]) -> dict[str, Any]:
+@_check_input_parameters
+def drop(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For deleting model from db """
-    pass
+    if not parameters.get('model'):
+        raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
+
+    if not parameters.get('db'):
+        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
+
+    model = _get_model(parameters['model'], parameters['db'])
+
+    result = model.drop()
+
+    return result
 
 
-def _get_info(parameters: dict[str, Any]) -> dict[str, Any]:
+@_check_input_parameters
+def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For getting model info """
-    pass
+
+    model = _get_model(parameters['model'], parameters['db'])
+
+    result = model.get_info()
+
+    return result
 
 
-def _drop_fitting(parameters: dict[str, Any]) -> dict[str, Any]:
+def drop_fitting(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For deleting fit data from model """
     pass
 
 
-def _update(parameters: dict[str, Any]) -> dict[str, Any]:
+def update(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For updating model parameters """
     pass
 
 
-def _get_model(model_id: str) -> Model:
-    models = [c_model for c_model in MODELS if c_model.id == model_id]
+def _get_model(input_model: dict[str, Any], db_path: str) -> Model:
+
+    if not input_model.get('id'):
+        raise ModelException('Parameter "id" is not found in model parameters')
+
+    models = [c_model for c_model in MODELS if c_model.id == input_model['id']]
 
     if models:
         model = models[0]
     else:
-        model = get_model(model_id)
+        model = get_model(input_model['id'], db_path)
         MODELS.append(model)
 
     return model
