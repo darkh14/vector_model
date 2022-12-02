@@ -14,7 +14,8 @@ __all__ = ['VMBaseException',
            'ParameterNotFoundException',
            'DBConnectorException',
            'LoadingProcessException',
-           'BackgroundJobException']
+           'BackgroundJobException',
+           'ModelException']
 
 
 class VMBaseException(Exception):
