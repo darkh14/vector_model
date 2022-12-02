@@ -103,9 +103,14 @@ class LoadingProcessException(VMBaseException):
 
 
 class BackgroundJobException(VMBaseException):
-    """Custom exception class for background jobs """
+    """ Custom exception class for background jobs """
     def _get_full_error_message(self) -> str:
         default_message = super()._get_full_error_message()
         return 'Error in background job! ' + default_message
 
 
+class ModelException(VMBaseException):
+    """ Custom exception class models """
+    def _get_full_error_message(self) -> str:
+        default_message = super()._get_full_error_message()
+        return 'Error in model! ' + default_message
