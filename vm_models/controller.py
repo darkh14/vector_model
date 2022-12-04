@@ -11,13 +11,14 @@
 from typing import Any, Callable
 from functools import wraps
 
-from .model import Model, get_model
+from vm_models.models import base_model, get_model_class
+from vm_models.models import get_additional_actions as model_get_actions
 from vm_logging.exceptions import ModelException, ParameterNotFoundException
 
-MODELS: list[Model] = list()
+MODELS: list[base_model.Model] = list()
 
 
-__all__ = ['fit', 'predict', 'initialize', 'drop', 'update', 'get_info', 'drop_fitting']
+__all__ = ['fit', 'predict', 'initialize', 'drop', 'update', 'get_info', 'drop_fitting', 'get_additional_actions']
 
 
 def _check_input_parameters(func: Callable):
@@ -62,7 +63,7 @@ def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
 
 
 @_check_input_parameters
-def drop(parameters: dict[str, Any]) -> dict[str, Any]:
+def drop(parameters: dict[str, Any]) -> str:
     """ For deleting model from db """
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
@@ -95,10 +96,16 @@ def drop_fitting(parameters: dict[str, Any]) -> dict[str, Any]:
 
 def update(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For updating model parameters """
-    pass
+    model = _get_model(parameters['model'], parameters['db'])
 
+    result = model.get_info()
 
-def _get_model(input_model: dict[str, Any], db_path: str) -> Model:
+    return result
+
+def get_additional_actions() -> dict[str|Callable]:
+    return model_get_actions()
+
+def _get_model(input_model: dict[str, Any], db_path: str) -> base_model.Model:
 
     if not input_model.get('id'):
         raise ModelException('Parameter "id" is not found in model parameters')
@@ -108,7 +115,7 @@ def _get_model(input_model: dict[str, Any], db_path: str) -> Model:
     if models:
         model = models[0]
     else:
-        model = get_model(input_model['id'], db_path)
+        model = get_model_class()(input_model['id'], db_path)
         MODELS.append(model)
 
     return model

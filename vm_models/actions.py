@@ -20,7 +20,7 @@ from . import controller
 
 def get_actions() -> dict[str, Callable]:
     """ forms actions dict available for vm_models"""
-    return {
+    actions =  {
         'model_fit': _fit,
         'model_predict': _predict,
         'model_initialize': _initialize,
@@ -28,7 +28,11 @@ def get_actions() -> dict[str, Callable]:
         'model_get_info': _get_info,
         'model_drop_fitting': _drop_fitting,
         'model_update': _update
-            }
+               }
+
+    actions.update(controller.get_additional_actions())
+
+    return actions
 
 
 def _fit(parameters: dict[str, Any]) -> dict[str, Any]:
@@ -46,7 +50,7 @@ def _initialize(parameters: dict[str, Any]) -> dict[str, Any]:
     return controller.initialize(parameters)
 
 
-def _drop(parameters: dict[str, Any]) -> dict[str, Any]:
+def _drop(parameters: dict[str, Any]) -> str:
     """ For deleting model from db """
     return controller.drop(parameters)
 
