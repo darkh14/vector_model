@@ -12,42 +12,37 @@ __all__ = ['VbmModelParameters', 'VbmFittingParameters']
 class VbmModelParameters(ModelParameters):
 
     service_name: str = 'vbm'
-    x_indicators: list[dict[str, Any]] = None
-    y_indicators: list[dict[str, Any]] = None
+    _x_indicators: list[dict[str, Any]] = None
+    _y_indicators: list[dict[str, Any]] = None
 
     rsme: int = 0
     mspe: int = 0
 
-    def set_all(self, parameters: dict[str, Any]) -> None:
+    def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
 
         super().set_all(parameters)
 
-        x_indicators = deepcopy(parameters['x_indicators'])
+        self._check_new_parameters(parameters)
 
-        for line in x_indicators:
-            line['short_id'] = IdGenerator.get_short_id_from_dict_id_type(line)
+        super_fields = [el.name for el in fields(super()) if el.name not in ['service_name']]
+        self_fields =  [el.name for el in fields(self) if el.name not in super_fields + ['service_name']]
+        self_parameters = [el[1:] if el.startswith('_') else el for el in self_fields]
 
-        y_indicators = deepcopy(parameters['y_indicators'])
-
-        for line in y_indicators:
-            line['short_id'] = IdGenerator.get_short_id_from_dict_id_type(line)
-
-        self.x_indicators = x_indicators
-        self.y_indicators = y_indicators
-
-        if 'rsme' in parameters:
-            self.rsme = parameters['rsme']
-        if 'mspe' in parameters:
-            self.mspe = parameters['mspe']
+        for count, par_name in enumerate(self_parameters):
+            name = self_fields[0] if without_processing else par_name
+            if par_name in parameters:
+                setattr(self, name, parameters[par_name])
 
     def get_all(self) -> dict[str, Any]:
         result = super().get_all()
 
-        result['x_indicators'] = self.x_indicators
-        result['y_indicators'] = self.y_indicators
+        super_fields = [el.name for el in fields(super()) if el.name not in ['service_name']]
+        self_fields = [el.name for el in fields(self) if el.name not in super_fields + ['service_name']]
+        self_fields = [el[1:] if el.startswith('_') else el for el in self_fields]
 
-        result['rsme'] = self.rsme
-        result['mspe'] = self.mspe
+        parameters_to_add = {name: getattr(self, name) for name in self_fields}
+
+        result.update(parameters_to_add)
 
         return result
 
@@ -56,6 +51,36 @@ class VbmModelParameters(ModelParameters):
         super()._check_new_parameters(parameters, checking_names)
         if not checking_names:
             super()._check_new_parameters(parameters, ['x_indicators', 'y_indicators'])
+
+    @property
+    def x_indicators(self):
+        return self._x_indicators
+
+    @property
+    def y_indicators(self):
+        return self._y_indicators
+
+    @x_indicators.setter
+    def x_indicators(self, value):
+        x_indicators = deepcopy(value)
+
+        for el in x_indicators:
+            if 'short_id' not in el:
+                el['short_id'] = IdGenerator.get_short_id_from_dict_id_type(el)
+
+        self._x_indicators = x_indicators
+
+    @y_indicators.setter
+    def y_indicators(self, value):
+        y_indicators = deepcopy(value)
+
+        for el in y_indicators:
+            if 'short_id' not in el:
+                el['short_id'] = IdGenerator.get_short_id_from_dict_id_type(el)
+
+        self._y_indicators = y_indicators
+
+
 
 @dataclass
 class VbmFittingParameters(FittingParameters):
@@ -83,16 +108,17 @@ class VbmFittingParameters(FittingParameters):
         self.x_columns = []
         self.y_columns = []
 
-    def set_all(self, parameters: dict[str, Any]) -> None:
+    def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
         super().set_all(parameters)
 
         super_fields = [el.name for el in fields(super()) if el.name not in ['service_name']]
         self_fields =  [el.name for el in fields(self) if el.name not in super_fields + ['service_name']]
-        self_fields = [el[1:] if el.startswith('_') else el for el in self_fields]
+        self_parameters = [el[1:] if el.startswith('_') else el for el in self_fields]
 
-        for field_name in self_fields:
-            if field_name in parameters:
-                setattr(self, field_name, parameters[field_name])
+        for count, par_name in enumerate(self_parameters):
+            name = self_fields[0] if without_processing else par_name
+            if par_name in parameters:
+                setattr(self, name, parameters[par_name])
 
     def get_all(self) -> dict[str, Any]:
         result = super().get_all()
@@ -106,7 +132,6 @@ class VbmFittingParameters(FittingParameters):
         result.update(parameters_to_add)
 
         return result
-
 
     @property
     def x_analytics(self):

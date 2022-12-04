@@ -71,8 +71,8 @@ class Model:
         model_from_db = self._db_connector.get_line('models', {'id': self._id})
 
         if model_from_db:
-            self.parameters.set_all(model_from_db)
-            self.fitting_parameters.set_all(model_from_db)
+            self.parameters.set_all(model_from_db, without_processing=True)
+            self.fitting_parameters.set_all(model_from_db, without_processing=True)
 
             self._initialized = True
 

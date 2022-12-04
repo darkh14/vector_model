@@ -19,7 +19,7 @@ class ModelParameters:
     def __post_init__(self):
         self.filter = {}
 
-    def set_all(self, parameters: dict[str, Any]) -> None:
+    def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
         self._check_new_parameters(parameters)
 
         self.name = parameters['name']
@@ -65,7 +65,7 @@ class FittingParameters:
     def __post_init__(self):
         pass
 
-    def set_all(self, parameters: dict[str, Any]) -> None:
+    def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
 
         par_fields = [el.name for el in fields(self) if el.name not in ['service_name']]
 
