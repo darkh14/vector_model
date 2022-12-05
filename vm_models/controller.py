@@ -39,12 +39,17 @@ def _check_input_parameters(func: Callable):
 @_check_input_parameters
 def fit(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For fitting model """
-    pass
+    model = _get_model(parameters['model'], parameters['db'])
+
+    result = model.fit()
+
+    return result
 
 
 def predict(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For predicting data with model """
     pass
+
 
 @_check_input_parameters
 def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
@@ -81,7 +86,6 @@ def drop(parameters: dict[str, Any]) -> str:
 @_check_input_parameters
 def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For getting model info """
-
     model = _get_model(parameters['model'], parameters['db'])
 
     result = model.get_info()
@@ -93,14 +97,6 @@ def drop_fitting(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For deleting fit data from model """
     pass
 
-
-def update(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For updating model parameters """
-    model = _get_model(parameters['model'], parameters['db'])
-
-    result = model.get_info()
-
-    return result
 
 def get_additional_actions() -> dict[str|Callable]:
     return model_get_actions()

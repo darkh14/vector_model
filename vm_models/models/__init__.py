@@ -10,14 +10,13 @@ import types
 
 from . import base_model, vbm_model
 from vm_settings import get_var
-from vm_logging.exceptions import ModelException
 
 __all__ = ['base_model', 'vbm_model', 'get_model_class', 'get_additional_actions']
 
 SERVICE_NAME: str = ''
 
 def get_model_class() -> Type[base_model.Model]:
-    """ Function for getting model parameters or fitting parameters class. Choosing from subclasses of ModelParameters class where
+    """ Function for getting model class. Choosing from subclasses of ModelParameters class where
         service name = SERVICE_NAME var
     """
     global SERVICE_NAME

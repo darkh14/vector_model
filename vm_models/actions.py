@@ -26,8 +26,7 @@ def get_actions() -> dict[str, Callable]:
         'model_initialize': _initialize,
         'model_drop': _drop,
         'model_get_info': _get_info,
-        'model_drop_fitting': _drop_fitting,
-        'model_update': _update
+        'model_drop_fitting': _drop_fitting
                }
 
     actions.update(controller.get_additional_actions())
@@ -37,12 +36,12 @@ def get_actions() -> dict[str, Callable]:
 
 def _fit(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For fitting model """
-    pass
+    return controller.fit(parameters)
 
 
 def _predict(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For predicting data with model """
-    pass
+    return controller.predict(parameters)
 
 
 def _initialize(parameters: dict[str, Any]) -> dict[str, Any]:
@@ -62,9 +61,4 @@ def _get_info(parameters: dict[str, Any]) -> dict[str, Any]:
 
 def _drop_fitting(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For deleting fit data from model """
-    pass
-
-
-def _update(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For updating model parameters """
     pass

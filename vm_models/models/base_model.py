@@ -3,11 +3,14 @@ fitting and predicting
 """
 
 from typing import Any, Callable
+from sklearn.pipeline import Pipeline
 
 from vm_logging.exceptions import ModelException
 from vm_models.model_parameters import base_parameters, get_model_parameters_class
 from db_processing import get_connector as get_db_connector
 from db_processing.connectors import base_connector
+from ..data_transformers import get_transformer_class
+from ..model_types import DataTransformersTypes
 
 __all__ = ['Model']
 
@@ -18,10 +21,13 @@ class Model:
 
         self._id: str = model_id
         self._initialized: bool = False
+        self._db_path: str = db_path
 
         self.parameters: base_parameters.ModelParameters = get_model_parameters_class()()
         self.fitting_parameters:base_parameters.FittingParameters = get_model_parameters_class(fitting=True)()
 
+        self._scaler = get_transformer_class(DataTransformersTypes.SCALER)(self.parameters, self.fitting_parameters,
+                                                                           self._db_path)
         self._engine = None
 
         self._db_connector: base_connector.Connector = get_db_connector(db_path)
@@ -55,8 +61,38 @@ class Model:
         model_info = {'id': self._id}
 
         model_info.update(self.parameters.get_all())
+        model_info.update(self.fitting_parameters.get_all())
 
         return model_info
+
+    def fit(self) -> dict[str, Any]:
+
+        pipeline = self._get_fitting_pipeline()
+        result = pipeline.fit()
+
+        return {'descr': 'Fit OK'}
+
+    def _get_fitting_estimators(self) -> list[tuple[str, Any]]:
+
+        estimator_types_list = [DataTransformersTypes.READER,
+                                DataTransformersTypes.CHECKER,
+                                DataTransformersTypes.ROW_COLUMN_TRANSFORMER,
+                                DataTransformersTypes.CATEGORICAL_ENCODER,
+                                DataTransformersTypes.NAN_PROCESSOR]
+
+        estimators = [(el.value, get_transformer_class(el)(self.parameters, self.fitting_parameters,self._db_path))
+                      for el in estimator_types_list]
+
+        estimators.append(('scaler', self._scaler))
+
+        return estimators
+
+    def _get_fitting_pipeline(self) -> Pipeline:
+
+        estimators = self._get_fitting_estimators()
+        estimators.append(('engine', self._engine))
+
+        return Pipeline(estimators)
 
     def _write_to_db(self):
         model_to_db = {'id': self._id}

@@ -14,10 +14,10 @@ class ModelParameters:
 
     name: str = ''
     type: str = ''
-    filter: Optional[dict[str, Any]] = None
+    data_filter: Optional[dict[str, Any]] = None
 
     def __post_init__(self):
-        self.filter = {}
+        self._filter = {}
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
         self._check_new_parameters(parameters)
@@ -25,7 +25,7 @@ class ModelParameters:
         self.name = parameters['name']
         self.type = parameters['type']
 
-        self.filter = parameters.get('filter') or {}
+        self.data_filter = parameters.get('filter')
 
     def _check_new_parameters(self, parameters: dict[str, Any], checking_names:Optional[list] = None) -> None:
 
@@ -37,11 +37,14 @@ class ModelParameters:
         if not parameters.get('name'):
             ModelException('Parameter(s) {} not found in model parameters'.format(', '.join("{}".format(error_names))))
 
+    def get_data_filter_for_db(self) -> dict[str, Any]:
+        return self.data_filter
+
     def get_all(self) -> dict[str, Any]:
         parameters = {
             'name': self.name,
             'type': self.type,
-            'filter': self.filter
+            'filter': self.data_filter
         }
 
         return parameters
