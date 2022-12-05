@@ -299,7 +299,7 @@ def process(environ: Optional[dict[str, any]] = None,
 
     output = PROCESSOR.process(environ, start_response)
 
-    print(output)
+    # print(output)
     return output
 
 
