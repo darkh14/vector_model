@@ -59,7 +59,7 @@ class Model:
 
     def get_info(self) -> dict[str, Any]:
 
-        model_info = {'id': self._id}
+        model_info = {'id': self._id, 'initialized': self._initialized}
 
         model_info.update(self.parameters.get_all())
         model_info.update(self.fitting_parameters.get_all())
