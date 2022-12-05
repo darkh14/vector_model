@@ -89,6 +89,8 @@ def drop(parameters: dict[str, Any]) -> str:
 
     result = model.drop()
 
+    del model
+
     return result
 
 
@@ -122,5 +124,8 @@ def _get_model(input_model: dict[str, Any], db_path: str) -> base_model.Model:
     else:
         model = get_model_class()(input_model['id'], db_path)
         MODELS.append(model)
+
+    print(model.id)
+    print([el.id for el in MODELS])
 
     return model
