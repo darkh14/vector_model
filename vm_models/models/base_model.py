@@ -49,10 +49,10 @@ class Model:
         return self.get_info()
 
     def drop(self) -> str:
-        print('initialized 2 {}'.format(self._initialized))
+
         if not self._initialized:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
-        print('initialized 3 {}'.format(self._initialized))
+
         self._db_connector.delete_lines('models', {'id': self._id})
 
         return 'model id {} is dropped'.format(self._id)
@@ -106,15 +106,12 @@ class Model:
 
     def _read_from_db(self):
         model_from_db = self._db_connector.get_line('models', {'id': self._id})
-        print('read from db ')
-        print(model_from_db)
+
         if model_from_db:
             self.parameters.set_all(model_from_db, without_processing=True)
             self.fitting_parameters.set_all(model_from_db, without_processing=True)
 
             self._initialized = True
-
-        print('initialized {}'.format(self._initialized))
 
     @property
     def id(self) -> str:
