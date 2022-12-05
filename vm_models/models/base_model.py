@@ -49,9 +49,10 @@ class Model:
         return self.get_info()
 
     def drop(self) -> str:
+        print('initialized 2 {}'.format(self._initialized))
         if not self._initialized:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
-
+        print('initialized 3 {}'.format(self._initialized))
         self._db_connector.delete_lines('models', {'id': self._id})
 
         return 'model id {} is dropped'.format(self._id)
