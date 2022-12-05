@@ -10,7 +10,7 @@
         PROCESSOR - saving instance of Processor class (cache)
 
     """
-
+import datetime
 import traceback
 import json
 import os.path
@@ -115,7 +115,9 @@ class Processor(ABC):
         if not method:
             raise RequestProcessException('Request type "{}" is not supported'.format(request_type))
 
+        print('request type "{}" start {}'.format(request_type, datetime.datetime.now()))
         result = method(parameters)
+        print('request type "{}" end {}'.format(request_type, datetime.datetime.now()))
 
         return {'status': 'OK', 'error': '', 'result': result}
 

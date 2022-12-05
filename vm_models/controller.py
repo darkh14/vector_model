@@ -80,15 +80,12 @@ def drop(parameters: dict[str, Any]) -> str:
 
     index = -1
     for c_index, c_model in enumerate(MODELS):
-        print('{} ----- {}'.format(c_model.id, model.id))
         if c_model.id == model.id:
             index = c_index
             break
 
     if index != -1:
-        print('drop from MODELS')
         MODELS.pop(index)
-        print(MODELS)
 
     result = model.drop()
 
