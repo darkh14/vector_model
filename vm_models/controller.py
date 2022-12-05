@@ -88,6 +88,7 @@ def drop(parameters: dict[str, Any]) -> str:
     if index != -1:
         print('drop from MODELS')
         MODELS.pop(index)
+        print(MODELS)
 
     result = model.drop()
 
