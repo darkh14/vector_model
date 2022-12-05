@@ -18,7 +18,7 @@ from vm_logging.exceptions import ModelException, ParameterNotFoundException
 MODELS: list[base_model.Model] = list()
 
 
-__all__ = ['fit', 'predict', 'initialize', 'drop', 'update', 'get_info', 'drop_fitting', 'get_additional_actions']
+__all__ = ['fit', 'predict', 'initialize', 'drop', 'get_info', 'drop_fitting', 'get_additional_actions']
 
 
 def _check_input_parameters(func: Callable):

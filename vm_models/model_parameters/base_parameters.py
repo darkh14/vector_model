@@ -58,8 +58,8 @@ class FittingParameters:
     is_fit: bool = False
     fitting_is_started: bool = False
     fitting_is_error: bool = False
-    fitting_date: Optional[datetime] = False
-    fitting_start_date: Optional[datetime] = False
+    fitting_date: Optional[datetime] = None
+    fitting_start_date: Optional[datetime] = None
 
     fitting_job_id: str = ''
     fitting_job_pid: int = 0
