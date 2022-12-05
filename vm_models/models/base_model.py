@@ -113,6 +113,8 @@ class Model:
 
             self._initialized = True
 
+        print('initialized {}'.format(self._initialized))
+
     @property
     def id(self) -> str:
         return self._id
