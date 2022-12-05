@@ -105,7 +105,8 @@ class Model:
 
     def _read_from_db(self):
         model_from_db = self._db_connector.get_line('models', {'id': self._id})
-
+        print('read from db')
+        print(model_from_db)
         if model_from_db:
             self.parameters.set_all(model_from_db, without_processing=True)
             self.fitting_parameters.set_all(model_from_db, without_processing=True)
