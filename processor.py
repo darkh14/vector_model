@@ -67,6 +67,8 @@ class Processor(ABC):
             start_response = self.t_start_response
 
         request_parameters = self._get_request_parameters_from_environ(environ)
+
+        print('request type "{}" start {}'.format(request_parameters.get('request_type'), datetime.datetime.now()))
         if TEST_MODE:
             output_dict = self._process_with_parameters(request_parameters)
         else:
@@ -83,7 +85,7 @@ class Processor(ABC):
         output_len = len(output_list[0])
 
         start_response('200 OK', [('Content-type', 'text/html'), ('Content-Length', str(output_len))])
-
+        print('request type "{}" end {}'.format(request_parameters.get('request_type'), datetime.datetime.now()))
         return output_list
 
     @staticmethod
@@ -115,9 +117,7 @@ class Processor(ABC):
         if not method:
             raise RequestProcessException('Request type "{}" is not supported'.format(request_type))
 
-        print('request type "{}" start {}'.format(request_type, datetime.datetime.now()))
         result = method(parameters)
-        print('request type "{}" end {}'.format(request_type, datetime.datetime.now()))
 
         return {'status': 'OK', 'error': '', 'result': result}
 
