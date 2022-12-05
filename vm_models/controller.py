@@ -121,8 +121,10 @@ def _get_model(input_model: dict[str, Any], db_path: str) -> base_model.Model:
 
     if models:
         model = models[0]
+        print('from MODELS')
     else:
         model = get_model_class()(input_model['id'], db_path)
         MODELS.append(model)
+        print('New')
 
     return model

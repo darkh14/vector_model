@@ -52,6 +52,7 @@ class Model:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
 
         self._db_connector.delete_lines('models', {'id': self._id})
+        # self._initialized = False
 
         return 'model id {} is dropped'.format(self._id)
 

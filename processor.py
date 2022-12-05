@@ -10,7 +10,7 @@
         PROCESSOR - saving instance of Processor class (cache)
 
     """
-import datetime
+
 import traceback
 import json
 import os.path
@@ -68,7 +68,6 @@ class Processor(ABC):
 
         request_parameters = self._get_request_parameters_from_environ(environ)
 
-        print('request type "{}" start {}'.format(request_parameters.get('request_type'), datetime.datetime.now()))
         if TEST_MODE:
             output_dict = self._process_with_parameters(request_parameters)
         else:
@@ -85,7 +84,6 @@ class Processor(ABC):
         output_len = len(output_list[0])
 
         start_response('200 OK', [('Content-type', 'text/html'), ('Content-Length', str(output_len))])
-        print('request type "{}" end {}'.format(request_parameters.get('request_type'), datetime.datetime.now()))
         return output_list
 
     @staticmethod
@@ -299,7 +297,7 @@ def process(environ: Optional[dict[str, any]] = None,
 
     output = PROCESSOR.process(environ, start_response)
 
-    # print(output)
+    print(output)
     return output
 
 
