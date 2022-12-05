@@ -35,7 +35,6 @@ class Model:
         self._read_from_db()
 
     def initialize(self, model_parameters: dict[str, Any]) -> dict[str, Any]:
-        print('initialize - {}'.format(datetime.now()))
         if self._initialized:
             raise ModelException('Model "{}" id - "{}" is always initialized'.format(self.parameters.name, self._id))
 
@@ -49,7 +48,6 @@ class Model:
         return self.get_info()
 
     def drop(self) -> str:
-        print('drop - {}'.format(datetime.now()))
         if not self._initialized:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
 
@@ -58,7 +56,6 @@ class Model:
         return 'model id {} is dropped'.format(self._id)
 
     def get_info(self) -> dict[str, Any]:
-        print('get_info - {}'.format(datetime.now()))
         model_info = {'id': self._id, 'initialized': self._initialized}
 
         model_info.update(self.parameters.get_all())

@@ -78,6 +78,15 @@ def drop(parameters: dict[str, Any]) -> str:
 
     model = _get_model(parameters['model'], parameters['db'])
 
+    index = -1
+    for c_index, c_model in enumerate(MODELS):
+        if c_model.id == model.id:
+            index = c_index
+            break
+
+    if index != -1:
+        MODELS.pop(index)
+
     result = model.drop()
 
     return result
