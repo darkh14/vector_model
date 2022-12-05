@@ -123,7 +123,7 @@ def _get_model(input_model: dict[str, Any], db_path: str) -> base_model.Model:
         model = models[0]
     else:
         model = get_model_class()(input_model['id'], db_path)
-        MODELS.append(model)
+        # MODELS.append(model)
 
     print(model.id)
     print([el.id for el in MODELS])
