@@ -15,8 +15,6 @@ from vm_models.models import base_model, get_model_class
 from vm_models.models import get_additional_actions as model_get_actions
 from vm_logging.exceptions import ModelException, ParameterNotFoundException
 
-MODELS: list[base_model.Model] = list()
-
 
 __all__ = ['fit', 'predict', 'initialize', 'drop', 'get_info', 'drop_fitting', 'get_additional_actions']
 
@@ -54,7 +52,6 @@ def predict(parameters: dict[str, Any]) -> dict[str, Any]:
 @_check_input_parameters
 def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For initializing new model """
-    print('initialize')
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
@@ -62,11 +59,8 @@ def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
         raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
     model = _get_model(parameters['model'], parameters['db'])
-    print('-- INITIALIZE start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
+
     result = model.initialize(parameters['model'])
-    print('MODELS - append - 1')
-    MODELS.append(model)
-    print('-- INITIALIZE end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
 
     return result
 
@@ -74,7 +68,7 @@ def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
 @_check_input_parameters
 def drop(parameters: dict[str, Any]) -> str:
     """ For deleting model from db """
-    print('drop')
+
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
@@ -82,16 +76,8 @@ def drop(parameters: dict[str, Any]) -> str:
         raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
     model = _get_model(parameters['model'], parameters['db'])
-    print('-- DROP start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
 
-    try:
-        result = model.drop()
-        _drop_model_from_cache(model)
-    except Exception as ex:
-        _drop_model_from_cache(model)
-        raise ex
-
-    print('-- DROP end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
+    result = model.drop()
 
     return result
 
@@ -99,12 +85,10 @@ def drop(parameters: dict[str, Any]) -> str:
 @_check_input_parameters
 def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For getting model info """
-    print('get_info')
+
     model = _get_model(parameters['model'], parameters['db'])
 
-    print('-- GET_INFO start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
     result = model.get_info()
-    print('-- GET_INFO end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
 
     return result
 
@@ -122,26 +106,6 @@ def _get_model(input_model: dict[str, Any], db_path: str) -> base_model.Model:
     if not input_model.get('id'):
         raise ModelException('Parameter "id" is not found in model parameters')
 
-    models = [c_model for c_model in MODELS if c_model.id == input_model['id']]
-
-    if models:
-        model = models[0]
-    else:
-        model = get_model_class()(input_model['id'], db_path)
-        if model.initialized:
-            print('MODELS - append - 2')
-            MODELS.append(model)
+    model = get_model_class()(input_model['id'], db_path)
 
     return model
-
-
-def _drop_model_from_cache(model: base_model.Model) -> None:
-    index = -1
-    for c_index, c_model in enumerate(MODELS):
-        if c_model.id == model.id:
-            index = c_index
-            break
-
-    if index != -1:
-        print('MODELS - pop')
-        MODELS.pop(index)

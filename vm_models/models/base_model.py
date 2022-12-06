@@ -110,6 +110,15 @@ class Model:
             self.fitting_parameters.set_all(model_from_db, without_processing=True)
 
             self._initialized = True
+        else:
+            self._initialized = False
+
+            self.parameters: base_parameters.ModelParameters = get_model_parameters_class()()
+            self.fitting_parameters: base_parameters.FittingParameters = get_model_parameters_class(fitting=True)()
+
+            self._scaler = get_transformer_class(DataTransformersTypes.SCALER)(self.parameters, self.fitting_parameters,
+                                                                               self._db_path)
+            self._engine = None
 
     @property
     def id(self) -> str:
