@@ -63,7 +63,8 @@ class VbmModelParameters(ModelParameters):
 
         for name, value in self.data_filter.items():
             if name in ['organisation', 'scenario']:
-                data_filter[name + '_id'] = value['id']
+                new_value = [el['id'] for el in value]
+                data_filter[name + '_id'] = new_value
             else:
                 data_filter[name] = value
 
