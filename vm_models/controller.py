@@ -62,10 +62,11 @@ def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
         raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
     model = _get_model(parameters['model'], parameters['db'])
-
+    print('-- start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
     result = model.initialize(parameters['model'])
     print('MODELS - append - 1')
     MODELS.append(model)
+    print('-- end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
 
     return result
 
@@ -81,7 +82,7 @@ def drop(parameters: dict[str, Any]) -> str:
         raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
     model = _get_model(parameters['model'], parameters['db'])
-
+    print('-- start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
     index = -1
     for c_index, c_model in enumerate(MODELS):
         if c_model.id == model.id:
@@ -95,6 +96,7 @@ def drop(parameters: dict[str, Any]) -> str:
     result = model.drop()
 
     del model
+    print('-- end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
 
     return result
 
