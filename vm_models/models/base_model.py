@@ -115,6 +115,9 @@ class Model:
     def id(self) -> str:
         return self._id
 
+    @property
+    def initialized(self) -> bool:
+        return self._initialized
 
 def get_additional_actions() -> dict[str, Callable]:
     return {}

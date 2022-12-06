@@ -64,6 +64,8 @@ def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
 
     result = model.initialize(parameters['model'])
 
+    MODELS.append(model)
+
     return result
 
 
@@ -101,6 +103,9 @@ def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
 
     result = model.get_info()
 
+    if not result['initialized']:
+        pass
+
     return result
 
 
@@ -121,10 +126,9 @@ def _get_model(input_model: dict[str, Any], db_path: str) -> base_model.Model:
 
     if models:
         model = models[0]
-        print('from MODELS')
     else:
         model = get_model_class()(input_model['id'], db_path)
-        MODELS.append(model)
-        print('New')
+        if model.initialized:
+            MODELS.append(model)
 
     return model
