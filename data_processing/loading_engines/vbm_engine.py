@@ -69,6 +69,14 @@ class VbmEngine(BaseEngine):
 
         pd_data['period_date'] = pd_data['period'].apply(lambda x: datetime.strptime(x, '%d.%m.%Y'))
 
+        pd_data['organisation_id'] = pd_data['organisation'].apply(lambda x: x['id'])
+        pd_data['organisation_name'] = pd_data['organisation'].apply(lambda x: x['name'])
+
+        pd_data['scenario_id'] = pd_data['scenario'].apply(lambda x: x['id'])
+        pd_data['scenario_name'] = pd_data['scenario'].apply(lambda x: x['name'])
+
+        pd_data['indicator_name'] = pd_data['indicator'].apply(lambda x: x['name'])
+
         pd_data['indicator'] = pd_data[['indicator', 'indicator_short_id']].apply(
             self._add_short_id_to_indicator, axis=1)
 
