@@ -62,11 +62,11 @@ def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
         raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
     model = _get_model(parameters['model'], parameters['db'])
-    print('-- start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
+    print('-- INITIALIZE start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
     result = model.initialize(parameters['model'])
     print('MODELS - append - 1')
     MODELS.append(model)
-    print('-- end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
+    print('-- INITIALIZE end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
 
     return result
 
@@ -82,21 +82,16 @@ def drop(parameters: dict[str, Any]) -> str:
         raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
     model = _get_model(parameters['model'], parameters['db'])
-    print('-- start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
-    index = -1
-    for c_index, c_model in enumerate(MODELS):
-        if c_model.id == model.id:
-            index = c_index
-            break
+    print('-- DROP start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
 
-    if index != -1:
-        print('MODELS - pop')
-        MODELS.pop(index)
+    try:
+        result = model.drop()
+        _drop_model_from_cache(model)
+    except Exception as ex:
+        _drop_model_from_cache(model)
+        raise ex
 
-    result = model.drop()
-
-    del model
-    print('-- end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
+    print('-- DROP end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
 
     return result
 
@@ -138,3 +133,15 @@ def _get_model(input_model: dict[str, Any], db_path: str) -> base_model.Model:
             MODELS.append(model)
 
     return model
+
+
+def _drop_model_from_cache(model: base_model.Model) -> None:
+    index = -1
+    for c_index, c_model in enumerate(MODELS):
+        if c_model.id == model.id:
+            index = c_index
+            break
+
+    if index != -1:
+        print('MODELS - pop')
+        MODELS.pop(index)
