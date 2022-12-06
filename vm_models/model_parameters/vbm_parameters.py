@@ -59,9 +59,17 @@ class VbmModelParameters(ModelParameters):
 
     def get_data_filter_for_db(self) -> dict[str, Any]:
 
-        filter_list = []
+        data_filter = {}
 
         for name, value in self.data_filter.items():
+            if name in ['organisation', 'scenario']:
+                data_filter[name + '_id'] = value['id']
+            else:
+                data_filter[name] = value
+
+        filter_list = []
+
+        for name, value in data_filter:
             if name == 'date_from':
                 filter_el = {'period_date': {'$gte': datetime.strptime(value, '%d.%m.%Y')}}
             elif name == 'date_to':
