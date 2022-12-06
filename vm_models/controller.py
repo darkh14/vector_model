@@ -54,6 +54,7 @@ def predict(parameters: dict[str, Any]) -> dict[str, Any]:
 @_check_input_parameters
 def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For initializing new model """
+    print('initialize')
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
@@ -72,6 +73,7 @@ def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
 @_check_input_parameters
 def drop(parameters: dict[str, Any]) -> str:
     """ For deleting model from db """
+    print('drop')
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
@@ -100,6 +102,7 @@ def drop(parameters: dict[str, Any]) -> str:
 @_check_input_parameters
 def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For getting model info """
+    print('get_info')
     model = _get_model(parameters['model'], parameters['db'])
 
     print('-- start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
