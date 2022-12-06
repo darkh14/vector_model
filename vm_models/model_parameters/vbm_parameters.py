@@ -23,6 +23,11 @@ class VbmModelParameters(ModelParameters):
     def __init__(self):
         super().__init__()
 
+    def __post_init__(self):
+        super().__post_init__()
+        self._x_indicators = []
+        self._y_indicators = []
+
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
 
         super().set_all(parameters)
@@ -34,7 +39,7 @@ class VbmModelParameters(ModelParameters):
         self_parameters = [el[1:] if el.startswith('_') else el for el in self_fields]
 
         for count, par_name in enumerate(self_parameters):
-            name = self_fields[0] if without_processing else par_name
+            name = self_fields[count] if without_processing else par_name
             if par_name in parameters:
                 setattr(self, name, parameters[par_name])
 
@@ -51,7 +56,7 @@ class VbmModelParameters(ModelParameters):
 
         return result
 
-    def _check_new_parameters(self, parameters: dict[str, Any], checking_names:Optional[list] = None) -> None:
+    def _check_new_parameters(self, parameters: dict[str, Any], checking_names: Optional[list] = None) -> None:
 
         super()._check_new_parameters(parameters, checking_names)
         if not checking_names:
@@ -70,7 +75,7 @@ class VbmModelParameters(ModelParameters):
 
         filter_list = []
 
-        for name, value in data_filter:
+        for name, value in data_filter.items():
             if name == 'date_from':
                 filter_el = {'period_date': {'$gte': datetime.strptime(value, '%d.%m.%Y')}}
             elif name == 'date_to':
@@ -148,7 +153,7 @@ class VbmFittingParameters(FittingParameters):
         self_parameters = [el[1:] if el.startswith('_') else el for el in self_fields]
 
         for count, par_name in enumerate(self_parameters):
-            name = self_fields[0] if without_processing else par_name
+            name = self_fields[count] if without_processing else par_name
             if par_name in parameters:
                 setattr(self, name, parameters[par_name])
 

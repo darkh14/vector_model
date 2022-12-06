@@ -12,6 +12,7 @@ from vm_settings import get_var
 from ..model_types import DataTransformersTypes
 from .base_transformer import BaseTransformer
 from vm_logging.exceptions import ModelException
+from . import vbm_transformer
 
 SERVICE_NAME: str = ''
 
@@ -27,14 +28,17 @@ def get_transformer_class(transformer_type: DataTransformersTypes) -> Type[BaseT
         SERVICE_NAME = get_var('SERVICE_NAME')
 
     transformer_classes = [cls for cls in BaseTransformer.__subclasses__()
+                           if cls.service_name == '' and cls.transformer_type == transformer_type]
+
+    if not transformer_classes:
+        raise ModelException('Can not find right transformer class with type "{}" '.format(transformer_type.value))
+
+    transformer_class = transformer_classes[0]
+
+    transformer_classes = [cls for cls in transformer_class.__subclasses__()
                       if cls.service_name == SERVICE_NAME and cls.transformer_type == transformer_type]
 
-    if not transformer_classes:
-        transformer_classes = [cls for cls in BaseTransformer.__subclasses__()
-                               if cls.service_name == '' and cls.transformer_type == transformer_type]
+    if transformer_classes:
+        transformer_class = transformer_classes[0]
 
-    if not transformer_classes:
-        raise ModelException('Can not find right transformer class with type "{}" '.format(transformer_type.value) +
-                             'for service name "{}"'.format(SERVICE_NAME))
-
-    return transformer_classes[0]
+    return transformer_class
