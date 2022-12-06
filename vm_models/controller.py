@@ -63,7 +63,7 @@ def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
     model = _get_model(parameters['model'], parameters['db'])
 
     result = model.initialize(parameters['model'])
-
+    print('MODELS - append')
     MODELS.append(model)
 
     return result
@@ -87,6 +87,7 @@ def drop(parameters: dict[str, Any]) -> str:
             break
 
     if index != -1:
+        print('MODELS - pop')
         MODELS.pop(index)
 
     result = model.drop()
@@ -128,6 +129,7 @@ def _get_model(input_model: dict[str, Any], db_path: str) -> base_model.Model:
     else:
         model = get_model_class()(input_model['id'], db_path)
         if model.initialized:
+            print('MODELS - append')
             MODELS.append(model)
 
     return model
