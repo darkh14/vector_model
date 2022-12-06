@@ -102,9 +102,9 @@ def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
     print('get_info')
     model = _get_model(parameters['model'], parameters['db'])
 
-    print('-- start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
+    print('-- GET_INFO start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
     result = model.get_info()
-    print('-- end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
+    print('-- GET_INFO end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
 
     return result
 
