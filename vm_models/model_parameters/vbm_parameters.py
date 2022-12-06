@@ -20,6 +20,9 @@ class VbmModelParameters(ModelParameters):
     rsme: int = 0
     mspe: int = 0
 
+    def __init__(self):
+        super().__init__()
+
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
 
         super().set_all(parameters)
@@ -107,10 +110,6 @@ class VbmModelParameters(ModelParameters):
 
         self._y_indicators = y_indicators
 
-    @property
-    def filter(self):
-        return self.filter
-
 
 @dataclass
 class VbmFittingParameters(FittingParameters):
@@ -122,9 +121,6 @@ class VbmFittingParameters(FittingParameters):
     _x_analytic_keys: Optional[list[dict[str, Any]]] = None
     _y_analytic_keys: Optional[list[dict[str, Any]]] = None
 
-    x_columns: Optional[list[str]] = None
-    y_columns: Optional[list[str]] = None
-
     def __post_init__(self):
 
         super().__post_init__()
@@ -134,9 +130,6 @@ class VbmFittingParameters(FittingParameters):
 
         self._x_analytic_keys = []
         self._y_analytic_keys = []
-
-        self.x_columns = []
-        self.y_columns = []
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
         super().set_all(parameters)

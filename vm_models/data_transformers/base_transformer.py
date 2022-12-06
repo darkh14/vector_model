@@ -14,7 +14,13 @@ from ..model_types import DataTransformersTypes
 
 BaseTransformerClass = TypeVar('BaseTransformerClass', bound='BaseTransformer')
 
-__all__ = ['BaseTransformer', 'Reader', 'Checker', 'RowColumnTransformer', 'Scaler']
+__all__ = ['BaseTransformer',
+           'Reader',
+           'Checker',
+           'RowColumnTransformer',
+           'Scaler',
+           'CategoricalEncoder',
+           'NanProcessor']
 
 class BaseTransformer(BaseEstimator, TransformerMixin):
     service_name = ''
@@ -32,6 +38,8 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
         return x
+
+    def initialize(self, transformer_parameters: dict[str, Any]) -> None: ...
 
 
 class Reader(BaseTransformer):

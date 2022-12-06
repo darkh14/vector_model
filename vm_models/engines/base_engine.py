@@ -1,14 +1,11 @@
 
-from typing import Any, Optional
-from sklearn.base import BaseEstimator, TransformerMixin
-import pandas as pd
+from typing import Any
+import numpy as np
 
-from ..model_types import DataTransformersTypes
 from db_processing import get_connector
 
-class BaseEngine(BaseEstimator, TransformerMixin):
+class BaseEngine:
     service_name: str = ''
-    transformer_type: DataTransformersTypes  = DataTransformersTypes.ENGINE
 
     def __init__(self, model_parameters, fitting_parameters, db_path, **kwargs):
         self._model_parameters = model_parameters
@@ -16,8 +13,10 @@ class BaseEngine(BaseEstimator, TransformerMixin):
 
         self._db_connector = get_connector(db_path)
 
-    def fit(self, x: pd.DataFrame,  y: pd.DataFrame)-> dict[str, Any]:
+    def initialize(self, engine_parameters: dict[str, Any]): ...
+
+    def fit(self, x: np.ndarray,  y: np.ndarray)-> dict[str, Any]:
         return {'description': 'Fit OK'}
 
-    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
+    def predict(self, x: np.ndarray) -> np.ndarray:
         return x

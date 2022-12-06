@@ -3,6 +3,9 @@ fitting and predicting
 """
 from datetime import datetime
 from typing import Any, Callable
+
+import numpy as np
+import pandas as pd
 from sklearn.pipeline import Pipeline
 
 from vm_logging.exceptions import ModelException
@@ -10,6 +13,7 @@ from vm_models.model_parameters import base_parameters, get_model_parameters_cla
 from db_processing import get_connector as get_db_connector
 from db_processing.connectors import base_connector
 from ..data_transformers import get_transformer_class
+from ..engines import get_engine_class
 from ..model_types import DataTransformersTypes
 
 __all__ = ['Model']
@@ -28,7 +32,7 @@ class Model:
 
         self._scaler = get_transformer_class(DataTransformersTypes.SCALER)(self.parameters, self.fitting_parameters,
                                                                            self._db_path)
-        self._engine = None
+        self._engine = get_engine_class()(self.parameters, self.fitting_parameters, self._db_path)
 
         self._db_connector: base_connector.Connector = get_db_connector(db_path)
 
@@ -66,10 +70,30 @@ class Model:
 
     def fit(self) -> dict[str, Any]:
 
-        pipeline = self._get_fitting_pipeline()
-        result = pipeline.fit()
+        self._check_before_fitting()
 
-        return {'descr': 'Fit OK'}
+        result = self._fit_model()
+
+        self._write_to_db()
+
+        return {'descr': result}
+
+    def _fit_model(self) -> Any:
+        pipeline = self._get_fitting_pipeline()
+        data = pipeline.fit_transform(None)
+
+        x, y = self._data_to_x_y(data)
+        result = self._engine.fit(x, y)
+
+        return result
+
+    def _data_to_x_y(self, data: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+        return data[self.fitting_parameters.x_columns].to_numpy(), data[self.fitting_parameters.y_columns].to_numpy()
+
+
+    def _check_before_fitting(self):
+        if not self._initialized:
+            raise ModelException('Model id - {} is not initialized'.format(self._id))
 
     def _get_fitting_estimators(self) -> list[tuple[str, Any]]:
 
@@ -89,7 +113,6 @@ class Model:
     def _get_fitting_pipeline(self) -> Pipeline:
 
         estimators = self._get_fitting_estimators()
-        estimators.append(('engine', self._engine))
 
         return Pipeline(estimators)
 

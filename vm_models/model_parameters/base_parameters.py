@@ -17,7 +17,7 @@ class ModelParameters:
     data_filter: Optional[dict[str, Any]] = None
 
     def __post_init__(self):
-        self._filter = {}
+        self.data_filter = {}
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
         self._check_new_parameters(parameters)
@@ -61,12 +61,16 @@ class FittingParameters:
     fitting_date: Optional[datetime] = None
     fitting_start_date: Optional[datetime] = None
 
+    x_columns: Optional[list[str]] = None
+    y_columns: Optional[list[str]] = None
+
     fitting_job_id: str = ''
     fitting_job_pid: int = 0
 
 
     def __post_init__(self):
-        pass
+        self.x_columns = []
+        self.y_columns = []
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
 
@@ -84,7 +88,9 @@ class FittingParameters:
             'fitting_date': self.fitting_date,
             'fitting_start_date': self.fitting_start_date,
             'fitting_job_id': self.fitting_job_id,
-            'fitting_job_pid': self.fitting_job_pid
+            'fitting_job_pid': self.fitting_job_pid,
+            'x_columns': self.x_columns,
+            'y_columns': self.y_columns
         }
 
         return parameters
