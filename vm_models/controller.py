@@ -101,9 +101,9 @@ def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For getting model info """
     model = _get_model(parameters['model'], parameters['db'])
 
-    print('-- start initialized "{}" - in db: {}'.format(model.initialized, model._db_connector.get_count('models')))
+    print('-- start initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
     result = model.get_info()
-    print('-- start initialized "{}" - in db: {}'.format(model.initialized, model._db_connector.get_count('models')))
+    print('-- end initialized "{}" - in db: {}, in MODELS {}'.format(model.initialized, model._db_connector.get_count('models'), len(MODELS)))
 
     return result
 
