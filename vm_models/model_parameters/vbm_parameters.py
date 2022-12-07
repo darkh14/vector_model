@@ -24,6 +24,7 @@ class VbmModelParameters(ModelParameters):
         super().__init__()
 
     def __post_init__(self):
+        super().__post_init__()
         self._x_indicators = []
         self._y_indicators = []
 

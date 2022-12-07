@@ -17,6 +17,9 @@ class ModelParameters:
     type: str = ''
     data_filter: Optional[base_filter.FittingFilter] = None
 
+    def __post_init__(self):
+        self.data_filter = get_fitting_filter_class()({}, for_model=True)
+
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
         self._check_new_parameters(parameters)
 
