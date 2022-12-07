@@ -76,9 +76,9 @@ class FittingParameters:
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
 
-        self.is_fit = parameters['is_fit']
-        self.fitting_is_started = parameters['fitting_is_started']
-        self.fitting_is_error = parameters['fitting_is_error']
+        self.is_fit = parameters.get('is_fit') or False
+        self.fitting_is_started = parameters.get('fitting_is_started') or False
+        self.fitting_is_error = parameters.get('fitting_is_error') or False
 
         self.fitting_date = (datetime.strptime(parameters['fitting_date'], '%d.%m.%Y %H:%M:%S')
                              if parameters.get('fitting_date') else None)
@@ -87,11 +87,11 @@ class FittingParameters:
         self.fitting_error_date = (datetime.strptime(parameters['fitting_error_date'], '%d.%m.%Y %H:%M:%S')
                                    if parameters.get('fitting_error_date') else None)
 
-        self.fitting_job_id = parameters['fitting_job_id']
-        self.fitting_job_pid = parameters['fitting_job_pid']
+        self.fitting_job_id = parameters.get('fitting_job_id') or 0
+        self.fitting_job_pid = parameters.get('fitting_job_pid') or 0
 
-        self.x_columns = parameters['x_columns']
-        self.y_columns = parameters['y_columns']
+        self.x_columns = parameters.get('x_columns') or []
+        self.y_columns = parameters.get('y_columns') or []
 
     def get_all(self) -> dict[str, Any]:
         parameters = {
