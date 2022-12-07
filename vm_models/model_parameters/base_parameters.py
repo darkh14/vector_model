@@ -60,6 +60,7 @@ class FittingParameters:
     fitting_is_error: bool = False
     fitting_date: Optional[datetime] = None
     fitting_start_date: Optional[datetime] = None
+    fitting_error_date: Optional[datetime] = None
 
     x_columns: Optional[list[str]] = None
     y_columns: Optional[list[str]] = None
@@ -95,3 +96,36 @@ class FittingParameters:
 
         return parameters
 
+    def set_start_fitting(self):
+        self.is_fit = False
+        self.fitting_is_started = True
+        self.fitting_is_error = False
+
+        self.fitting_start_date = datetime.utcnow()
+        self.fitting_date = None
+        self.fitting_error_date = None
+
+    def set_end_fitting(self):
+        self.is_fit = True
+        self.fitting_is_started = False
+        self.fitting_is_error = False
+
+        self.fitting_date = datetime.utcnow()
+        self.fitting_error_date = None
+
+    def set_drop_fitting(self):
+        self.is_fit = False
+        self.fitting_is_started = False
+        self.fitting_is_error = False
+
+        self.fitting_start_date = None
+        self.fitting_date = None
+        self.fitting_error_date = None
+
+    def set_error_fitting(self):
+        self.is_fit = False
+        self.fitting_is_started = False
+        self.fitting_is_error = True
+
+        self.fitting_date = None
+        self.fitting_error_date = datetime.utcnow()
