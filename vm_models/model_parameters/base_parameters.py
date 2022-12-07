@@ -73,11 +73,21 @@ class FittingParameters:
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
 
-        par_fields = [el.name for el in fields(self) if el.name not in ['service_name']]
+        self.is_fit = parameters['is_fit']
+        self.fitting_is_started = parameters['fitting_is_started']
+        self.fitting_is_error = parameters['fitting_is_error']
 
-        for field_name in par_fields:
-            if field_name in parameters:
-                setattr(self, field_name, parameters[field_name])
+        self.fitting_date = datetime.strptime(parameters['fitting_date']) if parameters.get('fitting_date') else None
+        self.fitting_start_date = (datetime.strptime(parameters['fitting_start_date'])
+                                   if parameters.get('fitting_start_date') else None)
+        self.fitting_error_date = (datetime.strptime(parameters['fitting_error_date'])
+                                   if parameters.get('fitting_error_date') else None)
+
+        self.fitting_job_id = parameters['fitting_job_id']
+        self.fitting_job_pid = parameters['fitting_job_pid']
+
+        self.x_columns = parameters['x_columns']
+        self.y_columns = parameters['y_columns']
 
     def get_all(self) -> dict[str, Any]:
         parameters = {
