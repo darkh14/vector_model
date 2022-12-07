@@ -12,7 +12,7 @@ from vm_logging.exceptions import ModelException
 from vm_models.model_parameters import base_parameters, get_model_parameters_class
 from db_processing import get_connector as get_db_connector
 from db_processing.connectors import base_connector
-from ..data_transformers import get_transformer_class
+from ..data_transformers import get_transformer_class, base_transformer
 from ..engines import get_engine_class
 from ..model_types import DataTransformersTypes
 
@@ -76,7 +76,7 @@ class Model:
         self._write_to_db()
 
         try:
-            result = self._fit_model(fitting_parameters['epochs'], fitting_parameters.get('filter'), fitting_parameters)
+            result = self._fit_model(fitting_parameters['epochs'], fitting_parameters)
         except Exception as ex:
             self.fitting_parameters.set_error_fitting()
             self._write_to_db()
@@ -95,9 +95,8 @@ class Model:
 
         return 'Model "{}" id "{}" fitting is dropped'.format(self.parameters.name, self.id)
 
-    def _fit_model(self, epochs: int, fitting_filter: Optional[dict[str, Any]],
-                   fitting_parameters: Optional[dict[str, Any]] = None) -> Any:
-        pipeline = self._get_fitting_pipeline(fitting_filter)
+    def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None) -> Any:
+        pipeline = self._get_fitting_pipeline(fitting_parameters)
         data = pipeline.fit_transform(None)
 
         x, y = self._data_to_x_y(data)
@@ -118,32 +117,39 @@ class Model:
         if self.fitting_parameters.fitting_is_started:
             raise ModelException('Another fitting is started yet. Wait for end of fitting')
 
-    def _get_fitting_estimators(self, fitting_filter: Optional[dict[str, Any]] = None,
-                              fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
+    def _get_fitting_estimators(self, fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
 
         estimator_types_list = [
                                 DataTransformersTypes.READER,
                                 DataTransformersTypes.CHECKER,
                                 DataTransformersTypes.ROW_COLUMN_TRANSFORMER,
                                 DataTransformersTypes.CATEGORICAL_ENCODER,
-                                DataTransformersTypes.NAN_PROCESSOR
+                                DataTransformersTypes.NAN_PROCESSOR,
+                                DataTransformersTypes.SCALER
         ]
 
         estimators = []
         for estimator_type in estimator_types_list:
-            estimator_class = get_transformer_class(estimator_type)
-            estimator = estimator_class(self.parameters, self.fitting_parameters,self._db_path)
-
+            estimator = self._get_estimator(estimator_type, fitting_parameters)
             estimators.append((estimator_type.value, estimator))
-
-        estimators.append(('scaler', self._scaler))
 
         return estimators
 
-    def _get_fitting_pipeline(self, fitting_filter: Optional[dict[str, Any]] = None,
-                              fitting_parameters: Optional[dict[str, Any]] = None) -> Pipeline:
+    def _get_estimator(self, transformer_type: DataTransformersTypes,
+                             fitting_parameters: Optional[dict[str, Any]] = None) -> base_transformer.BaseTransformer:
 
-        estimators = self._get_fitting_estimators(fitting_filter, fitting_parameters)
+        if transformer_type != DataTransformersTypes.SCALER:
+            estimator_class = get_transformer_class(transformer_type)
+            estimator = estimator_class(self.parameters, self.fitting_parameters, self._db_path)
+            estimator.set_additional_parameters(fitting_parameters)
+        else:
+            estimator = self._scaler
+
+        return estimator
+
+    def _get_fitting_pipeline(self, fitting_parameters: Optional[dict[str, Any]] = None) -> Pipeline:
+
+        estimators = self._get_fitting_estimators(fitting_parameters)
 
         return Pipeline(estimators)
 
