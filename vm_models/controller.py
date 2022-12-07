@@ -93,9 +93,13 @@ def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def drop_fitting(parameters: dict[str, Any]) -> dict[str, Any]:
+def drop_fitting(parameters: dict[str, Any]) -> str:
     """ For deleting fit data from model """
-    pass
+    model = _get_model(parameters['model'], parameters['db'])
+
+    result = model.drop_fitting()
+
+    return result
 
 
 def get_additional_actions() -> dict[str|Callable]:

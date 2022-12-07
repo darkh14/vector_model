@@ -106,6 +106,10 @@ class FittingParameters:
         self.fitting_error_date = None
 
     def set_end_fitting(self):
+
+        if not self.fitting_is_started:
+            raise ModelException('Can not finish fitting. Fitting is not started. Start fitting before')
+
         self.is_fit = True
         self.fitting_is_started = False
         self.fitting_is_error = False
@@ -114,6 +118,10 @@ class FittingParameters:
         self.fitting_error_date = None
 
     def set_drop_fitting(self):
+
+        if not self.is_fit:
+            raise ModelException('Can not drop fitting. Model is not fit')
+
         self.is_fit = False
         self.fitting_is_started = False
         self.fitting_is_error = False
@@ -123,6 +131,7 @@ class FittingParameters:
         self.fitting_error_date = None
 
     def set_error_fitting(self):
+
         self.is_fit = False
         self.fitting_is_started = False
         self.fitting_is_error = True

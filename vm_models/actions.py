@@ -59,6 +59,6 @@ def _get_info(parameters: dict[str, Any]) -> dict[str, Any]:
     return controller.get_info(parameters)
 
 
-def _drop_fitting(parameters: dict[str, Any]) -> dict[str, Any]:
+def _drop_fitting(parameters: dict[str, Any]) -> str:
     """ For deleting fit data from model """
-    pass
+    return controller.drop_fitting(parameters)
