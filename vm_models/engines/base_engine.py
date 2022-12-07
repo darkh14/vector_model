@@ -1,5 +1,5 @@
 
-from typing import Any
+from typing import Any, Optional
 import numpy as np
 
 from db_processing import get_connector
@@ -15,7 +15,8 @@ class BaseEngine:
 
     def initialize(self, engine_parameters: dict[str, Any]): ...
 
-    def fit(self, x: np.ndarray,  y: np.ndarray)-> dict[str, Any]:
+    def fit(self, x: np.ndarray,  y: np.ndarray, epochs: int,
+            parameters: Optional[dict[str, Any]] = None)-> dict[str, Any]:
         return {'description': 'Fit OK'}
 
     def predict(self, x: np.ndarray) -> np.ndarray:

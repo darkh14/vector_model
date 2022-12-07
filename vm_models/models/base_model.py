@@ -1,8 +1,8 @@
 """ Contains model class, that provides working with models including
 fitting and predicting
 """
-from datetime import datetime
-from typing import Any, Callable
+
+from typing import Any, Callable,Optional
 
 import numpy as np
 import pandas as pd
@@ -68,15 +68,15 @@ class Model:
 
         return model_info
 
-    def fit(self) -> dict[str, Any]:
+    def fit(self, fitting_parameters: dict[str, Any]) -> dict[str, Any]:
 
-        self._check_before_fitting()
+        self._check_before_fitting(fitting_parameters)
 
         self.fitting_parameters.set_start_fitting()
         self._write_to_db()
 
         try:
-            result = self._fit_model()
+            result = self._fit_model(fitting_parameters['epochs'], fitting_parameters['filter'])
         except Exception as ex:
             self.fitting_parameters.set_error_fitting()
             raise ex
@@ -92,40 +92,52 @@ class Model:
 
         return 'Model "{}" id "{}" fitting is dropped'.format(self.parameters.name, self.id)
 
-    def _fit_model(self) -> Any:
-        pipeline = self._get_fitting_pipeline()
+    def _fit_model(self, epochs: int, fitting_filter: Optional[dict[str, Any]],
+                   fitting_parameters: Optional[dict[str, Any]]) -> Any:
+        pipeline = self._get_fitting_pipeline(fitting_filter)
         data = pipeline.fit_transform(None)
 
         x, y = self._data_to_x_y(data)
-        result = self._engine.fit(x, y)
+        result = self._engine.fit(x, y, epochs, fitting_parameters)
 
         return result
 
     def _data_to_x_y(self, data: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
         return data[self.fitting_parameters.x_columns].to_numpy(), data[self.fitting_parameters.y_columns].to_numpy()
 
-    def _check_before_fitting(self):
+    def _check_before_fitting(self, fitting_parameters: dict[str, Any]):
         if not self._initialized:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
 
-    def _get_fitting_estimators(self) -> list[tuple[str, Any]]:
+        if 'epochs' not in fitting_parameters:
+            raise ModelException('Parameter "epochs" not found in fitting parameters')
 
-        estimator_types_list = [DataTransformersTypes.READER,
+    def _get_fitting_estimators(self, fitting_filter: Optional[dict[str, Any]] = None,
+                              fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
+
+        estimator_types_list = [
+                                DataTransformersTypes.READER,
                                 DataTransformersTypes.CHECKER,
                                 DataTransformersTypes.ROW_COLUMN_TRANSFORMER,
                                 DataTransformersTypes.CATEGORICAL_ENCODER,
-                                DataTransformersTypes.NAN_PROCESSOR]
+                                DataTransformersTypes.NAN_PROCESSOR
+        ]
 
-        estimators = [(el.value, get_transformer_class(el)(self.parameters, self.fitting_parameters,self._db_path))
-                      for el in estimator_types_list]
+        estimators = []
+        for estimator_type in estimator_types_list:
+            estimator_class = get_transformer_class(estimator_type)
+            estimator = estimator_class(self.parameters, self.fitting_parameters,self._db_path)
+
+            estimators.append((estimator_type.value, estimator))
 
         estimators.append(('scaler', self._scaler))
 
         return estimators
 
-    def _get_fitting_pipeline(self) -> Pipeline:
+    def _get_fitting_pipeline(self, fitting_filter: Optional[dict[str, Any]] = None,
+                              fitting_parameters: Optional[dict[str, Any]] = None) -> Pipeline:
 
-        estimators = self._get_fitting_estimators()
+        estimators = self._get_fitting_estimators(fitting_filter, fitting_parameters)
 
         return Pipeline(estimators)
 

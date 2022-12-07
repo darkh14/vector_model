@@ -39,7 +39,10 @@ def fit(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For fitting model """
     model = _get_model(parameters['model'], parameters['db'])
 
-    result = model.fit()
+    if 'fitting_parameters' not in parameters['model']:
+        raise ModelException('Can not find fitting parameters in model parameters')
+
+    result = model.fit(parameters['model']['fitting_parameters'])
 
     return result
 
