@@ -77,10 +77,11 @@ class FittingParameters:
         self.fitting_is_started = parameters['fitting_is_started']
         self.fitting_is_error = parameters['fitting_is_error']
 
-        self.fitting_date = datetime.strptime(parameters['fitting_date']) if parameters.get('fitting_date') else None
-        self.fitting_start_date = (datetime.strptime(parameters['fitting_start_date'])
+        self.fitting_date = (datetime.strptime(parameters['fitting_date'], '%d.%m.%Y %H:%M:%S')
+                             if parameters.get('fitting_date') else None)
+        self.fitting_start_date = (datetime.strptime(parameters['fitting_start_date'], '%d.%m.%Y %H:%M:%S')
                                    if parameters.get('fitting_start_date') else None)
-        self.fitting_error_date = (datetime.strptime(parameters['fitting_error_date'])
+        self.fitting_error_date = (datetime.strptime(parameters['fitting_error_date'], '%d.%m.%Y %H:%M:%S')
                                    if parameters.get('fitting_error_date') else None)
 
         self.fitting_job_id = parameters['fitting_job_id']
