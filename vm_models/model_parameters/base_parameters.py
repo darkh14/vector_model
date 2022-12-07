@@ -118,7 +118,7 @@ class FittingParameters:
 
     def set_drop_fitting(self):
 
-        if not self.is_fit:
+        if not self.is_fit and not self.fitting_is_started:
             raise ModelException('Can not drop fitting. Model is not fit')
 
         self.is_fit = False

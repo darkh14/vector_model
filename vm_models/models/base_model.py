@@ -76,24 +76,27 @@ class Model:
         self._write_to_db()
 
         try:
-            result = self._fit_model(fitting_parameters['epochs'], fitting_parameters.get('filter'))
+            result = self._fit_model(fitting_parameters['epochs'], fitting_parameters.get('filter'), fitting_parameters)
         except Exception as ex:
             self.fitting_parameters.set_error_fitting()
+            self._write_to_db()
             raise ex
 
-        self.fitting_parameters.set_end_fitting()
-        self._write_to_db()
+        if not self.fitting_parameters.fitting_is_error:
+            self.fitting_parameters.set_end_fitting()
+            self._write_to_db()
 
         return {'descr': result}
 
     def drop_fitting(self) -> str:
 
         self.fitting_parameters.set_drop_fitting()
+        self._write_to_db()
 
         return 'Model "{}" id "{}" fitting is dropped'.format(self.parameters.name, self.id)
 
     def _fit_model(self, epochs: int, fitting_filter: Optional[dict[str, Any]],
-                   fitting_parameters: Optional[dict[str, Any]]) -> Any:
+                   fitting_parameters: Optional[dict[str, Any]] = None) -> Any:
         pipeline = self._get_fitting_pipeline(fitting_filter)
         data = pipeline.fit_transform(None)
 
@@ -111,6 +114,9 @@ class Model:
 
         if 'epochs' not in fitting_parameters:
             raise ModelException('Parameter "epochs" not found in fitting parameters')
+
+        if self.fitting_parameters.fitting_is_started:
+            raise ModelException('Another fitting is started yet. Wait for end of fitting')
 
     def _get_fitting_estimators(self, fitting_filter: Optional[dict[str, Any]] = None,
                               fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
