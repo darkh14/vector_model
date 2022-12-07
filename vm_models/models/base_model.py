@@ -76,7 +76,7 @@ class Model:
         self._write_to_db()
 
         try:
-            result = self._fit_model(fitting_parameters['epochs'], fitting_parameters['filter'])
+            result = self._fit_model(fitting_parameters['epochs'], fitting_parameters.get('filter'))
         except Exception as ex:
             self.fitting_parameters.set_error_fitting()
             raise ex
