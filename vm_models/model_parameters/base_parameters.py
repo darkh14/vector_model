@@ -1,8 +1,9 @@
 """ Module contains base class for saving and getting fitting parameters of model """
 
-from typing import Any, Optional
+from typing import Any, Optional, Type
 from dataclasses import dataclass, fields
 from datetime import datetime
+from ..model_filters import base_filter, get_fitting_filter_class
 
 from vm_logging.exceptions import ModelException
 
@@ -14,10 +15,7 @@ class ModelParameters:
 
     name: str = ''
     type: str = ''
-    data_filter: Optional[dict[str, Any]] = None
-
-    def __post_init__(self):
-        self.data_filter = {}
+    data_filter: Optional[base_filter.FittingFilter] = None
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
         self._check_new_parameters(parameters)
@@ -25,7 +23,7 @@ class ModelParameters:
         self.name = parameters['name']
         self.type = parameters['type']
 
-        self.data_filter = parameters.get('filter')
+        self.data_filter = get_fitting_filter_class()(parameters.get('filter'), for_model=True)
 
     def _check_new_parameters(self, parameters: dict[str, Any], checking_names:Optional[list] = None) -> None:
 
@@ -38,13 +36,13 @@ class ModelParameters:
             ModelException('Parameter(s) {} not found in model parameters'.format(', '.join("{}".format(error_names))))
 
     def get_data_filter_for_db(self) -> dict[str, Any]:
-        return self.data_filter
+        return self.data_filter.get_value_for_db()
 
     def get_all(self) -> dict[str, Any]:
         parameters = {
             'name': self.name,
             'type': self.type,
-            'filter': self.data_filter
+            'filter': self.data_filter.get_value()
         }
 
         return parameters

@@ -4,10 +4,9 @@
         ... modules for other services
 """
 
-from typing import Type, Callable
-import types
+from typing import Type
 
-from . import base_filter
+from . import base_filter, vbm_filter
 from vm_settings import get_var
 
 __all__ = ['base_filter', 'get_fitting_filter_class']
