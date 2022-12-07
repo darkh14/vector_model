@@ -72,11 +72,25 @@ class Model:
 
         self._check_before_fitting()
 
-        result = self._fit_model()
+        self.fitting_parameters.set_start_fitting()
+        self._write_to_db()
 
+        try:
+            result = self._fit_model()
+        except Exception as ex:
+            self.fitting_parameters.set_error_fitting()
+            raise ex
+
+        self.fitting_parameters.set_end_fitting()
         self._write_to_db()
 
         return {'descr': result}
+
+    def drop_fitting(self) -> str:
+
+        self.fitting_parameters.set_drop_fitting()
+
+        return 'Model "{}" id "{}" fitting is dropped'.format(self.parameters.name, self.id)
 
     def _fit_model(self) -> Any:
         pipeline = self._get_fitting_pipeline()
@@ -89,7 +103,6 @@ class Model:
 
     def _data_to_x_y(self, data: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
         return data[self.fitting_parameters.x_columns].to_numpy(), data[self.fitting_parameters.y_columns].to_numpy()
-
 
     def _check_before_fitting(self):
         if not self._initialized:
@@ -150,6 +163,7 @@ class Model:
     @property
     def initialized(self) -> bool:
         return self._initialized
+
 
 def get_additional_actions() -> dict[str, Callable]:
     return {}
