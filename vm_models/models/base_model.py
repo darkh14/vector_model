@@ -75,10 +75,12 @@ class Model:
         self.fitting_parameters.set_start_fitting()
         self._write_to_db()
 
+        first_fitting = self.fitting_parameters.is_first_fitting()
+
         try:
             result = self._fit_model(fitting_parameters['epochs'], fitting_parameters)
         except Exception as ex:
-            self.fitting_parameters.set_error_fitting()
+            self.fitting_parameters.set_error_fitting(first_fitting)
             self._write_to_db()
             raise ex
 
@@ -96,6 +98,7 @@ class Model:
         return 'Model "{}" id "{}" fitting is dropped'.format(self.parameters.name, self.id)
 
     def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None) -> Any:
+
         pipeline = self._get_fitting_pipeline(fitting_parameters)
         data = pipeline.fit_transform(None)
 

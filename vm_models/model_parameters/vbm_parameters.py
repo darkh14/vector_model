@@ -136,6 +136,26 @@ class VbmFittingParameters(FittingParameters):
 
         return result
 
+    def set_drop_fitting(self):
+        super().set_drop_fitting()
+
+        self._x_analytics = []
+        self._y_analytics = []
+
+        self._x_analytic_keys = []
+        self._y_analytic_keys = []
+
+
+    def set_error_fitting(self, first_fitting:bool = False):
+        super().set_error_fitting(first_fitting)
+
+        if first_fitting:
+            self._x_analytics = []
+            self._y_analytics = []
+
+            self._x_analytic_keys = []
+            self._y_analytic_keys = []
+
     @property
     def x_analytics(self):
         return self._x_analytics
@@ -166,7 +186,8 @@ class VbmFittingParameters(FittingParameters):
 
     @property
     def x_analytic_keys(self):
-        return self._x_analytics
+        return self._x_analytic_keys
+
     @property
     def y_analytic_keys(self):
         return self._y_analytic_keys

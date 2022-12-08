@@ -130,9 +130,9 @@ class FittingParameters:
         self.fitting_date = datetime.utcnow()
         self.fitting_error_date = None
 
-    def set_drop_fitting(self):
+    def set_drop_fitting(self) -> None:
 
-        if not self.is_fit and not self.fitting_is_started:
+        if not self.is_fit and not self.fitting_is_started and not self.fitting_is_error:
             raise ModelException('Can not drop fitting. Model is not fit')
 
         self.is_fit = False
@@ -143,7 +143,10 @@ class FittingParameters:
         self.fitting_date = None
         self.fitting_error_date = None
 
-    def set_error_fitting(self):
+        self.x_columns = []
+        self.y_columns = []
+
+    def set_error_fitting(self, first_fitting: bool = False) -> None:
 
         self.is_fit = False
         self.fitting_is_started = False
@@ -151,3 +154,10 @@ class FittingParameters:
 
         self.fitting_date = None
         self.fitting_error_date = datetime.utcnow()
+
+        if first_fitting:
+            self.x_columns = []
+            self.y_columns = []
+
+    def is_first_fitting(self):
+        return not self.x_columns and not self.y_columns
