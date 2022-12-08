@@ -34,8 +34,12 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
         self._db_connector: base_connector.Connector = get_connector(db_path)
 
+        self._fitting_mode = False
+
     def fit(self, x: Optional[list[dict[str, Any]]] = None,
             y: Optional[list[dict[str, Any]]] = None)-> BaseTransformerClass:
+        self._fitting_mode = True
+
         return self
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
