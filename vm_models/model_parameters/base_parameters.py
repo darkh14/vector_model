@@ -70,6 +70,9 @@ class FittingParameters:
     fitting_job_pid: int = 0
 
 
+    def __init__(self):
+        self._first_fitting: bool = False
+
     def __post_init__(self):
         self.x_columns = []
         self.y_columns = []
@@ -118,6 +121,8 @@ class FittingParameters:
         self.fitting_date = None
         self.fitting_error_date = None
 
+        self._first_fitting = not self.x_columns and not self.y_columns
+
     def set_end_fitting(self):
 
         if not self.fitting_is_started:
@@ -129,6 +134,8 @@ class FittingParameters:
 
         self.fitting_date = datetime.utcnow()
         self.fitting_error_date = None
+
+        self._first_fitting = False
 
     def set_drop_fitting(self) -> None:
 
@@ -146,7 +153,9 @@ class FittingParameters:
         self.x_columns = []
         self.y_columns = []
 
-    def set_error_fitting(self, first_fitting: bool = False) -> None:
+        self._first_fitting = True
+
+    def set_error_fitting(self,) -> None:
 
         self.is_fit = False
         self.fitting_is_started = False
@@ -155,9 +164,9 @@ class FittingParameters:
         self.fitting_date = None
         self.fitting_error_date = datetime.utcnow()
 
-        if first_fitting:
+        if self._first_fitting:
             self.x_columns = []
             self.y_columns = []
 
     def is_first_fitting(self):
-        return not self.x_columns and not self.y_columns
+        return self._first_fitting

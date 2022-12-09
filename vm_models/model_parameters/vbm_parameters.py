@@ -146,8 +146,8 @@ class VbmFittingParameters(FittingParameters):
         self._y_analytic_keys = []
 
 
-    def set_error_fitting(self, first_fitting:bool = False):
-        super().set_error_fitting(first_fitting)
+    def set_error_fitting(self):
+        super().set_error_fitting()
 
         if first_fitting:
             self._x_analytics = []

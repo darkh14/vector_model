@@ -1,12 +1,12 @@
 
-from typing import Any, Optional
+from typing import Any
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 from vm_logging.exceptions import ModelException
-
-from .base_transformer import RowColumnTransformer, Checker
+from ..model_parameters.base_parameters import ModelParameters, FittingParameters
+from .base_transformer import RowColumnTransformer, Checker, CategoricalEncoder, NanProcessor
 
 
 class VbmChecker(Checker):
@@ -200,7 +200,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         elif indicator_parameters.get('period_number'):
             result += '_p_n{}'.format(indicator_parameters['period_number'])
         elif indicator_parameters.get('period_accumulation'):
-            result += '_p_a{}'.format(indicator_parameters['period_accumulation'])
+            result += '_p_a'
 
         return result
 
@@ -232,7 +232,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         elif indicator_parameters.get('period_number'):
             result_data = self._process_data_periods_number(result_data, indicator_parameters)
         elif indicator_parameters.get('period_accumulation'):
-            result_data = self._process_data_periods_accumulation(result_data, indicator_parameters)
+            result_data = self._process_data_periods_accumulation(result_data)
 
         return result_data
 
@@ -278,8 +278,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return data
 
-    def _process_data_periods_accumulation(self, data: pd.DataFrame,
-                                           indicator_parameters: dict[str, Any]) -> pd.DataFrame:
+    def _process_data_periods_accumulation(self, data: pd.DataFrame) -> pd.DataFrame:
 
         temp_data = data.copy()
 
@@ -382,3 +381,79 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         result = list(range(1, result+1))
 
         return result
+
+
+class VbmCategoricalEncoder(CategoricalEncoder):
+    service_name = 'vbm'
+
+    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, db_path: str, **kwargs):
+        super().__init__(model_parameters, fitting_parameters, db_path, **kwargs)
+        self._fields = ['scenario']
+
+        if kwargs.get('fields'):
+            self._fields = kwargs['fields']
+
+    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
+
+        for field in self._fields:
+
+            values = list(x[field].unique())
+
+            for value in values:
+                model_field = '{}_{}'.format(field, value)
+                need_to_add = self._check_model_field(model_field)
+                if need_to_add:
+                    x[model_field] = x[field].apply(lambda l: 1 if l == value else 0)
+
+        return x
+
+    def _check_model_field(self, field) -> bool:
+
+        result = False
+        if self._fitting_mode and self._fitting_parameters.is_first_fitting():
+            if field not in self._fitting_parameters.x_columns:
+                self._fitting_parameters.x_columns.append(field)
+                result = True
+        else:
+            result = field in self._fitting_parameters.x_columns
+
+        return result
+
+
+class VbmNanProcessor(NanProcessor):
+    service_name = 'vbm'
+    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
+
+        all_columns = self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
+
+        non_digit_columns = ['organisation', 'scenario', 'period']
+
+        digit_columns = [_el for _el in all_columns if _el not in non_digit_columns]
+
+        x_digit_columns = self._fitting_parameters.x_columns
+
+        y_digit_columns = self._fitting_parameters.y_columns
+
+        x['x_not_del'] = x[x_digit_columns].any(axis=1)
+        x['y_not_del'] = x[y_digit_columns].any(axis=1)
+
+        x['not_del'] = x[['x_not_del', 'y_not_del']].apply(lambda l: l[0] and l[1], axis=1)
+
+        x = x.loc[x['not_del'] == True]
+
+        if self._fitting_mode and self._fitting_parameters.is_first_fitting():
+            pass
+            # col_to_delete = []
+            #
+            # for d_col in x_digit_columns:
+            #     if not x[d_col].any():
+            #         col_to_delete.append(d_col)
+            #
+            #     columns_not_to_del = [_el for _el in all_columns if _el not in col_to_delete]
+            #
+            #     dataset = dataset[columns_not_to_del].copy()
+            #
+        x = x.fillna(0)
+
+        return x
+
