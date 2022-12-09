@@ -1,6 +1,8 @@
 
 from typing import Any, Optional
 import pandas as pd
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
 from vm_logging.exceptions import ModelException
 
@@ -54,10 +56,9 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         for ind_parameters in self._model_parameters.x_indicators + self._model_parameters.y_indicators:
 
-            if ind_parameters.get('period_shift'):
-                continue
-
             ind_data = self._get_raw_data_by_indicator(raw_data, ind_parameters)
+
+            ind_data = self._process_data_periods(ind_data, ind_parameters)
 
             analytic_keys, analytic_ids = self._get_analytic_parameters_from_data(ind_data, ind_parameters)
 
@@ -99,15 +100,18 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
     def _get_raw_data_by_indicator(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
 
-        fields = ['organisation', 'scenario', 'period', 'analytics_key_id','analytics', 'value']
+        fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytics_key_id','analytics', 'value']
         ind_data = data[fields].loc[data['indicator'] == indicator_parameters['short_id']]
 
         return ind_data
 
     def _get_raw_data_by_analytics(self, data: pd.DataFrame, analytic_id: str) -> pd.DataFrame:
 
-        fields = ['organisation', 'scenario', 'period', 'analytics_key_id', 'value']
-        an_data = data[fields].loc[data['analytics_key_id'] == analytic_id]
+        fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytics_key_id', 'value']
+        if analytic_id:
+            an_data = data[fields].loc[data['analytics_key_id'] == analytic_id]
+        else:
+            an_data = data[fields]
 
         fields = ['organisation', 'scenario', 'period']
         an_data = an_data[fields + ['value']].groupby(fields, as_index=False).sum()
@@ -190,7 +194,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         if indicator_parameters.get('period_shift'):
             if indicator_parameters['period_shift'] < 0:
-                result += '_p_m{}'.format(indicator_parameters['period_shift'])
+                result += '_p_m{}'.format(-indicator_parameters['period_shift'])
             else:
                 result += '_p_p{}'.format(indicator_parameters['period_shift'])
         elif indicator_parameters.get('period_number'):
@@ -218,3 +222,163 @@ class VbmRowColumnTransformer(RowColumnTransformer):
                 if column_name not in self._fitting_parameters.x_columns:
                     raise ModelException('Column name "{}" not in x columns'.format(column_name))
 
+
+    def _process_data_periods(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
+
+        result_data = data.copy()
+
+        if indicator_parameters.get('period_shift'):
+            result_data = self._process_data_periods_shift(result_data, indicator_parameters)
+        elif indicator_parameters.get('period_number'):
+            result_data = self._process_data_periods_number(result_data, indicator_parameters)
+        elif indicator_parameters.get('period_accumulation'):
+            result_data = self._process_data_periods_accumulation(result_data, indicator_parameters)
+
+        return result_data
+
+    def _process_data_periods_shift(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
+        data['period_shift'] = indicator_parameters['period_shift']
+        data['temp_period'] = data[['period', 'periodicity', 'period_shift']].apply(self._shift_data_period, axis=1)
+
+        data = data.drop(['period_shift', 'period'], axis=1)
+        data = data.rename({'temp_period': 'period'}, axis=1)
+
+        return data
+
+    def _process_data_periods_number(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
+        data['period_number'] = data[['period', 'periodicity']].apply(self._get_period_number, axis=1)
+        data['year'] = data['period'].apply(lambda x: x.year)
+
+        data = data.loc[data['period_number'] == indicator_parameters['period_number']]
+
+        years_scenarios = data[['year', 'scenario', 'periodicity']].groupby(['year',
+                                       'scenario', 'periodicity'], as_index=False).sum().to_dict('records')
+
+        all_scenarios_periods = pd.DataFrame(columns=['period_temp', 'scenario'])
+
+        scenarios_periodicity = []
+        scenarios = []
+        for el in years_scenarios:
+            if el['scenario'] not in scenarios:
+                scenarios.append(el['scenario'])
+                scenarios_periodicity.append({'scenario': el['scenario'], 'periodicity': el['periodicity']})
+
+        for sc_p in scenarios_periodicity:
+            years = [el['year'] for el in years_scenarios if el['scenario'] == sc_p['scenario']]
+            sc_periods = self._form_all_periods_by_years(years, sc_p['periodicity'])
+
+            periods_df = pd.DataFrame(sc_periods, columns=['period_temp'])
+            periods_df['scenario'] = sc_p['scenario']
+
+            all_scenarios_periods = pd.concat([all_scenarios_periods, periods_df])
+
+        data = data.merge(all_scenarios_periods, on=['scenario'], how='left')
+        data = data.drop(['period_number', 'period', 'year'], axis=1)
+        data = data.rename({'period_temp': 'period'}, axis=1)
+
+        return data
+
+    def _process_data_periods_accumulation(self, data: pd.DataFrame,
+                                           indicator_parameters: dict[str, Any]) -> pd.DataFrame:
+
+        temp_data = data.copy()
+
+        temp_data['period_number'] =  temp_data[['period', 'periodicity']].apply(self._get_period_number, axis=1)
+
+        scenarios_periodicity = data[['scenario', 'periodicity']].groupby(['scenario',
+                                'periodicity'], as_index=False).sum().to_dict('records')
+
+        result_data = pd.DataFrame(columns=['organisation', 'scenario', 'period', 'value'])
+
+        for sc_p in scenarios_periodicity:
+            period_numbers = self._get_period_numbers_in_year(sc_p['periodicity'])
+
+            for number in period_numbers:
+
+                num_data = temp_data[['organisation', 'scenario', 'period', 'period_number', 'periodicity',
+                                      'analytics_key_id', 'value']].loc[(temp_data['scenario'] == sc_p['scenario'])
+                                      & (temp_data['period_number'] <= number)]
+
+                num_data = num_data[['organisation', 'scenario', 'period', 'periodicity', 'analytics_key_id',
+                                     'value']].groupby(['organisation', 'periodicity', 'analytics_key_id',
+                                     'scenario'], as_index=False).agg({'period': 'max', 'value': 'sum'})
+
+                result_data = pd.concat([result_data, num_data])
+
+        return result_data
+
+    def _shift_data_period(self, data:pd.DataFrame) -> datetime:
+
+        result =  self._add_to_period(data['period'], -data['period_shift'], data['periodicity'])
+
+        return result
+
+    def _form_all_periods_by_years(self, years: list[int], periodicity: str) -> list[datetime]:
+
+        all_periods = []
+
+        for year in years:
+            current_period = datetime(year=year, month=1, day=1)
+            end_of_year = datetime(year=year, month=12, day=31)
+
+            while current_period <= end_of_year:
+                all_periods.append(current_period)
+                current_period = self._add_to_period(current_period, 1, periodicity)
+
+        return all_periods
+
+    @staticmethod
+    def _add_to_period(period: datetime, shift: int, periodicity: str) -> datetime:
+
+        if periodicity not in ['day', 'week', 'decade', 'month', 'quarter', 'half_year', 'year']:
+            raise ModelException('Unknown periodicity "{}"'.format(periodicity))
+
+        if periodicity == 'decade':
+            shifting_parameters ={'days': 10*shift}
+        elif periodicity == 'quarter':
+            shifting_parameters ={'months': 3*shift}
+        elif periodicity == 'half_year':
+            shifting_parameters ={'months': 6*shift}
+        else:
+            shifting_parameters ={periodicity + 's': shift}
+
+        return period + relativedelta(**shifting_parameters)
+
+    def _get_period_number(self, data: pd.Series) -> int:
+
+        if data['periodicity'] == 'month':
+            result = data['period'].month
+        else:
+            current_date = datetime(year=data['period'].year, month=1, day=1)
+
+            result = 1
+            while current_date < data['period']:
+                current_date = self._add_to_period(current_date, 1, data['periodicity'])
+                result += 1
+
+        return result
+
+    def _get_period_numbers_in_year(self, periodicity: str) -> list[int]:
+
+        if periodicity == 'day':
+            result = 365
+        elif periodicity == 'month':
+            result = 12
+        elif periodicity == 'quarter':
+            result = 4
+        elif periodicity == 'half_year':
+            result = 2
+        elif periodicity == 'year':
+            result = 1
+        else:
+            current_year = datetime.now().year
+            current_date = datetime(year=current_year, month=1, day=1)
+            end_of_year = datetime(year=current_year, month=12, day=31)
+            result = 1
+            while current_date < end_of_year:
+                current_date = self._add_to_period(current_date, 1, periodicity)
+                result += 1
+
+        result = list(range(1, result+1))
+
+        return result
