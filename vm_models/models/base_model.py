@@ -30,8 +30,6 @@ class Model:
         self.parameters: base_parameters.ModelParameters = get_model_parameters_class()()
         self.fitting_parameters:base_parameters.FittingParameters = get_model_parameters_class(fitting=True)()
 
-        self._scaler = get_transformer_class(DataTransformersTypes.SCALER)(self.parameters, self.fitting_parameters,
-                                                                           self._db_path)
         self._engine = get_engine_class()(self.parameters, self.fitting_parameters, self._db_path)
 
         self._db_connector: base_connector.Connector = get_db_connector(db_path)
@@ -139,12 +137,9 @@ class Model:
     def _get_estimator(self, transformer_type: DataTransformersTypes,
                              fitting_parameters: Optional[dict[str, Any]] = None) -> base_transformer.BaseTransformer:
 
-        if transformer_type != DataTransformersTypes.SCALER:
-            estimator_class = get_transformer_class(transformer_type)
-            estimator = estimator_class(self.parameters, self.fitting_parameters, self._db_path)
-            estimator.set_additional_parameters(fitting_parameters)
-        else:
-            estimator = self._scaler
+        estimator_class = get_transformer_class(transformer_type)
+        estimator = estimator_class(self.parameters, self.fitting_parameters, self._db_path)
+        estimator.set_additional_parameters(fitting_parameters)
 
         return estimator
 
