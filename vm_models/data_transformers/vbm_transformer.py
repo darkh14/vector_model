@@ -424,35 +424,52 @@ class VbmNanProcessor(NanProcessor):
     service_name = 'vbm'
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
 
-        all_columns = self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
+        if self._fitting_mode:
 
-        non_digit_columns = ['organisation', 'scenario', 'period']
+            x_digit_columns = self._fitting_parameters.x_columns
 
-        digit_columns = [_el for _el in all_columns if _el not in non_digit_columns]
+            y_digit_columns = self._fitting_parameters.y_columns
 
-        x_digit_columns = self._fitting_parameters.x_columns
+            x_not_del = x[x_digit_columns].isnull().all(axis=1)
+            y_not_del = x[y_digit_columns].isnull().all(axis=1)
 
-        y_digit_columns = self._fitting_parameters.y_columns
+            x_not_del = x_not_del
+            y_not_del = y_not_del
 
-        x['x_not_del'] = x[x_digit_columns].any(axis=1)
-        x['y_not_del'] = x[y_digit_columns].any(axis=1)
+            x['x_del'] = x_not_del
+            x['y_del'] = y_not_del
 
-        x['not_del'] = x[['x_not_del', 'y_not_del']].apply(lambda l: l[0] and l[1], axis=1)
+            x['not_del'] = x[['x_del', 'y_del']].apply(lambda l: not l['x_del'] and not l['y_del'], axis=1)
 
-        x = x.loc[x['not_del'] == True]
+            x = x.loc[x['not_del'] == True]
 
-        if self._fitting_mode and self._fitting_parameters.is_first_fitting():
-            pass
-            # col_to_delete = []
-            #
-            # for d_col in x_digit_columns:
-            #     if not x[d_col].any():
-            #         col_to_delete.append(d_col)
-            #
-            #     columns_not_to_del = [_el for _el in all_columns if _el not in col_to_delete]
-            #
-            #     dataset = dataset[columns_not_to_del].copy()
-            #
+            x = x.drop(['not_del', 'x_del', 'y_del'], axis=1)
+
+            if x.empty:
+                raise ModelException('All data are empty. Fitting is impossible')
+
+            if self._fitting_parameters.is_first_fitting():
+
+                all_columns = self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
+
+                cols_to_delete = []
+                for d_col in all_columns:
+                    if x[d_col].isnull().all():
+                        cols_to_delete.append(d_col)
+                        if d_col in self._fitting_parameters.x_columns:
+                            self._fitting_parameters.x_columns.remove(d_col)
+
+                        if d_col in self._fitting_parameters.y_columns:
+                            self._fitting_parameters.y_columns.remove(d_col)
+
+                if not self._fitting_parameters.x_columns:
+                    raise ModelException('All x columns are empty. Fitting is impossible')
+
+                if not self._fitting_parameters.y_columns:
+                    raise ModelException('All y columns are empty. Fitting is impossible')
+
+                x= x.drop(cols_to_delete, axis=1)
+
         x = x.fillna(0)
 
         return x
