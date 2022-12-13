@@ -445,8 +445,11 @@ class VbmNanProcessor(NanProcessor):
 
             x = x.drop(['not_del', 'x_del', 'y_del'], axis=1)
 
-            if x.empty:
+            if x[self._fitting_parameters.x_columns].empty:
                 raise ModelException('All data are empty. Fitting is impossible')
+
+            if x[self._fitting_parameters.y_columns].empty:
+                raise ModelException('All labels are empty. Fitting is impossible')
 
             if self._fitting_parameters.is_first_fitting():
 
