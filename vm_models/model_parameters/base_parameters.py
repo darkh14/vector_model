@@ -66,6 +66,8 @@ class FittingParameters:
     x_columns: Optional[list[str]] = None
     y_columns: Optional[list[str]] = None
 
+    categorical_columns: Optional[list[str]] = None
+
     fitting_job_id: str = ''
     fitting_job_pid: int = 0
 
@@ -76,6 +78,8 @@ class FittingParameters:
     def __post_init__(self):
         self.x_columns = []
         self.y_columns = []
+
+        self.categorical_columns = []
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
 
@@ -96,6 +100,8 @@ class FittingParameters:
         self.x_columns = parameters.get('x_columns') or []
         self.y_columns = parameters.get('y_columns') or []
 
+        self.categorical_columns = parameters.get('categorical_columns') or []
+
     def get_all(self) -> dict[str, Any]:
         parameters = {
             'is_fit': self.is_fit,
@@ -107,7 +113,8 @@ class FittingParameters:
             'fitting_job_id': self.fitting_job_id,
             'fitting_job_pid': self.fitting_job_pid,
             'x_columns': self.x_columns,
-            'y_columns': self.y_columns
+            'y_columns': self.y_columns,
+            'categorical_columns': self.categorical_columns
         }
 
         return parameters
@@ -153,6 +160,8 @@ class FittingParameters:
         self.x_columns = []
         self.y_columns = []
 
+        self.categorical_columns = []
+
         self._first_fitting = True
 
     def set_error_fitting(self,) -> None:
@@ -167,6 +176,8 @@ class FittingParameters:
         if self._first_fitting:
             self.x_columns = []
             self.y_columns = []
+
+            self.categorical_columns = []
 
     def is_first_fitting(self):
         return self._first_fitting
