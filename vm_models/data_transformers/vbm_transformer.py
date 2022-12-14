@@ -1,13 +1,17 @@
 
-from typing import Any
+from typing import Any, Optional, TypeVar
 import pandas as pd
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
+from sklearn.preprocessing import MinMaxScaler
+import pickle
+
 from vm_logging.exceptions import ModelException
 from ..model_parameters.base_parameters import ModelParameters, FittingParameters
-from .base_transformer import RowColumnTransformer, Checker, CategoricalEncoder, NanProcessor
+from .base_transformer import RowColumnTransformer, Checker, CategoricalEncoder, NanProcessor, Scaler
 
+VbmScalerClass = TypeVar('VbmScalerClass', bound='VbmScaler')
 
 class VbmChecker(Checker):
     service_name = 'vbm'
@@ -413,6 +417,7 @@ class VbmCategoricalEncoder(CategoricalEncoder):
         if self._fitting_mode and self._fitting_parameters.is_first_fitting():
             if field not in self._fitting_parameters.x_columns:
                 self._fitting_parameters.x_columns.append(field)
+                self._fitting_parameters.categorical_columns.append(field)
                 result = True
         else:
             result = field in self._fitting_parameters.x_columns
@@ -477,3 +482,57 @@ class VbmNanProcessor(NanProcessor):
 
         return x
 
+
+class VbmScaler(Scaler):
+    service_name = 'vbm'
+
+    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, db_path: str, **kwargs):
+
+        super().__init__(model_parameters, fitting_parameters, db_path, **kwargs)
+
+        if 'model_id' not in kwargs:
+            raise ModelException('Parameter "model_id" not found in additional parameter for VbmScaler object')
+
+        self._model_id = kwargs['model_id']
+
+        self._scaler_engine = MinMaxScaler()
+
+        self._model_id = ''
+
+        self._read_from_db()
+
+    def fit(self, x: Optional[list[dict[str, Any]] | pd.DataFrame] = None,
+            y: Optional[list[dict[str, Any]] | pd.DataFrame] = None) -> VbmScalerClass:
+
+        non_categorical_columns = [el for el in self._fitting_parameters.x_columns
+                                   if el not in self._fitting_parameters.categorical_columns]
+
+        self._scaler_engine.fit(x[non_categorical_columns])
+
+        self._write_to_db()
+
+        return self
+
+    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
+
+        non_categorical_columns = [el for el in self._fitting_parameters.x_columns
+                                   if el not in self._fitting_parameters.categorical_columns]
+
+        result = x.copy()
+        result[non_categorical_columns] = self._scaler_engine.transform(x[non_categorical_columns])
+
+        return result
+
+    def drop(self):
+        self._db_connector.delete_lines('scalers', {'model_id': self._model_id})
+
+    def _write_to_db(self):
+        line_to_db = {'model_id': self._model_id, 'engine': pickle.dumps(self._scaler_engine)}
+
+        self._db_connector.set_line('scalers', line_to_db, {'model_id': self._model_id})
+
+    def _read_from_db(self):
+        line_from_db = self._db_connector.get_line('scalers', {'model_id': self._model_id})
+
+        if line_from_db:
+            self._scaler_engine = pickle.loads(line_from_db['engine'])

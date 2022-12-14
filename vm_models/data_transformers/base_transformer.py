@@ -36,8 +36,8 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
         self._fitting_mode = False
 
-    def fit(self, x: Optional[list[dict[str, Any]]] = None,
-            y: Optional[list[dict[str, Any]]] = None)-> BaseTransformerClass:
+    def fit(self, x: Optional[list[dict[str, Any]] | pd.DataFrame] = None,
+            y: Optional[list[dict[str, Any]] | pd.DataFrame] = None)-> BaseTransformerClass:
         self._fitting_mode = True
 
         return self

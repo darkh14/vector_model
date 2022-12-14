@@ -14,7 +14,7 @@ __all__ = ['base_engine', 'vbm_engine', 'get_engine_class']
 
 SERVICE_NAME: str = ''
 
-def get_engine_class() -> Type[base_engine.BaseEngine]:
+def get_engine_class(model_type: str) -> Type[base_engine.BaseEngine]:
     """ Function for getting engine class. Choosing from subclasses of ModelParameters class where
         service name = SERVICE_NAME var
     """
@@ -24,7 +24,7 @@ def get_engine_class() -> Type[base_engine.BaseEngine]:
         SERVICE_NAME = get_var('SERVICE_NAME')
 
     engine_classes = [cls for cls in base_engine.BaseEngine.__subclasses__()
-                      if cls.service_name == SERVICE_NAME]
+                      if cls.service_name == SERVICE_NAME and cls.model_type == model_type]
 
     if not engine_classes:
         engine_classes.append(base_engine.BaseEngine)

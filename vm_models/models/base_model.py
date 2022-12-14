@@ -30,7 +30,7 @@ class Model:
         self.parameters: base_parameters.ModelParameters = get_model_parameters_class()()
         self.fitting_parameters:base_parameters.FittingParameters = get_model_parameters_class(fitting=True)()
 
-        self._engine = get_engine_class()(self.parameters, self.fitting_parameters, self._db_path)
+        self._engine = None
 
         self._db_connector: base_connector.Connector = get_db_connector(db_path)
 
@@ -54,7 +54,15 @@ class Model:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
 
         self._db_connector.delete_lines('models', {'id': self._id})
-        # self._initialized = False
+        self._initialized = False
+
+        scaler = get_transformer_class(DataTransformersTypes.SCALER)(self.parameters,
+                                                                     self.fitting_parameters,
+                                                                     self._db_path, model_id=self._id)
+        scaler.drop()
+
+        if self._engine:
+            self._engine.drop()
 
         return 'model id {} is dropped'.format(self._id)
 
@@ -99,6 +107,8 @@ class Model:
         data = pipeline.fit_transform(None)
 
         x, y = self._data_to_x_y(data)
+        self._engine = get_engine_class(self.parameters.type)(self.parameters,
+                                                              self.fitting_parameters, self._db_path, self._id)
         result = self._engine.fit(x, y, epochs, fitting_parameters)
 
         return result
@@ -138,7 +148,7 @@ class Model:
                              fitting_parameters: Optional[dict[str, Any]] = None) -> base_transformer.BaseTransformer:
 
         estimator_class = get_transformer_class(transformer_type)
-        estimator = estimator_class(self.parameters, self.fitting_parameters, self._db_path)
+        estimator = estimator_class(self.parameters, self.fitting_parameters, self._db_path, model_id=self._id)
         estimator.set_additional_parameters(fitting_parameters)
 
         return estimator
@@ -172,8 +182,6 @@ class Model:
             self.parameters: base_parameters.ModelParameters = get_model_parameters_class()()
             self.fitting_parameters: base_parameters.FittingParameters = get_model_parameters_class(fitting=True)()
 
-            self._scaler = get_transformer_class(DataTransformersTypes.SCALER)(self.parameters, self.fitting_parameters,
-                                                                               self._db_path)
             self._engine = None
 
     @property
