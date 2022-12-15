@@ -3,8 +3,9 @@
 from typing import Any, Optional, Type
 from dataclasses import dataclass, fields
 from datetime import datetime
-from ..model_filters import base_filter, get_fitting_filter_class
+import os
 
+from ..model_filters import base_filter, get_fitting_filter_class
 from vm_logging.exceptions import ModelException
 
 
@@ -94,7 +95,7 @@ class FittingParameters:
         self.fitting_error_date = (datetime.strptime(parameters['fitting_error_date'], '%d.%m.%Y %H:%M:%S')
                                    if parameters.get('fitting_error_date') else None)
 
-        self.fitting_job_id = parameters.get('fitting_job_id') or 0
+        self.fitting_job_id = parameters.get('fitting_job_id') or ''
         self.fitting_job_pid = parameters.get('fitting_job_pid') or 0
 
         self.x_columns = parameters.get('x_columns') or []
@@ -119,7 +120,7 @@ class FittingParameters:
 
         return parameters
 
-    def set_start_fitting(self):
+    def set_start_fitting(self, fitting_parameters: dict[str, Any]) -> None:
         self.is_fit = False
         self.fitting_is_started = True
         self.fitting_is_error = False
@@ -127,6 +128,11 @@ class FittingParameters:
         self.fitting_start_date = datetime.utcnow()
         self.fitting_date = None
         self.fitting_error_date = None
+
+        self.fitting_job_pid = os.getpid()
+
+        if fitting_parameters.get('job_id'):
+            self.fitting_job_id = fitting_parameters['job_id']
 
         self._first_fitting = not self.x_columns and not self.y_columns
 

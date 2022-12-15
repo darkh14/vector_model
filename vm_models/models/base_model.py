@@ -3,6 +3,7 @@ fitting and predicting
 """
 
 from typing import Any, Callable,Optional
+import psutil
 
 import numpy as np
 import pandas as pd
@@ -15,6 +16,7 @@ from db_processing.connectors import base_connector
 from ..data_transformers import get_transformer_class, base_transformer
 from ..engines import get_engine_class
 from ..model_types import DataTransformersTypes
+from vm_background_jobs.controller import set_background_job_interrupted
 
 __all__ = ['Model']
 
@@ -80,7 +82,7 @@ class Model:
 
         self._check_before_fitting(fitting_parameters)
 
-        self.fitting_parameters.set_start_fitting()
+        self.fitting_parameters.set_start_fitting(fitting_parameters)
         self._write_to_db()
 
         try:
@@ -98,10 +100,16 @@ class Model:
 
     def drop_fitting(self) -> str:
 
+        self._interrupt_fitting_job()
+
         self.fitting_parameters.set_drop_fitting()
         self._write_to_db()
 
         return 'Model "{}" id "{}" fitting is dropped'.format(self.parameters.name, self.id)
+
+    def _interrupt_fitting_job(self):
+        if self.fitting_parameters.fitting_is_started:
+            set_background_job_interrupted(self.fitting_parameters.fitting_job_id, self._db_path)
 
     def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None) -> Any:
 

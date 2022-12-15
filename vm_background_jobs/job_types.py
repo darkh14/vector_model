@@ -13,3 +13,4 @@ class JobStatuses(Enum):
     FINISHED = 'finished'
     ERROR = 'error'
     DELETED = 'deleted'
+    INTERRUPTED = 'interrupted'

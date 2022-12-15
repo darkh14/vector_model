@@ -185,18 +185,38 @@ class BackgroundJob:
 
     def delete(self):
         """ For deleting job from db. Also kills process, drops temp collections and clears logs"""
-        if self._pid and self._status == JobStatuses.IN_PROCESS:
-            try:
-                process = psutil.Process(self._pid)
-                process.terminate()
-                self._pid = 0
-            except psutil.Error as ex:
-                self._error = str(ex)
+        self._kill_job_process()
 
         self._drop_temp()
         job_logger = JobContextLoggerManager(self._id, context_mode=False)
         job_logger.clear_old_logs()
         self._db_connector.delete_lines('background_jobs', {'id': self._id})
+
+    def set_interrupted(self):
+
+        self._kill_job_process()
+        self._drop_temp()
+        job_logger = JobContextLoggerManager(self._id, context_mode=False)
+        job_logger.clear_old_logs()
+
+        self._status = JobStatuses.INTERRUPTED
+        self._end_date = datetime.now()
+
+        self._output = 'Interrupted'
+
+        self._write_to_db()
+
+    def _kill_job_process(self) -> None:
+        """ kills job process when deleting job or job is interrupted """
+        if self._pid and self._status == JobStatuses.IN_PROCESS:
+            try:
+                process = psutil.Process(self._pid)
+                process.terminate()
+                self._pid = 0
+            except psutil.NoSuchProcess:
+                self._error = 'No such process pid {}'.format(self._pid)
+            except psutil.Error as ex:
+                self._error = 'Process termination error. {}'.format(str(ex))
 
     @classmethod
     def get_jobs_info(cls, job_filter:  dict[str, Any], db_path: str) -> list[dict[str, Any]]:

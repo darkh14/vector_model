@@ -15,6 +15,7 @@ from vm_models.models import base_model, get_model_class
 from vm_models.models import get_additional_actions as model_get_actions
 from vm_logging.exceptions import ModelException, ParameterNotFoundException
 from vm_background_jobs.decorators import execute_in_background
+from .model_filters import get_fitting_filter_class
 
 
 __all__ = ['fit', 'predict', 'initialize', 'drop', 'get_info', 'drop_fitting', 'get_additional_actions']
@@ -35,8 +36,28 @@ def _check_input_parameters(func: Callable):
 
     return wrapper
 
+def _transform_model_parameters_for_fitting(func: Callable):
+    @wraps(func)
+    def wrapper(parameters: dict[str, Any]):
+
+        if 'fitting_parameters' in parameters['model']:
+            if 'filter' in parameters['model']['fitting_parameters']:
+
+                input_filter = parameters['model']['fitting_parameters']['filter']
+                filter_obj = get_fitting_filter_class()(input_filter)
+                parameters['model']['fitting_parameters']['filter'] = filter_obj.get_value_as_model_parameter()
+
+            if 'job_id' in parameters:
+                parameters['model']['fitting_parameters']['job_id'] = parameters['job_id']
+
+        result = func(parameters)
+        return result
+
+    return wrapper
+
 @_check_input_parameters
-# @execute_in_background
+@_transform_model_parameters_for_fitting
+@execute_in_background
 def fit(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For fitting model """
     model = _get_model(parameters['model'], parameters['db'])
