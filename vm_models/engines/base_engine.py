@@ -21,12 +21,23 @@ class BaseEngine:
         self._input_number = len(self._fitting_parameters.x_columns)
         self._output_number = len(self._fitting_parameters.y_columns)
 
+        self.metrics = {}
+
     def fit(self, x: np.ndarray,  y: np.ndarray, epochs: int,
             parameters: Optional[dict[str, Any]] = None)-> dict[str, Any]:
-        return {'description': 'Fit OK'}
+
+        return {'description': 'Fit OK', 'metrics': self.metrics}
 
     def predict(self, x: np.ndarray) -> np.ndarray:
         return x
 
     def drop(self) -> None:
         self._db_connector.delete_lines('engines', {'model_id': self._model_id})
+
+    @staticmethod
+    def _calculate_mspe(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+        return 0
+
+    @staticmethod
+    def _calculate_rsme(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+        return 0

@@ -17,9 +17,6 @@ class VbmModelParameters(ModelParameters):
     _x_indicators: list[dict[str, Any]] = None
     _y_indicators: list[dict[str, Any]] = None
 
-    rsme: int = 0
-    mspe: int = 0
-
     def __init__(self):
         super().__init__()
 

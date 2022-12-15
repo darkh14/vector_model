@@ -14,7 +14,7 @@ from vm_models.model_parameters import base_parameters, get_model_parameters_cla
 from db_processing import get_connector as get_db_connector
 from db_processing.connectors import base_connector
 from ..data_transformers import get_transformer_class, base_transformer
-from ..engines import get_engine_class
+from ..engines import get_engine_class, base_engine
 from ..model_types import DataTransformersTypes
 from vm_background_jobs.controller import set_background_job_interrupted
 
@@ -32,7 +32,7 @@ class Model:
         self.parameters: base_parameters.ModelParameters = get_model_parameters_class()()
         self.fitting_parameters:base_parameters.FittingParameters = get_model_parameters_class(fitting=True)()
 
-        self._engine = None
+        self._engine: Optional[base_engine.BaseEngine] = None
 
         self._db_connector: base_connector.Connector = get_db_connector(db_path)
 
@@ -93,10 +93,13 @@ class Model:
             raise ex
 
         if not self.fitting_parameters.fitting_is_error:
+
+            self.fitting_parameters.metrics = self._engine.metrics
+
             self.fitting_parameters.set_end_fitting()
             self._write_to_db()
 
-        return {'descr': result}
+        return result
 
     def drop_fitting(self) -> str:
 

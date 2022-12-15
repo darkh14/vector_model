@@ -72,6 +72,8 @@ class FittingParameters:
     fitting_job_id: str = ''
     fitting_job_pid: int = 0
 
+    metrics: Optional[dict[str, Any]] = None
+
 
     def __init__(self):
         self._first_fitting: bool = False
@@ -81,6 +83,7 @@ class FittingParameters:
         self.y_columns = []
 
         self.categorical_columns = []
+        self.metrics = {}
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
 
@@ -103,6 +106,8 @@ class FittingParameters:
 
         self.categorical_columns = parameters.get('categorical_columns') or []
 
+        self.metrics = parameters.get('metrics') or {}
+
     def get_all(self) -> dict[str, Any]:
         parameters = {
             'is_fit': self.is_fit,
@@ -115,7 +120,8 @@ class FittingParameters:
             'fitting_job_pid': self.fitting_job_pid,
             'x_columns': self.x_columns,
             'y_columns': self.y_columns,
-            'categorical_columns': self.categorical_columns
+            'categorical_columns': self.categorical_columns,
+            'metrics': self.metrics
         }
 
         return parameters
