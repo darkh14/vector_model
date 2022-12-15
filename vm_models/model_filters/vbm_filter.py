@@ -95,7 +95,7 @@ class VbmFittingFilter(FittingFilter):
             result = {}
             for name, val in value.items():
                 c_name = name
-                if name.starts_with('$'):
+                if name.startswith('$'):
                     c_name = '_' + name[1:]
                 result[c_name] = self._transform_dates_to_str(val)
         elif isinstance(value, datetime):
