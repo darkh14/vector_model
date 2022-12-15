@@ -114,8 +114,10 @@ class FittingParameters:
             'fitting_is_started': self.fitting_is_started,
             'fitting_is_error': self.fitting_is_error,
             'fitting_date': self.fitting_date.strftime('%d.%m.%Y %H:%M:%S') if self.fitting_date else None,
-            'fitting_start_date': self.fitting_start_date.strftime('%d.%m.%Y %H:%M:%S') if self.fitting_date else None,
-            'fitting_error_date': self.fitting_start_date.strftime('%d.%m.%Y %H:%M:%S') if self.fitting_date else None,
+            'fitting_start_date': self.fitting_start_date.strftime('%d.%m.%Y %H:%M:%S')
+                                    if self.fitting_start_date else None,
+            'fitting_error_date': self.fitting_error_date.strftime('%d.%m.%Y %H:%M:%S')
+                                    if self.fitting_error_date else None,
             'fitting_job_id': self.fitting_job_id,
             'fitting_job_pid': self.fitting_job_pid,
             'x_columns': self.x_columns,
