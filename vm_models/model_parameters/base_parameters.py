@@ -39,13 +39,13 @@ class ModelParameters:
             ModelException('Parameter(s) {} not found in model parameters'.format(', '.join("{}".format(error_names))))
 
     def get_data_filter_for_db(self) -> dict[str, Any]:
-        return self.data_filter.get_value_for_db()
+        return self.data_filter.get_value_as_db_filter()
 
     def get_all(self) -> dict[str, Any]:
         parameters = {
             'name': self.name,
             'type': self.type,
-            'filter': self.data_filter.get_value()
+            'filter': self.data_filter
         }
 
         return parameters

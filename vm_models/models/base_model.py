@@ -72,6 +72,8 @@ class Model:
         model_info.update(self.parameters.get_all())
         model_info.update(self.fitting_parameters.get_all())
 
+        model_info['filter'] = model_info['filter'].get_value_as_json_serializable()
+
         return model_info
 
     def fit(self, fitting_parameters: dict[str, Any]) -> dict[str, Any]:
@@ -163,6 +165,8 @@ class Model:
         model_to_db = {'id': self._id}
         model_to_db.update(self.parameters.get_all())
         model_to_db.update(self.fitting_parameters.get_all())
+
+        model_to_db['filter'] = model_to_db['filter'].get_value_as_model_parameter()
 
         self._db_connector.set_line('models', model_to_db, {'id': self._id})
 

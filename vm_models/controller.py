@@ -36,7 +36,7 @@ def _check_input_parameters(func: Callable):
     return wrapper
 
 @_check_input_parameters
-@execute_in_background
+# @execute_in_background
 def fit(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For fitting model """
     model = _get_model(parameters['model'], parameters['db'])

@@ -1,6 +1,7 @@
 
-from typing import Any
+from typing import Any, Optional
 from datetime import datetime
+import pickle
 
 from .base_filter import FittingFilter
 
@@ -9,14 +10,25 @@ __all__ = ['VbmFittingFilter']
 class VbmFittingFilter(FittingFilter):
     service_name: str = 'vbm'
 
-    def get_value_for_db(self) -> dict[str, Any]:
+    def __init__(self, filter_value: bytes | dict[str, Any], for_model: bool = False) -> None:
+        super().__init__(filter_value, for_model)
 
-        if self._for_model:
-            result_filter = self._get_value_db_for_model()
+        if isinstance(self._value, bytes):
+            self._value = pickle.loads(self._value)
         else:
-            result_filter = self._get_value_db_for_fitting()
+            if self._for_model:
+                self._value = self._get_value_db_for_model()
+            else:
+                self._value = self._transform_period_value(self._value)
 
-        return result_filter
+    def get_value_as_model_parameter(self):
+        return pickle.dumps(self._value, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def get_value_as_json_serializable(self):
+
+        result = self._value.copy()
+
+        return self._transform_dates_to_str(result)
 
     def _get_value_db_for_model(self) -> dict[str, Any]:
 
@@ -52,12 +64,6 @@ class VbmFittingFilter(FittingFilter):
 
         return result_filter
 
-    def _get_value_db_for_fitting(self) -> dict[str, Any]:
-
-        result_filter =  self._transform_period_value(self._value)
-
-        return result_filter
-
     def _transform_period_value(self, value, transform_to_date: bool = False) -> Any:
 
         if isinstance(value, list):
@@ -73,6 +79,24 @@ class VbmFittingFilter(FittingFilter):
                     result[name] = self._transform_period_value(el, transform_to_date)
         elif transform_to_date:
             result = datetime.strptime(value, '%d.%m.%Y')
+        else:
+            result = value
+
+        return result
+
+    def _transform_dates_to_str(self, value: dict|list|int|float|str|datetime) -> \
+            Optional[dict|list|int|float|str|datetime]:
+
+        if isinstance(value, list):
+            result = []
+            for el in value:
+                result.append(self._transform_dates_to_str(el))
+        elif isinstance(value, dict):
+            result = {}
+            for name, val in value.items():
+                result[name] = self._transform_dates_to_str(val)
+        elif isinstance(value, datetime):
+            result = value.strftime('%d.%m.%Y')
         else:
             result = value
 

@@ -62,7 +62,7 @@ class Reader(BaseTransformer):
 
         data_filter = self._model_parameters.get_data_filter_for_db()
 
-        ad_data_filter = self._fitting_filter.get_value_for_db() if self._fitting_filter else None
+        ad_data_filter = self._fitting_filter.get_value_as_db_filter() if self._fitting_filter else None
 
         if data_filter and ad_data_filter:
             result_filter = {'$and': [data_filter, ad_data_filter]}
