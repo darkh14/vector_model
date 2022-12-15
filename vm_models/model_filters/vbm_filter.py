@@ -94,7 +94,10 @@ class VbmFittingFilter(FittingFilter):
         elif isinstance(value, dict):
             result = {}
             for name, val in value.items():
-                result[name] = self._transform_dates_to_str(val)
+                c_name = name
+                if name.starts_with('$'):
+                    c_name = '_' + name[1:]
+                result[c_name] = self._transform_dates_to_str(val)
         elif isinstance(value, datetime):
             result = value.strftime('%d.%m.%Y')
         else:
