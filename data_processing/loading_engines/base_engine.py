@@ -4,7 +4,7 @@
 """
 
 
-from typing import ClassVar, Any, Optional
+from typing import ClassVar, Any
 from abc import ABC, abstractmethod
 from db_processing.connectors import base_connector
 from ..loading_types import LoadingTypes
@@ -14,7 +14,7 @@ class BaseEngine(ABC):
     """ Abstract class for loading data. Provides loading and deleting data """
     service_name: ClassVar[str] = ''
 
-    def __init__(self, db_connector: Optional[base_connector.Connector] = None):
+    def __init__(self, db_connector: [base_connector.Connector]):
         self._db_connector: base_connector.Connector = db_connector
 
     @abstractmethod

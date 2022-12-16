@@ -10,7 +10,7 @@ import pickle
 from vm_logging.exceptions import ModelException
 from ..model_parameters.base_parameters import ModelParameters, FittingParameters
 from .base_transformer import Reader, RowColumnTransformer, Checker, CategoricalEncoder, NanProcessor, Scaler
-from data_processing.loading_engines.vbm_engine import VbmEngine
+from data_processing.data_preprocessors import get_data_preprocessing_class
 
 VbmScalerClass = TypeVar('VbmScalerClass', bound='VbmScaler')
 
@@ -19,8 +19,8 @@ class VbmReader(Reader):
     service_name = 'vbm'
     def _read_while_predicting(self, data: list[dict[str, Any]]) -> pd.DataFrame:
 
-        loading_engine = VbmEngine()
-        return loading_engine.preprocess_data(data)
+        data_preprocessor = get_data_preprocessing_class()()
+        return data_preprocessor.preprocess_data_for_predicting(data)
 
 
 class VbmChecker(Checker):
