@@ -1,7 +1,7 @@
 """ Module contains base class for saving and getting fitting parameters of model """
 
-from typing import Any, Optional, Type
-from dataclasses import dataclass, fields
+from typing import Any, Optional
+from dataclasses import dataclass
 from datetime import datetime
 import os
 
