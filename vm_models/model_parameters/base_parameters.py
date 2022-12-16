@@ -74,9 +74,7 @@ class FittingParameters:
 
     metrics: Optional[dict[str, Any]] = None
 
-
-    def __init__(self):
-        self._first_fitting: bool = False
+    _first_fitting: bool = False
 
     def __post_init__(self):
         self.x_columns = []

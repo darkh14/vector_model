@@ -17,9 +17,6 @@ class VbmModelParameters(ModelParameters):
     _x_indicators: list[dict[str, Any]] = None
     _y_indicators: list[dict[str, Any]] = None
 
-    def __init__(self):
-        super().__init__()
-
     def __post_init__(self):
         super().__post_init__()
         self._x_indicators = []

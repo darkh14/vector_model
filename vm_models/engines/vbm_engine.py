@@ -45,6 +45,9 @@ class VbmNeuralNetwork(BaseEngine):
 
         return {'description': 'Fit OK', 'metrics': self.metrics, 'history': history.history}
 
+    def predict(self, x: np.ndarray) -> np.ndarray:
+        return self._inner_engine.predict(x)
+
     def _create_inner_engine(self) -> Sequential:
 
         model = Sequential()

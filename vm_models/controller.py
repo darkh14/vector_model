@@ -69,10 +69,17 @@ def fit(parameters: dict[str, Any]) -> dict[str, Any]:
 
     return result
 
+@_check_input_parameters
+def predict(parameters: dict[str, Any]) -> list[dict[str, Any]]:
 
-def predict(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For predicting data with model """
-    pass
+    if 'inputs' not in parameters:
+        raise ParameterNotFoundException('Parameter "inputs" is not in request parameters')
+
+    model = _get_model(parameters['model'], parameters['db'])
+
+    result = model.predict(parameters['inputs'])
+
+    return result
 
 
 @_check_input_parameters

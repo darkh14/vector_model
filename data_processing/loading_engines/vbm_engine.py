@@ -33,7 +33,7 @@ class VbmEngine(BaseEngine):
 
         """
 
-        pd_data = self._preprocess_data(data, loading_id, package_id)
+        pd_data = self.preprocess_data(data, loading_id, package_id)
 
         data_to_write = list(pd_data.to_dict('records'))
 
@@ -54,7 +54,7 @@ class VbmEngine(BaseEngine):
         self._db_connector.delete_lines('raw_data', {'loading_id': loading_id, 'package_id': package_id})
         return True
 
-    def _preprocess_data(self, data: list[dict[str, Any]], loading_id:  str, package_id: str):
+    def preprocess_data(self, data: list[dict[str, Any]], loading_id:  str = '', package_id: str = ''):
         """ Adds additional fields to data array and converts data list to pandas DataFrame.
             Parameters:
                 data: list - data array to load;

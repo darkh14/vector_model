@@ -101,6 +101,13 @@ class Model:
 
         return result
 
+    def predict(self, x: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        self._check_before_predicting()
+
+        result = self._predict_model(x)
+
+        return result
+
     def drop_fitting(self) -> str:
 
         self._interrupt_fitting_job()
@@ -116,7 +123,7 @@ class Model:
 
     def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None) -> Any:
 
-        pipeline = self._get_fitting_pipeline(fitting_parameters)
+        pipeline = self._get_model_pipeline(for_predicting=False, fitting_parameters=fitting_parameters)
         data = pipeline.fit_transform(None)
 
         x, y = self._data_to_x_y(data)
@@ -129,6 +136,12 @@ class Model:
     def _data_to_x_y(self, data: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
         return data[self.fitting_parameters.x_columns].to_numpy(), data[self.fitting_parameters.y_columns].to_numpy()
 
+    def _data_to_x(self, data: pd.DataFrame) -> np.ndarray:
+        return data[self.fitting_parameters.x_columns].to_numpy()
+
+    def _y_to_data(self, y: np.ndarray) ->  pd.DataFrame:
+        return pd.DataFrame(y, columns=self.fitting_parameters.y_columns)
+
     def _check_before_fitting(self, fitting_parameters: dict[str, Any]):
         if not self._initialized:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
@@ -139,7 +152,17 @@ class Model:
         if self.fitting_parameters.fitting_is_started:
             raise ModelException('Another fitting is started yet. Wait for end of fitting')
 
-    def _get_fitting_estimators(self, fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
+    def _check_before_predicting(self):
+
+        if not self._initialized:
+            raise ModelException('Model id - {} is not initialized'.format(self._id))
+
+        if not self.fitting_parameters.is_fit:
+            raise ModelException(('Model "{}" id "{}" is not fit. ' +
+                                 'Fit model before predicting').format(self.parameters.name, self._id))
+
+    def _get_model_estimators(self, for_predicting: bool = False,
+                              fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
 
         estimator_types_list = [
                                 DataTransformersTypes.READER,
@@ -162,13 +185,15 @@ class Model:
 
         estimator_class = get_transformer_class(transformer_type)
         estimator = estimator_class(self.parameters, self.fitting_parameters, self._db_path, model_id=self._id)
-        estimator.set_additional_parameters(fitting_parameters)
+        if fitting_parameters:
+            estimator.set_additional_parameters(fitting_parameters)
 
         return estimator
 
-    def _get_fitting_pipeline(self, fitting_parameters: Optional[dict[str, Any]] = None) -> Pipeline:
+    def _get_model_pipeline(self, for_predicting: bool = False,
+                            fitting_parameters: Optional[dict[str, Any]] = None) -> Pipeline:
 
-        estimators = self._get_fitting_estimators(fitting_parameters)
+        estimators = self._get_model_estimators(for_predicting, fitting_parameters)
 
         return Pipeline(estimators)
 
@@ -198,6 +223,19 @@ class Model:
             self.fitting_parameters: base_parameters.FittingParameters = get_model_parameters_class(fitting=True)()
 
             self._engine = None
+
+    def _predict_model(self, x: list[dict[str, Any]]) -> list[dict[str, Any]]:
+
+        pipeline = self._get_model_pipeline(for_predicting=True)
+        data = pipeline.transform(x)
+
+        x = self._data_to_x(data)
+        self._engine = get_engine_class(self.parameters.type)(self.parameters,
+                                                              self.fitting_parameters, self._db_path, self._id)
+        y_pred = self._engine.predict(x)
+
+        result_data = self._y_to_data(y_pred)
+        return result_data.to_dict('records')
 
     @property
     def id(self) -> str:

@@ -9,21 +9,33 @@ import pickle
 
 from vm_logging.exceptions import ModelException
 from ..model_parameters.base_parameters import ModelParameters, FittingParameters
-from .base_transformer import RowColumnTransformer, Checker, CategoricalEncoder, NanProcessor, Scaler
+from .base_transformer import Reader, RowColumnTransformer, Checker, CategoricalEncoder, NanProcessor, Scaler
+from data_processing.loading_engines.vbm_engine import VbmEngine
 
 VbmScalerClass = TypeVar('VbmScalerClass', bound='VbmScaler')
+
+
+class VbmReader(Reader):
+    service_name = 'vbm'
+    def _read_while_predicting(self, data: list[dict[str, Any]]) -> pd.DataFrame:
+
+        loading_engine = VbmEngine()
+        return loading_engine.preprocess_data(data)
+
 
 class VbmChecker(Checker):
     service_name = 'vbm'
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
 
         if x.empty:
-            raise ModelException('There are no data to fit model. Check loading data, '
-                                 'model settings and fitting filter')
+            raise ModelException('There are no data to {} model. Check loading data, '.format('fit'
+                                if self._fitting_mode else 'predict') + 'model settings and filter')
 
-        indicator_ids =list(x['indicator_short_id'].unique())
 
         if self._fitting_mode and self._fitting_parameters.is_first_fitting():
+
+            indicator_ids = list(x['indicator_short_id'].unique())
+
             model_indicators = self._model_parameters.x_indicators + self._model_parameters.y_indicators
 
             model_indicator_ids = [el['short_id'] for el in model_indicators]
@@ -399,15 +411,24 @@ class VbmCategoricalEncoder(CategoricalEncoder):
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
 
+        added_fields = []
+
         for field in self._fields:
 
             values = list(x[field].unique())
+
 
             for value in values:
                 model_field = '{}_{}'.format(field, value)
                 need_to_add = self._check_model_field(model_field)
                 if need_to_add:
                     x[model_field] = x[field].apply(lambda l: 1 if l == value else 0)
+                    added_fields.append(model_field)
+
+        if not self._fitting_mode or not self._fitting_parameters.is_first_fitting():
+            for col in self._fitting_parameters.categorical_columns:
+                if col not in added_fields:
+                    x[col] = 0
 
         return x
 

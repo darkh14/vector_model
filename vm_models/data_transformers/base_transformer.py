@@ -60,6 +60,15 @@ class Reader(BaseTransformer):
 
     def transform(self, x: Optional[list[dict[str, Any]]]) -> pd.DataFrame:
 
+        if self._fitting_mode:
+            raw_data = self._read_while_fitting()
+        else:
+            raw_data = self._read_while_predicting(x)
+
+        return raw_data
+
+    def _read_while_fitting(self) -> pd.DataFrame:
+
         data_filter = self._model_parameters.get_data_filter_for_db()
 
         ad_data_filter = self._fitting_filter.get_value_as_db_filter() if self._fitting_filter else None
@@ -74,8 +83,12 @@ class Reader(BaseTransformer):
             result_filter = None
 
         raw_data = self._db_connector.get_lines('raw_data', result_filter)
+        raw_data = pd.DataFrame(raw_data)
 
-        return pd.DataFrame(raw_data)
+        return raw_data
+
+    def _read_while_predicting(self, data: list[dict[str, Any]]) -> pd.DataFrame:
+        return pd.DataFrame(data)
 
     def set_additional_parameters(self, parameters: dict[str, Any]) -> None:
         if 'filter' in parameters:
