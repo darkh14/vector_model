@@ -2,6 +2,8 @@
 """
 
 from typing import Any
+import numpy as np
+import pandas as pd
 
 from .base_model import Model
 
@@ -30,4 +32,12 @@ class VbmModel(Model):
             result_description[col_name] = {'indicator': indicator, 'analytics': analytics}
 
         return result_description
+
+    def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) ->  pd.DataFrame:
+        result = pd.DataFrame(y, columns=self.fitting_parameters.y_columns)
+
+        result[['organisation', 'scenario', 'period']] = x_data[['organisation', 'scenario', 'period']]
+        result['period'] = result['period'].apply(lambda x: x.strftime('%d.%m.%Y'))
+
+        return result
 

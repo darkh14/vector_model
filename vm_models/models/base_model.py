@@ -138,7 +138,7 @@ class Model:
     def _data_to_x(self, data: pd.DataFrame) -> np.ndarray:
         return data[self.fitting_parameters.x_columns].to_numpy()
 
-    def _y_to_data(self, y: np.ndarray) ->  pd.DataFrame:
+    def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) ->  pd.DataFrame:
         return pd.DataFrame(y, columns=self.fitting_parameters.y_columns)
 
     def _check_before_fitting(self, fitting_parameters: dict[str, Any]):
@@ -223,17 +223,17 @@ class Model:
 
             self._engine = None
 
-    def _predict_model(self, x: list[dict[str, Any]]) -> dict[str, Any]:
+    def _predict_model(self, x_input: list[dict[str, Any]]) -> dict[str, Any]:
 
         pipeline = self._get_model_pipeline(for_predicting=True)
-        data = pipeline.transform(x)
+        data = pipeline.transform(x_input)
 
         x = self._data_to_x(data)
         self._engine = get_engine_class(self.parameters.type)(self.parameters,
                                                               self.fitting_parameters, self._db_path, self._id)
         y_pred = self._engine.predict(x)
 
-        result_data = self._y_to_data(y_pred)
+        result_data = self._y_to_data(y_pred, data)
         return {'output': result_data.to_dict('records'), 'description': self._form_output_columns_description()}
 
     def _form_output_columns_description(self):
