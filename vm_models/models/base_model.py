@@ -3,7 +3,6 @@ fitting and predicting
 """
 
 from typing import Any, Callable,Optional
-import psutil
 
 import numpy as np
 import pandas as pd
@@ -101,7 +100,7 @@ class Model:
 
         return result
 
-    def predict(self, x: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def predict(self, x: list[dict[str, Any]]) -> dict[str, Any]:
         self._check_before_predicting()
 
         result = self._predict_model(x)
@@ -224,7 +223,7 @@ class Model:
 
             self._engine = None
 
-    def _predict_model(self, x: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _predict_model(self, x: list[dict[str, Any]]) -> dict[str, Any]:
 
         pipeline = self._get_model_pipeline(for_predicting=True)
         data = pipeline.transform(x)
@@ -235,7 +234,10 @@ class Model:
         y_pred = self._engine.predict(x)
 
         result_data = self._y_to_data(y_pred)
-        return result_data.to_dict('records')
+        return {'output': result_data.to_dict('records'), 'description': self._form_output_columns_description()}
+
+    def _form_output_columns_description(self):
+        return self.fitting_parameters.y_columns
 
     @property
     def id(self) -> str:
