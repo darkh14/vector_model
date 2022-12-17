@@ -438,7 +438,7 @@ class VbmCategoricalEncoder(CategoricalEncoder):
 
     def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, db_path: str, **kwargs):
         super().__init__(model_parameters, fitting_parameters, db_path, **kwargs)
-        self._fields = ['scenario']
+        self._fields = []
 
         if kwargs.get('fields'):
             self._fields = kwargs['fields']

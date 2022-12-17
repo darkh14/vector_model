@@ -1,11 +1,12 @@
 """ VBM (Vector Budget model) Contains model class for VBM
 """
 
-from typing import Any
+from typing import Any, Optional
 import numpy as np
 import pandas as pd
 
 from .base_model import Model
+from ..model_types import DataTransformersTypes
 
 class VbmModel(Model):
     service_name = 'vbm'
@@ -40,3 +41,11 @@ class VbmModel(Model):
 
         return result
 
+
+    def _get_model_estimators(self, for_predicting: bool = False,
+                              fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
+
+        estimators = super()._get_model_estimators(for_predicting, fitting_parameters)
+
+        estimators = [es for es in estimators if es[0] != DataTransformersTypes.SCALER.value]
+        return estimators
