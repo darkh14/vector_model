@@ -26,6 +26,7 @@ __all__ = ['BaseTransformer',
 
 class BaseTransformer(BaseEstimator, TransformerMixin):
     service_name: str = ''
+    model_type = ''
     transformer_type: str = DataTransformersTypes.NONE
 
     def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, db_path: str, **kwargs):

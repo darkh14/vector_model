@@ -57,9 +57,8 @@ class Model:
         self._db_connector.delete_lines('models', {'id': self._id})
         self._initialized = False
 
-        scaler = get_transformer_class(DataTransformersTypes.SCALER)(self.parameters,
-                                                                     self.fitting_parameters,
-                                                                     self._db_path, model_id=self._id)
+        scaler = get_transformer_class(DataTransformersTypes.SCALER, self.parameters.type)(self.parameters,
+                                            self.fitting_parameters, self._db_path, model_id=self._id)
         scaler.drop()
 
         if self._engine:
@@ -182,7 +181,7 @@ class Model:
     def _get_estimator(self, transformer_type: DataTransformersTypes,
                              fitting_parameters: Optional[dict[str, Any]] = None) -> base_transformer.BaseTransformer:
 
-        estimator_class = get_transformer_class(transformer_type)
+        estimator_class = get_transformer_class(transformer_type, self.parameters.type)
         estimator = estimator_class(self.parameters, self.fitting_parameters, self._db_path, model_id=self._id)
         if fitting_parameters:
             estimator.set_additional_parameters(fitting_parameters)
