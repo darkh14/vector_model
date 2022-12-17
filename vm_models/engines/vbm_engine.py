@@ -152,3 +152,23 @@ class VbmNeuralNetwork(BaseEngine):
     @staticmethod
     def _calculate_rsme(y_true, y_pred):
         return np.sqrt(mean_squared_error(y_true, y_pred))
+
+
+class VbmLinearModel(VbmNeuralNetwork):
+    model_type = 'linear_regression'
+
+    def _create_inner_engine(self) -> Sequential:
+
+        model = Sequential()
+
+        model.add(Dense(self._input_number, activation="relu", input_shape=(self._input_number,), name='dense_1'))
+        model.add(Dense(self._output_number, activation="linear", name='dense_last'))
+
+        self._compile_model(model)
+
+        return model
+
+    @staticmethod
+    def _compile_model(model):
+        model.compile(optimizer=Adam(learning_rate=0.01), loss='MeanSquaredError',
+                      metrics=['RootMeanSquaredError'])
