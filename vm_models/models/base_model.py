@@ -125,8 +125,10 @@ class Model:
         data = pipeline.fit_transform(None)
 
         x, y = self._data_to_x_y(data)
-        self._engine = get_engine_class(self.parameters.type)(self.parameters,
-                                                              self.fitting_parameters, self._db_path, self._id)
+        input_number = len(self.fitting_parameters.x_columns)
+        output_number = len(self.fitting_parameters.y_columns)
+        self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number, self._db_path,
+                                                              self.fitting_parameters.is_first_fitting())
         result = self._engine.fit(x, y, epochs, fitting_parameters)
 
         return result
@@ -228,8 +230,10 @@ class Model:
         data = pipeline.transform(x_input)
 
         x = self._data_to_x(data)
-        self._engine = get_engine_class(self.parameters.type)(self.parameters,
-                                                              self.fitting_parameters, self._db_path, self._id)
+        input_number = len(self.fitting_parameters.x_columns)
+        output_number = len(self.fitting_parameters.y_columns)
+        self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number, self._db_path)
+
         y_pred = self._engine.predict(x)
 
         result_data = self._y_to_data(y_pred, data)

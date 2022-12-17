@@ -9,19 +9,19 @@ class BaseEngine:
     service_name: str = ''
     model_type = ''
 
-    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, db_path: str,
-                 model_id: str, **kwargs):
+    def __init__(self, model_id: str, input_number: int, output_number: int, db_path: str, new_engine: bool = False,
+                 **kwargs):
 
         self._model_id: str = model_id
-        self._model_parameters: ModelParameters = model_parameters
-        self._fitting_parameters: FittingParameters = fitting_parameters
 
         self._db_connector: connectors.base_connector.Connector  = get_connector(db_path)
 
-        self._input_number = len(self._fitting_parameters.x_columns)
-        self._output_number = len(self._fitting_parameters.y_columns)
+        self._input_number: int = input_number
+        self._output_number: int = output_number
 
-        self.metrics = {}
+        self._new_engine: bool = new_engine
+
+        self.metrics: dict[str, Any] = {}
 
     def fit(self, x: np.ndarray,  y: np.ndarray, epochs: int,
             parameters: Optional[dict[str, Any]] = None)-> dict[str, Any]:

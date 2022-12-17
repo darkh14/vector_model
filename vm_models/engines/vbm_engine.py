@@ -18,10 +18,10 @@ class VbmNeuralNetwork(BaseEngine):
     service_name = 'vbm'
     model_type = 'neural_network'
 
-    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, db_path: str,
-                 model_id: str, **kwargs) -> None:
+    def __init__(self, model_id: str, input_number: int, output_number: int, db_path: str, new_engine: bool = False,
+                 **kwargs) -> None:
 
-        super().__init__(model_parameters, fitting_parameters, db_path, model_id, **kwargs)
+        super().__init__(model_id, input_number, output_number, db_path, new_engine, **kwargs)
 
         self._inner_engine: Optional[Sequential] = None
         self._validation_split: float = 0.2
@@ -64,7 +64,7 @@ class VbmNeuralNetwork(BaseEngine):
 
     def _read_from_db(self) -> None:
 
-        if self._fitting_parameters.is_first_fitting():
+        if self._new_engine:
             self._inner_engine = self._create_inner_engine()
         else:
             line_from_db = self._db_connector.get_line('engines', {'model_id': self._model_id})
