@@ -72,7 +72,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         all_indicators = self._model_parameters.x_indicators
         if self._fitting_mode:
-            all_indicators =+ self._model_parameters.y_indicators
+            all_indicators = all_indicators + self._model_parameters.y_indicators
 
         for ind_parameters in all_indicators:
 
@@ -103,7 +103,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
             all_columns = self._fitting_parameters.x_columns
             if self._fitting_mode:
-                all_columns += self._fitting_parameters.y_columns
+                all_columns = all_columns +  self._fitting_parameters.y_columns
 
             for col in all_columns:
                 if col not in x_columns + y_columns and col not in self._fitting_parameters.categorical_columns:
