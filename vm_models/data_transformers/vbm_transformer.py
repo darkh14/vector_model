@@ -70,7 +70,11 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         x_columns = []
         y_columns = []
 
-        for ind_parameters in self._model_parameters.x_indicators + self._model_parameters.y_indicators:
+        all_indicators = self._model_parameters.x_indicators
+        if self._fitting_mode:
+            all_indicators =+ self._model_parameters.y_indicators
+
+        for ind_parameters in all_indicators:
 
             ind_data = self._get_raw_data_by_indicator(raw_data, ind_parameters)
 
@@ -95,12 +99,41 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         if self._fitting_mode and self._fitting_parameters.is_first_fitting():
             self._fitting_parameters.x_columns = x_columns
             self._fitting_parameters.y_columns = y_columns
+        else:
+
+            all_columns = self._fitting_parameters.x_columns
+            if self._fitting_mode:
+                all_columns += self._fitting_parameters.y_columns
+
+            for col in all_columns:
+                if col not in x_columns + y_columns and col not in self._fitting_parameters.categorical_columns:
+                    data_result[col] = 0
+
+        if not self._fitting_mode:
+            data_result = self._add_data_while_predicting(data_result, raw_data)
+
+        return data_result
+
+
+    def _add_data_while_predicting(self, data_result: pd.DataFrame, raw_data: pd.DataFrame) -> pd.DataFrame:
+
+        merge_data_columns = ['organisation', 'organisation_struct', 'scenario', 'scenario_struct', 'index']
+        data_to_merge = raw_data[merge_data_columns]
+
+        merge_columns = ['organisation', 'scenario', 'index']
+
+        data_result = data_result.merge(data_to_merge, on=merge_columns, how='left')
+
+        data_result['period'] = data_result['period'].apply(lambda x: x.strftime('%d.%m.%Y'))
 
         return data_result
 
     @staticmethod
     def _get_raw_data_from_x(x: pd.DataFrame) -> pd.DataFrame:
         raw_data = x
+
+        raw_data['index'] = raw_data.index
+
         raw_data.rename({'organisation': 'organisation_struct', 'scenario': 'scenario_struct', 'period': 'period_str',
                          'indicator': 'indicator_struct'}, axis=1, inplace=True)
 
@@ -112,7 +145,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
     @staticmethod
     def _get_grouped_raw_data(raw_data: pd.DataFrame) -> pd.DataFrame:
         return raw_data[['organisation', 'scenario',
-                                 'period']].groupby(by=['organisation', 'scenario', 'period'], as_index=False).sum()
+                        'period', 'index']].groupby(by=['organisation', 'scenario', 'period'], as_index=False).min()
 
     def _get_raw_data_by_indicator(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
 
@@ -225,12 +258,13 @@ class VbmRowColumnTransformer(RowColumnTransformer):
                                    y_columns: list[str],
                                    indicator_parameters: dict[str, Any]) -> None:
 
-        if self._fitting_mode and self._fitting_parameters.is_first_fitting():
-            if self._is_y_indicator(indicator_parameters):
-                y_columns.append(column_name)
-            else:
-                x_columns.append(column_name)
+        if self._is_y_indicator(indicator_parameters):
+            y_columns.append(column_name)
         else:
+            x_columns.append(column_name)
+
+        if not self._fitting_mode or not self._fitting_parameters.is_first_fitting():
+
             if self._is_y_indicator(indicator_parameters):
                 if column_name not in self._fitting_parameters.y_columns:
                     raise ModelException('Column name "{}" not in y columns'.format(column_name))

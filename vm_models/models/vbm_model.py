@@ -36,8 +36,7 @@ class VbmModel(Model):
     def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) ->  pd.DataFrame:
         result = pd.DataFrame(y, columns=self.fitting_parameters.y_columns)
 
-        result[['organisation', 'scenario', 'period']] = x_data[['organisation', 'scenario', 'period']]
-        result['period'] = result['period'].apply(lambda x: x.strftime('%d.%m.%Y'))
+        result[['organisation', 'scenario', 'period']] = x_data[['organisation_struct', 'scenario_struct', 'period']]
 
         return result
 
