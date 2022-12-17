@@ -64,6 +64,8 @@ class FittingParameters:
     fitting_start_date: Optional[datetime] = None
     fitting_error_date: Optional[datetime] = None
 
+    fitting_error_text: str = ''
+
     x_columns: Optional[list[str]] = None
     y_columns: Optional[list[str]] = None
 
@@ -96,6 +98,8 @@ class FittingParameters:
         self.fitting_error_date = (datetime.strptime(parameters['fitting_error_date'], '%d.%m.%Y %H:%M:%S')
                                    if parameters.get('fitting_error_date') else None)
 
+        self.fitting_error_text = parameters.get('fitting_error_text') or ''
+
         self.fitting_job_id = parameters.get('fitting_job_id') or ''
         self.fitting_job_pid = parameters.get('fitting_job_pid') or 0
 
@@ -116,6 +120,7 @@ class FittingParameters:
                                     if self.fitting_start_date else None,
             'fitting_error_date': self.fitting_error_date.strftime('%d.%m.%Y %H:%M:%S')
                                     if self.fitting_error_date else None,
+            'fitting_error_text': self.fitting_error_text,
             'fitting_job_id': self.fitting_job_id,
             'fitting_job_pid': self.fitting_job_pid,
             'x_columns': self.x_columns,
@@ -134,6 +139,8 @@ class FittingParameters:
         self.fitting_start_date = datetime.utcnow()
         self.fitting_date = None
         self.fitting_error_date = None
+
+        self.fitting_error_text = ''
 
         self.fitting_job_pid = os.getpid()
 
@@ -169,6 +176,8 @@ class FittingParameters:
         self.fitting_date = None
         self.fitting_error_date = None
 
+        self.fitting_error_text = ''
+
         self.x_columns = []
         self.y_columns = []
 
@@ -176,7 +185,7 @@ class FittingParameters:
 
         self._first_fitting = True
 
-    def set_error_fitting(self,) -> None:
+    def set_error_fitting(self, error_text: str = '') -> None:
 
         self.is_fit = False
         self.fitting_is_started = False
@@ -184,6 +193,8 @@ class FittingParameters:
 
         self.fitting_date = None
         self.fitting_error_date = datetime.utcnow()
+
+        self.fitting_error_text = error_text
 
         if self._first_fitting:
             self.x_columns = []

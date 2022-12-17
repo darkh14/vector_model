@@ -86,7 +86,7 @@ class Model:
         try:
             result = self._fit_model(fitting_parameters['epochs'], fitting_parameters)
         except Exception as ex:
-            self.fitting_parameters.set_error_fitting()
+            self.fitting_parameters.set_error_fitting(str(ex))
             self._write_to_db()
             raise ex
 
