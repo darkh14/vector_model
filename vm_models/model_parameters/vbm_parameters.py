@@ -4,7 +4,9 @@ from typing import Any, Optional
 from dataclasses import dataclass, fields
 from copy import deepcopy
 from datetime import datetime
+import os
 
+from vm_logging.exceptions import ModelException
 from .base_parameters import ModelParameters, FittingParameters
 from id_generator import IdGenerator
 
@@ -95,6 +97,19 @@ class VbmFittingParameters(FittingParameters):
     _x_analytic_keys: Optional[list[dict[str, Any]]] = None
     _y_analytic_keys: Optional[list[dict[str, Any]]] = None
 
+    fi_is_calculated: bool = False
+    fi_calculation_is_started: bool = False
+    fi_calculation_is_error: bool = False
+    fi_calculation_date: Optional[datetime] = None
+    fi_calculation_start_date: Optional[datetime] = None
+    fi_calculation_error_date: Optional[datetime] = None
+
+    fi_calculation_error_text: str = ''
+
+    fi_calculation_job_id: str = ''
+    fi_calculation_job_pid: int = 0
+    feature_importances: Optional[list] = None
+
     def __post_init__(self):
 
         super().__post_init__()
@@ -105,6 +120,8 @@ class VbmFittingParameters(FittingParameters):
         self._x_analytic_keys = []
         self._y_analytic_keys = []
 
+        self.feature_importances = []
+
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
         super().set_all(parameters)
 
@@ -112,10 +129,34 @@ class VbmFittingParameters(FittingParameters):
         self_fields =  [el.name for el in fields(self) if el.name not in super_fields + ['service_name']]
         self_parameters = [el[1:] if el.startswith('_') else el for el in self_fields]
 
+        fi_parameters  = ['fi_is_calculated', 'fi_calculation_is_started', 'fi_calculation_is_error',
+                          'fi_calculation_date', 'fi_calculation_start_date', 'fi_calculation_error_date',
+                          'fi_calculation_error_text', 'fi_calculation_job_id', 'fi_calculation_job_pid',
+                          'feature_importances']
+        self_parameters = [el for el in self_parameters if el not in fi_parameters]
+
         for count, par_name in enumerate(self_parameters):
             name = self_fields[count] if without_processing else par_name
             if par_name in parameters:
                 setattr(self, name, parameters[par_name])
+
+        self.fi_is_calculated = parameters.get('fi_is_calculated') or False
+        self.fi_calculation_is_started = parameters.get('fi_calculation_is_started') or False
+        self.fi_calculation_is_error = parameters.get('fi_calculation_is_error') or False
+
+        self.fi_calculation_date = (datetime.strptime(parameters['fi_calculation_date'], '%d.%m.%Y %H:%M:%S')
+                             if parameters.get('fi_calculation_date') else None)
+        self.fi_calculation_start_date = (datetime.strptime(parameters['fi_calculation_start_date'], '%d.%m.%Y %H:%M:%S')
+                                   if parameters.get('fi_calculation_start_date') else None)
+        self.fi_calculation_error_date = (datetime.strptime(parameters['fi_calculation_error_date'], '%d.%m.%Y %H:%M:%S')
+                                   if parameters.get('fi_calculation_error_date') else None)
+
+        self.fi_calculation_error_text = parameters.get('fi_calculation_error_text') or ''
+
+        self.fi_calculation_job_id = parameters.get('fi_calculation_job_id') or ''
+        self.fi_calculation_job_pid = parameters.get('fi_calculation_job_pid') or 0
+
+        self.feature_importances = parameters.get('feature_importances') or []
 
     def get_all(self) -> dict[str, Any]:
         result = super().get_all()
@@ -128,7 +169,29 @@ class VbmFittingParameters(FittingParameters):
 
         result.update(parameters_to_add)
 
+        fi_parameters = {
+            'fi_is_calculated': self.fi_is_calculated,
+            'fi_calculation_is_started': self.fi_calculation_is_started,
+            'fi_calculation_is_error': self.fi_calculation_is_error,
+            'fi_calculation_date': self.fi_calculation_date.strftime('%d.%m.%Y %H:%M:%S')
+            if self.fi_calculation_date else None,
+            'fi_calculation_start_date': self.fi_calculation_start_date.strftime('%d.%m.%Y %H:%M:%S')
+            if self.fi_calculation_start_date else None,
+            'fi_calculation_error_date': self.fi_calculation_error_date.strftime('%d.%m.%Y %H:%M:%S')
+            if self.fi_calculation_error_date else None,
+            'fi_calculation_error_text': self.fi_calculation_error_text,
+            'fi_calculation_job_id': self.fi_calculation_job_id,
+            'fi_calculation_job_pid': self.fi_calculation_job_pid,
+            'feature_importances': self.feature_importances
+        }
+
+        result.update(fi_parameters)
+
         return result
+
+    def set_start_fitting(self, fitting_parameters: dict[str, Any]) -> None:
+        super().set_start_fitting(fitting_parameters)
+        self.set_drop_fi_calculation()
 
     def set_drop_fitting(self):
         super().set_drop_fitting()
@@ -139,6 +202,7 @@ class VbmFittingParameters(FittingParameters):
         self._x_analytic_keys = []
         self._y_analytic_keys = []
 
+        self.set_drop_fi_calculation()
 
     def set_error_fitting(self, error_text: str = '') -> None:
         super().set_error_fitting(error_text)
@@ -149,6 +213,64 @@ class VbmFittingParameters(FittingParameters):
 
             self._x_analytic_keys = []
             self._y_analytic_keys = []
+
+    def set_start_fi_calculation(self, fi_parameters: dict[str, Any]) -> None:
+
+        self.fi_is_calculated = False
+        self.fi_calculation_is_started = True
+        self.fi_calculation_is_error = False
+
+        self.fi_calculation_date = datetime.utcnow()
+        self.fi_calculation_start_date = None
+        self.fi_calculation_error_date = None
+
+        self.fi_calculation_error_text = ''
+
+        self.fi_calculation_job_pid = os.getpid()
+
+        if fi_parameters.get('job_id'):
+            self.fitting_job_id = fi_parameters['job_id']
+
+    def set_end_fi_calculation(self):
+
+        if not self.fi_calculation_is_started:
+            raise ModelException('Can not finish fi calculation. Fi calculation is not started. ' +
+                                 'Start fi calculation before')
+
+        self.fi_is_calculated = True
+        self.fi_calculation_is_started = False
+        self.fi_calculation_is_error = False
+
+        self.fi_calculation_date = datetime.utcnow()
+        self.fi_calculation_error_date = None
+
+    def set_error_fi_calculation(self, error_text):
+
+        self.fi_is_calculated = False
+        self.fi_calculation_is_started = False
+        self.fi_calculation_is_error = True
+
+        self.fi_calculation_date = None
+        self.fi_calculation_error_date = datetime.utcnow()
+
+        self.fi_calculation_error_text = error_text
+
+    def set_drop_fi_calculation(self):
+
+        self.fi_is_calculated = False
+        self.fi_calculation_is_started = False
+        self.fi_calculation_is_error = False
+
+        self.fi_calculation_date = None
+        self.fi_calculation_start_date = None
+        self.fi_calculation_error_date = None
+
+        self.fi_calculation_error_text = ''
+
+        self.fi_calculation_job_id = ''
+        self.fi_calculation_job_pid = 0
+
+        self.feature_importances = []
 
     @property
     def x_analytics(self):

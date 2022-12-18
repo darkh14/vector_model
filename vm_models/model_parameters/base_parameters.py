@@ -123,6 +123,7 @@ class FittingParameters:
             'fitting_error_text': self.fitting_error_text,
             'fitting_job_id': self.fitting_job_id,
             'fitting_job_pid': self.fitting_job_pid,
+
             'x_columns': self.x_columns,
             'y_columns': self.y_columns,
             'categorical_columns': self.categorical_columns,
@@ -204,3 +205,5 @@ class FittingParameters:
 
     def is_first_fitting(self):
         return self._first_fitting
+
+

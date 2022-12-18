@@ -253,5 +253,3 @@ class Model:
 
 def get_additional_actions() -> dict[str, Callable]:
     return {}
-
-

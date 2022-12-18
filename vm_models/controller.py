@@ -40,15 +40,17 @@ def _transform_model_parameters_for_fitting(func: Callable):
     @wraps(func)
     def wrapper(parameters: dict[str, Any]):
 
-        if 'fitting_parameters' in parameters['model']:
-            if 'filter' in parameters['model']['fitting_parameters']:
+        if 'fitting_parameters' not in parameters['model']:
+            raise ParameterNotFoundException('Parameter "fitting_parameters" not found in model parameters')
 
-                input_filter = parameters['model']['fitting_parameters']['filter']
-                filter_obj = get_fitting_filter_class()(input_filter)
-                parameters['model']['fitting_parameters']['filter'] = filter_obj.get_value_as_model_parameter()
+        if 'filter' in parameters['model']['fitting_parameters']:
 
-            if 'job_id' in parameters:
-                parameters['model']['fitting_parameters']['job_id'] = parameters['job_id']
+            input_filter = parameters['model']['fitting_parameters']['filter']
+            filter_obj = get_fitting_filter_class()(input_filter)
+            parameters['model']['fitting_parameters']['filter'] = filter_obj.get_value_as_model_parameter()
+
+        if 'job_id' in parameters:
+            parameters['model']['fitting_parameters']['job_id'] = parameters['job_id']
 
         result = func(parameters)
         return result
