@@ -176,7 +176,7 @@ class VbmModel(Model):
             sa_ind_data['plus'] = sa_ind_data_plus
             sa_ind_data['minus'] = sa_ind_data_minus
 
-            sa[ind_id] = sa_ind_data
+            sa['ind_' + ind_id] = sa_ind_data
 
         return sa
 
