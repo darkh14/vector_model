@@ -16,6 +16,7 @@ from vm_logging.exceptions import ModelException, ParameterNotFoundException
 from ..model_filters import get_fitting_filter_class
 from ..engines import get_engine_class
 from vm_background_jobs.decorators import execute_in_background
+from vm_background_jobs.controller import set_background_job_interrupted
 
 
 
@@ -83,6 +84,14 @@ class VbmModel(Model):
             self._write_to_db()
 
         return result
+
+    def drop_fi_calculation(self) -> str:
+
+        self._interrupt_fi_calculation_job()
+        self.fitting_parameters.set_drop_fi_calculation()
+        self._write_to_db()
+
+        return 'Model "{}" id "{}" fi calculation is dropped'.format(self.parameters.name, self.id)
 
     def _check_before_fi_calculating(self, fi_parameters:  dict[str, Any]) -> None:
 
@@ -188,10 +197,14 @@ class VbmModel(Model):
 
         return result
 
+    def _interrupt_fi_calculation_job(self):
+        if self.fitting_parameters.fi_calculation_is_started:
+            set_background_job_interrupted(self.fitting_parameters.fi_calculation_job_id, self._db_path)
+
 
 def get_additional_actions() -> dict[str, Callable]:
     return {'model_calculate_feature_importances': _calculate_feature_importances,
-            'model_get_feature_importances': _get_feature_importances
+            'model_drop_fi_calculation': _drop_fi_calculation
             }
 
 
@@ -222,11 +235,15 @@ def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]
     return result
 
 
-def _get_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]:
+def _drop_fi_calculation(parameters: dict[str, Any]) -> str:
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
     if not parameters.get('db'):
         raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
-    return {'FI': []}
+    model = VbmModel(parameters['model']['id'], parameters['db'])
+
+    result = model.drop_fi_calculation()
+
+    return result

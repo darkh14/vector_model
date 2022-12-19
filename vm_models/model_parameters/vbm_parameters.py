@@ -259,6 +259,9 @@ class VbmFittingParameters(FittingParameters):
 
     def set_drop_fi_calculation(self):
 
+        if not self.fi_is_calculated and not self.fi_calculation_is_started and not self.fi_calculation_is_error:
+            raise ModelException('Can not drop fi calculation. FI is not calculated')
+
         self.fi_is_calculated = False
         self.fi_calculation_is_started = False
         self.fi_calculation_is_error = False
