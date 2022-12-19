@@ -85,6 +85,13 @@ class VbmModel(Model):
 
         return result
 
+    def get_feature_importances(self) -> dict[str, Any]:
+
+        if not self.fitting_parameters.fi_is_calculated:
+            raise ModelException('FI is not calculated. Calculate feature importances first')
+
+        return self.fitting_parameters.feature_importances
+
     def drop_fi_calculation(self) -> str:
 
         self._interrupt_fi_calculation_job()
@@ -92,6 +99,86 @@ class VbmModel(Model):
         self._write_to_db()
 
         return 'Model "{}" id "{}" fi calculation is dropped'.format(self.parameters.name, self.id)
+
+    def get_sensitivity_analysis(self, inputs_0: list[dict[str, Any]],
+                                 inputs_plus: list[dict[str, Any]],
+                                 inputs_minus: list[dict[str, Any]]) -> dict[str, Any]:
+
+        pipeline = self._get_model_pipeline(for_predicting=True)
+        data_0 = pipeline.transform(inputs_0)
+
+        data_plus = pipeline.transform(inputs_plus)
+        data_minus = pipeline.transform(inputs_minus)
+
+        x_0 = self._data_to_x(data_0)
+
+        input_number = len(self.fitting_parameters.x_columns)
+        output_number = len(self.fitting_parameters.y_columns)
+        self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number, self._db_path)
+        y_0 = self._engine.predict(x_0)
+
+        data_0[self.fitting_parameters.y_columns] = y_0
+
+        data_0['y_all'] = data_0[self.fitting_parameters.y_columns].apply(sum, axis=1)
+
+        ind_ids = list(set([ind['short_id'] for ind in self.parameters.x_indicators]))
+
+        sa = {}
+
+        for ind_id in ind_ids:
+            ind_columns = [col for col in self.fitting_parameters.x_columns if col.split('_')[1] == ind_id]
+
+            data_ind_plus = data_0.copy()
+            data_ind_plus[ind_columns] = data_plus[ind_columns]
+            x_ind_plus = self._data_to_x(data_ind_plus)
+
+            data_ind_minus = data_0.copy()
+            data_ind_minus[ind_columns] = data_minus[ind_columns]
+            x_ind_minus = self._data_to_x(data_ind_minus)
+
+
+            y_ind_plus = self._engine.predict(x_ind_plus)
+            y_ind_minus = self._engine.predict(x_ind_minus)
+
+            data_ind_plus[self.fitting_parameters.y_columns] = y_ind_plus
+            data_ind_minus[self.fitting_parameters.y_columns] = y_ind_minus
+
+            data_ind_plus['y_all'] = data_ind_plus[self.fitting_parameters.y_columns].apply(sum, axis=1)
+            data_ind_minus['y_all'] = data_ind_minus[self.fitting_parameters.y_columns].apply(sum, axis=1)
+
+            data_ind_plus['y_0'] = data_0['y_all']
+            data_ind_minus['y_0'] = data_0['y_all']
+
+            data_ind_plus['delta'] = data_ind_plus['y_all'] - data_ind_plus['y_0']
+            data_ind_minus['delta'] = data_ind_minus['y_0'] - data_ind_minus['y_all']
+
+            data_ind_plus['delta_percent'] = data_ind_plus[['delta', 'y_0']].apply(lambda ss: ss['delta']/ss['y_0']
+                                                                                   if ss['y_0'] else 0, axis=1)
+            data_ind_minus['delta_percent'] = data_ind_minus[['delta', 'y_0']].apply(lambda ss: ss['delta']/ss['y_0']
+                                                                                   if ss['y_0'] else 0, axis=1)
+            data_ind_plus = data_ind_plus.drop(['organisation', 'scenario'], axis=1)
+            data_ind_minus = data_ind_minus.drop(['organisation', 'scenario'], axis=1)
+
+            data_ind_plus = data_ind_plus.rename({'organisation_struct': 'organisation', 'scenario_struct':
+                'scenario', 'y_all': 'y'}, axis=1)
+
+            data_ind_minus = data_ind_minus.rename({'organisation_struct': 'organisation', 'scenario_struct':
+                'scenario', 'y_all': 'y'}, axis=1)
+
+            sa_ind_data = dict()
+            sa_ind_data['indicator'] = [ind for ind in self.parameters.x_indicators if ind['short_id'] == ind_id][0]
+
+            sa_ind_data_plus = data_ind_plus[['organisation', 'scenario', 'period', 'y', 'y_0',
+                                              'delta', 'delta_percent']].to_dict('records')
+            sa_ind_data_minus = data_ind_minus[['organisation', 'scenario', 'period', 'y', 'y_0',
+                                              'delta', 'delta_percent']].to_dict('records')
+
+            sa_ind_data['plus'] = sa_ind_data_plus
+            sa_ind_data['minus'] = sa_ind_data_minus
+
+            sa[ind_id] = sa_ind_data
+
+        return sa
 
     def _check_before_fi_calculating(self, fi_parameters:  dict[str, Any]) -> None:
 
@@ -204,7 +291,9 @@ class VbmModel(Model):
 
 def get_additional_actions() -> dict[str, Callable]:
     return {'model_calculate_feature_importances': _calculate_feature_importances,
-            'model_drop_fi_calculation': _drop_fi_calculation
+            'model_get_feature_importances': _get_feature_importances,
+            'model_drop_fi_calculation': _drop_fi_calculation,
+            'model_get_sensitivity_analysis': _get_sensitivity_analysis
             }
 
 
@@ -235,6 +324,20 @@ def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]
     return result
 
 
+def _get_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]:
+    if not parameters.get('model'):
+        raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
+
+    if not parameters.get('db'):
+        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
+
+    model = VbmModel(parameters['model']['id'], parameters['db'])
+
+    result = model.get_feature_importances()
+
+    return result
+
+
 def _drop_fi_calculation(parameters: dict[str, Any]) -> str:
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
@@ -245,5 +348,27 @@ def _drop_fi_calculation(parameters: dict[str, Any]) -> str:
     model = VbmModel(parameters['model']['id'], parameters['db'])
 
     result = model.drop_fi_calculation()
+
+    return result
+
+
+def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
+    if not parameters.get('model'):
+        raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
+
+    if not parameters.get('db'):
+        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
+
+    check_fields = ['inputs_0', 'inputs_plus', 'inputs_minus']
+
+    for field in check_fields:
+        if field not in parameters:
+            raise ParameterNotFoundException('Parameter "{}" is not found in request parameters'.format(field))
+
+    model = VbmModel(parameters['model']['id'], parameters['db'])
+
+    result = model.get_sensitivity_analysis(parameters['inputs_0'],
+                                            parameters['inputs_plus'],
+                                            parameters['inputs_minus'])
 
     return result
