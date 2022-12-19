@@ -4,11 +4,20 @@
 from typing import Any, Optional, Callable
 import numpy as np
 import pandas as pd
+import math
+
+from keras.wrappers.scikit_learn import KerasRegressor
+from keras.models import clone_model
+from eli5.sklearn import PermutationImportance
 
 from .base_model import Model
 from ..model_types import DataTransformersTypes
 from vm_logging.exceptions import ModelException, ParameterNotFoundException
 from ..model_filters import get_fitting_filter_class
+from ..engines import get_engine_class
+from vm_background_jobs.decorators import execute_in_background
+
+
 
 __all__ = ['VbmModel', 'get_additional_actions']
 
@@ -58,7 +67,7 @@ class VbmModel(Model):
 
         self._check_before_fi_calculating(fi_parameters)
 
-        self.fitting_parameters.set_start_fi_calculation()
+        self.fitting_parameters.set_start_fi_calculation(fi_parameters)
         self._write_to_db()
 
         try:
@@ -70,14 +79,15 @@ class VbmModel(Model):
 
         if not self.fitting_parameters.fi_calculation_is_error:
 
-            # self.fitting_parameters.metrics = self._engine.metrics
-
             self.fitting_parameters.set_end_fi_calculation()
             self._write_to_db()
 
         return result
 
     def _check_before_fi_calculating(self, fi_parameters:  dict[str, Any]) -> None:
+
+        if not self._initialized:
+            raise ModelException('Model is not initialized. Check model id before')
 
         if not self.fitting_parameters.is_fit:
             raise ModelException('Model is not fit. Fit model before fi calculation')
@@ -90,51 +100,89 @@ class VbmModel(Model):
 
     def _fi_calculate_model(self, epochs, fi_parameters):
 
-        # pipeline = self._get_model_pipeline(for_predicting=False, fitting_parameters=fitting_parameters)
-        # data = pipeline.fit_transform(None)
-        #
-        # x, y = self._data_to_x_y(data)
-        # input_number = len(self.fitting_parameters.x_columns)
-        # output_number = len(self.fitting_parameters.y_columns)
-        # self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number, self._db_path,
-        #                                                       self.fitting_parameters.is_first_fitting())
-        # result = self._engine.fit(x, y, epochs, fitting_parameters)
+        pipeline = self._get_model_pipeline(for_predicting=False, fitting_parameters=fi_parameters)
+        data = pipeline.fit_transform(None)
 
-        # if not retrofit:
-        #     date_from = None
-        # else:
-        #     date_from = datetime.datetime.strptime(date_from, '%d.%m.%Y')
-        #
-        # indicator_filter = [ind_data['short_id'] for ind_data in self.x_indicators + self.y_indicators]
-        #
-        # db_filter = {key: value for key, value in self.filter.items() if key not in ['date_from', 'date_to']}
-        #
-        # data = self._data_processor.read_raw_data(indicator_filter, date_from=date_from, ad_filter=db_filter)
-        # additional_data = {'x_indicators': self.x_indicators,
-        #                    'y_indicators': self.y_indicators,
-        #                    'periods': self.periods,
-        #                    'organisations': self.organisations,
-        #                    'scenarios': self.scenarios,
-        #                    'x_columns': self.x_columns,
-        #                    'y_columns': self.y_columns,
-        #                    'filter': self.filter}
-        # x, y, x_columns, y_columns = self._data_processor.get_x_y_for_fitting(data, additional_data)
-        #
-        # self._temp_input = x
-        # # self._inner_model = self._get_inner_model(len(self.x_columns), len(self.y_columns), retrofit=retrofit)
-        #
-        # epochs = epochs or 1000
-        # validation_split = validation_split or 0.2
-        #
-        # fi_model = KerasRegressor(build_fn=self._get_model_for_feature_importances,
-        #                           epochs=epochs,
-        #                           verbose=2,
-        #                           validation_split=validation_split)
-        # fi_model.fit(x, y)
-        #
-        # fi = self._calculate_fi_from_model(fi_model, x, y, x_columns)
+        x, y = self._data_to_x_y(data)
+        input_number = len(self.fitting_parameters.x_columns)
+        output_number = len(self.fitting_parameters.y_columns)
+        self._engine = get_engine_class(self.parameters.type)('', input_number, output_number, self._db_path, True)
+
+        validation_split = fi_parameters.get('validation_split') or 0.2
+
+        fi_engine = KerasRegressor(build_fn=self._get_engine_for_fi,
+                                  epochs=fi_parameters['epochs'],
+                                  verbose=2,
+                                  validation_split=validation_split)
+
+        fi_engine.fit(x, y)
+
+        self._calculate_fi_from_model(fi_engine, x, y)
 
         result = {'description': 'FI calculating OK'}
+
+        return result
+
+    def _get_engine_for_fi(self):
+        inner_engine = clone_model(self._engine.inner_engine)
+        self._engine.compile_engine(inner_engine)
+
+        return inner_engine
+
+    def _calculate_fi_from_model(self, fi_model: KerasRegressor, x: np.ndarray, y: np.ndarray) -> None:
+        perm = PermutationImportance(fi_model, random_state=42).fit(x, y)
+
+        fi = pd.DataFrame(perm.feature_importances_, columns=['error_delta'])
+        fi['feature'] = self.fitting_parameters.x_columns
+        fi = fi.sort_values(by='error_delta', ascending=False)
+
+        fi['indicator'] = fi['feature'].apply(self._get_indicator_from_column_name)
+
+        fi['analytics'] = fi['feature'].apply(self._get_analytics_from_column_name)
+
+        fi['influence_factor'] = fi['error_delta'].apply(lambda error_delta: math.log(error_delta + 1)
+                                    if error_delta > 0 else 0)
+
+        if_sum = fi['influence_factor'].sum()
+        fi['influence_factor'] = fi['influence_factor'] / if_sum
+
+        fi_ind = fi.copy()
+
+        fi_ind['indicator_short_id'] = fi_ind['indicator'].apply(lambda ind: ind['short_id'])
+
+        fi_ind = fi_ind[['indicator_short_id',
+                         'error_delta',
+                         'influence_factor']].groupby(['indicator_short_id'], as_index=False).sum()
+
+        fi_ind['indicator'] = fi_ind['indicator_short_id'].apply(self._get_indicator_from_short_id)
+
+        fi = fi.to_dict('records')
+        fi_ind = fi_ind.to_dict('records')
+
+        self.fitting_parameters.feature_importances = {'extended': fi, 'grouped': fi_ind}
+
+    def _get_indicator_from_column_name(self, column_name: str) -> dict[str, Any]:
+
+        short_id = column_name.split('_')[1]
+
+        return self._get_indicator_from_short_id(short_id)
+
+    def _get_indicator_from_short_id(self, short_id: str) -> dict[str, Any]:
+
+        indicators = [ind for ind in (self.parameters.x_indicators + self.parameters.y_indicators)
+                      if ind['short_id'] == short_id]
+
+        return indicators[0]
+
+    def _get_analytics_from_column_name(self, column_name: str) -> list[dict[str, Any]]:
+
+        column_list = column_name.split('_')
+
+        if 'an' in column_list:
+            result = [el['analytics'] for el in (self.fitting_parameters.x_analytic_keys + self.fitting_parameters.y_analytic_keys)
+                      if el['short_id'] == column_list[3]][0]
+        else:
+            result = []
 
         return result
 
@@ -145,6 +193,7 @@ def get_additional_actions() -> dict[str, Callable]:
             }
 
 
+@execute_in_background
 def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]:
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
@@ -164,7 +213,7 @@ def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]
         if 'job_id' in parameters:
             parameters['model']['fi_parameters']['job_id'] = parameters['job_id']
 
-    model = VbmModel(parameters['model'], parameters['db'])
+    model = VbmModel(parameters['model']['id'], parameters['db'])
 
     result = model.calculate_feature_importances(parameters['model']['fi_parameters'])
 

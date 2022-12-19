@@ -219,8 +219,8 @@ class Model:
         else:
             self._initialized = False
 
-            self.parameters: base_parameters.ModelParameters = get_model_parameters_class()()
-            self.fitting_parameters: base_parameters.FittingParameters = get_model_parameters_class(fitting=True)()
+            self.parameters = get_model_parameters_class()()
+            self.fitting_parameters = get_model_parameters_class(fitting=True)()
 
             self._engine = None
 

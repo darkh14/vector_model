@@ -48,7 +48,7 @@ class VbmNeuralNetwork(BaseEngine):
     def predict(self, x: np.ndarray) -> np.ndarray:
         return self._inner_engine.predict(x)
 
-    def _create_inner_engine(self) -> Sequential:
+    def create_inner_engine(self) -> Sequential:
 
         model = Sequential()
 
@@ -58,21 +58,21 @@ class VbmNeuralNetwork(BaseEngine):
         model.add(Dense(30, activation="relu", name='dense_4'))
         model.add(Dense(self._output_number, activation="linear", name='dense_last'))
 
-        self._compile_model(model)
+        self.compile_engine(model)
 
         return model
 
     def _read_from_db(self) -> None:
 
-        if self._new_engine:
-            self._inner_engine = self._create_inner_engine()
+        if self._new_engine or not self._model_id:
+            self._inner_engine = self.create_inner_engine()
         else:
             line_from_db = self._db_connector.get_line('engines', {'model_id': self._model_id})
 
             if line_from_db:
                 self._inner_engine = self._get_inner_engine_from_binary_data(line_from_db['inner_engine'])
             else:
-                self._inner_engine = self._create_inner_engine()
+                self._inner_engine = self.create_inner_engine()
 
     def _get_inner_engine_from_binary_data(self, model_data: bytes, use_pickle: bool=False) -> Sequential:
 
@@ -98,8 +98,9 @@ class VbmNeuralNetwork(BaseEngine):
 
     def _write_to_db(self):
 
-        line_to_db = {'model_id': self._model_id, 'inner_engine': self._get_binary_data_from_inner_engine()}
-        self._db_connector.set_line('engines', line_to_db, {'model_id': self._model_id})
+        if self._model_id:
+            line_to_db = {'model_id': self._model_id, 'inner_engine': self._get_binary_data_from_inner_engine()}
+            self._db_connector.set_line('engines', line_to_db, {'model_id': self._model_id})
 
     def _get_binary_data_from_inner_engine(self, use_pickle: bool = False) -> bytes:
 
@@ -136,8 +137,8 @@ class VbmNeuralNetwork(BaseEngine):
                                            os.path.join(path, '..')))
 
     @staticmethod
-    def _compile_model(model):
-        model.compile(optimizer=Adam(learning_rate=0.001), loss='MeanSquaredError',
+    def compile_engine(engine):
+        engine.compile(optimizer=Adam(learning_rate=0.001), loss='MeanSquaredError',
                       metrics=['RootMeanSquaredError'])
 
     @staticmethod
@@ -153,6 +154,11 @@ class VbmNeuralNetwork(BaseEngine):
     def _calculate_rsme(y_true, y_pred):
         return np.sqrt(mean_squared_error(y_true, y_pred))
 
+    @property
+    def inner_engine(self) -> Sequential:
+        return self._inner_engine
+
+
 
 class VbmLinearModel(VbmNeuralNetwork):
     model_type = 'linear_regression'
@@ -164,11 +170,11 @@ class VbmLinearModel(VbmNeuralNetwork):
         model.add(Dense(self._input_number, activation="relu", input_shape=(self._input_number,), name='dense_1'))
         model.add(Dense(self._output_number, activation="linear", name='dense_last'))
 
-        self._compile_model(model)
+        self.compile_engine(model)
 
         return model
 
     @staticmethod
-    def _compile_model(model):
-        model.compile(optimizer=Adam(learning_rate=0.01), loss='MeanSquaredError',
+    def compile_engine(engine):
+        engine.compile(optimizer=Adam(learning_rate=0.01), loss='MeanSquaredError',
                       metrics=['RootMeanSquaredError'])

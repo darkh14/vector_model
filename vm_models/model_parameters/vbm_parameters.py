@@ -108,7 +108,7 @@ class VbmFittingParameters(FittingParameters):
 
     fi_calculation_job_id: str = ''
     fi_calculation_job_pid: int = 0
-    feature_importances: Optional[list] = None
+    feature_importances: Optional[dict[str, Any]] = None
 
     def __post_init__(self):
 
@@ -120,7 +120,7 @@ class VbmFittingParameters(FittingParameters):
         self._x_analytic_keys = []
         self._y_analytic_keys = []
 
-        self.feature_importances = []
+        self.feature_importances = {}
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
         super().set_all(parameters)
@@ -156,7 +156,7 @@ class VbmFittingParameters(FittingParameters):
         self.fi_calculation_job_id = parameters.get('fi_calculation_job_id') or ''
         self.fi_calculation_job_pid = parameters.get('fi_calculation_job_pid') or 0
 
-        self.feature_importances = parameters.get('feature_importances') or []
+        self.feature_importances = parameters.get('feature_importances') or {}
 
     def get_all(self) -> dict[str, Any]:
         result = super().get_all()
@@ -255,6 +255,8 @@ class VbmFittingParameters(FittingParameters):
 
         self.fi_calculation_error_text = error_text
 
+        self.feature_importances = {}
+
     def set_drop_fi_calculation(self):
 
         self.fi_is_calculated = False
@@ -270,7 +272,7 @@ class VbmFittingParameters(FittingParameters):
         self.fi_calculation_job_id = ''
         self.fi_calculation_job_pid = 0
 
-        self.feature_importances = []
+        self.feature_importances = {}
 
     @property
     def x_analytics(self):

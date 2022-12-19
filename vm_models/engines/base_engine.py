@@ -3,7 +3,6 @@ from typing import Any, Optional
 import numpy as np
 
 from db_processing import connectors, get_connector
-from ..model_parameters.base_parameters import ModelParameters, FittingParameters
 
 class BaseEngine:
     service_name: str = ''
