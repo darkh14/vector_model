@@ -156,6 +156,8 @@ class VbmModel(Model):
 
         fi_ind['indicator'] = fi_ind['indicator_short_id'].apply(self._get_indicator_from_short_id)
 
+        fi_ind = fi_ind.sort_values(by='error_delta', ascending=False)
+
         fi = fi.to_dict('records')
         fi_ind = fi_ind.to_dict('records')
 
