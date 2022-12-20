@@ -9,6 +9,7 @@ import math
 from keras.wrappers.scikit_learn import KerasRegressor
 from keras.models import clone_model
 from eli5.sklearn import PermutationImportance
+import plotly.graph_objects as go
 
 from .base_model import Model
 from ..model_types import DataTransformersTypes
@@ -17,6 +18,7 @@ from ..model_filters import get_fitting_filter_class
 from ..engines import get_engine_class
 from vm_background_jobs.decorators import execute_in_background
 from vm_background_jobs.controller import set_background_job_interrupted
+from id_generator import IdGenerator
 
 
 
@@ -180,6 +182,72 @@ class VbmModel(Model):
 
         return sa
 
+    def get_factor_analysis(self, inputs: list[dict[str, Any]],
+                                 outputs: dict[str, Any],
+                                 input_indicators: list[dict[str, Any]],
+                                 output_indicator: dict[str, Any],
+                                 get_graph: bool = False) -> dict[str, Any]:
+
+        self._check_before_fa_calculation()
+
+        # method of chain substitutions
+        result_data = []
+        used_indicator_ids = []
+
+        output_indicator_short_id_s = [el['short_id'] for el in self.parameters.y_indicators
+                                       if el['id'] == output_indicator['id'] and el['type'] == output_indicator['type']]
+
+        if not output_indicator_short_id_s:
+            raise ModelException('Indicator "{}", id "{}" type "{}" not in model'.format(output_indicator['name'],
+                                                                                         output_indicator['id'],
+                                                                                         output_indicator['type']))
+
+        output_indicator_short_id = output_indicator_short_id_s[0]
+
+        output_columns = [col for col in self.fitting_parameters.y_columns
+                          if col.split('_')[1] == output_indicator_short_id]
+
+        input_data = pd.DataFrame(inputs)
+        input_data['indicator_short_id'] = input_data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
+
+        main_periods = input_data[['period',
+                                   'is_main_period']].loc[input_data['is_main_period'] == True]['period'].unique()
+
+        main_periods = list(main_periods)
+
+        output_base = self._get_output_value_for_fa(input_data, outputs, used_indicator_ids,
+                                                    main_periods, output_columns)
+
+        for indicator_element in input_indicators:
+
+            ind_short_id_s = [el['short_id'] for el in self.parameters.x_indicators
+                                 if el['id'] == indicator_element['id'] and el['type'] == indicator_element['type']]
+
+            if not ind_short_id_s:
+                raise ModelException('Indicator "{}", id "{}" type "{}" not in model'.format(indicator_element['name'],
+                                                                                             indicator_element['id'],
+                                                                                             indicator_element['type']))
+            ind_short_id = ind_short_id_s[0]
+
+            output_value = self._get_output_value_for_fa(input_data, outputs, used_indicator_ids, main_periods,
+                                                         output_columns, ind_short_id)
+
+            result_element = {'indicator': indicator_element, 'value': output_value - output_base}
+
+            result_data.append(result_element)
+            used_indicator_ids.append(ind_short_id)
+
+            output_base = output_value
+
+        graph_string = ''
+
+        if get_graph:
+            graph_data = self._get_data_for_fa_graph(result_data, outputs)
+            graph_string = self._get_fa_graph_bin(graph_data, output_indicator['name'])
+
+        return {'fa': result_data, 'graph_data': graph_string}
+
+
     def _check_before_fi_calculating(self, fi_parameters:  dict[str, Any]) -> None:
 
         if not self._initialized:
@@ -207,7 +275,7 @@ class VbmModel(Model):
         validation_split = fi_parameters.get('validation_split') or 0.2
 
         fi_engine = KerasRegressor(build_fn=self._get_engine_for_fi,
-                                  epochs=fi_parameters['epochs'],
+                                  epochs=epochs,
                                   verbose=2,
                                   validation_split=validation_split)
 
@@ -288,12 +356,176 @@ class VbmModel(Model):
         if self.fitting_parameters.fi_calculation_is_started:
             set_background_job_interrupted(self.fitting_parameters.fi_calculation_job_id, self._db_path)
 
+    def _check_before_fa_calculation(self):
+
+        if not self._initialized:
+            raise ModelException('Error of calculating factor analysis data. Model is not initialized')
+
+        if not self.fitting_parameters.is_fit:
+            raise ModelException('Error of calculating factor analysis data. Model is not fit. '
+                                     'Train the model before calculating')
+
+    def _get_output_value_for_fa(self, input_data: pd.DataFrame,
+                                 outputs: dict[str, Any],
+                                 used_indicator_ids: list[str],
+                                 main_periods: list[str],
+                                 output_columns: list[str],
+                                 current_ind_short_id: str = ''):
+
+        c_input_data = input_data.copy()
+
+        c_input_data['scenario'] = c_input_data['organisation'].apply(lambda sc: outputs['calculated'])
+        c_input_data['periodicity'] = c_input_data['scenario'].apply(lambda sc: sc['periodicity'])
+
+        c_input_data['current_indicator_short_id'] = current_ind_short_id
+        c_input_data['used_indicator_ids'] = None
+        c_input_data['used_indicator_ids'] = c_input_data['used_indicator_ids'].apply(lambda ind: used_indicator_ids)
+
+        c_input_data['value'] = c_input_data[['value_base',
+                                              'value_calculated',
+                                              'used_indicator_ids',
+                                              'indicator_short_id',
+                                              'current_indicator_short_id']].apply(self._get_value_for_fa, axis=1)
+
+        c_input_data = c_input_data.drop(['value_base', 'value_calculated', 'used_indicator_ids',
+                                          'current_indicator_short_id'], axis=1)
+
+        pipeline = self._get_model_pipeline(for_predicting=True)
+        data = pipeline.transform(c_input_data)
+
+        x = self._data_to_x(data)
+
+        input_number = len(self.fitting_parameters.x_columns)
+        output_number = len(self.fitting_parameters.y_columns)
+        if not self._engine:
+            self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number, self._db_path)
+        y = self._engine.predict(x)
+
+        data[self.fitting_parameters.y_columns] = y
+
+        output_data = data.loc[data['period'].isin(main_periods)].copy()
+
+        output_data = output_data[output_columns]
+        output_data['value'] = output_data.apply(sum, axis=1)
+
+        output_value = output_data['value'].sum()
+
+        return output_value
+
+
+    @staticmethod
+    def _get_value_for_fa(input_parameters):
+
+        (value_based, value_calculated, used_indicator_ids,
+         indicator_short_id, current_indicator_short_id) = input_parameters
+
+        if current_indicator_short_id == indicator_short_id:
+            value = value_calculated
+        elif indicator_short_id in used_indicator_ids:
+            value = value_calculated
+        else:
+            value = value_based
+
+        return value
+
+    def _get_data_for_fa_graph(self, result_data: list[dict[str, Any]], outputs: dict[str, Any]):
+
+        result_data = pd.DataFrame(result_data)
+        result_data['title'] = result_data['indicator'].apply(lambda x: x['name'])
+        result_data['order'] = list(range(2, result_data.shape[0]+2))
+
+        result_data.drop(['indicator'], axis=1, inplace=True)
+
+        base_line = {'title': 'Базовый', 'value': outputs['based']['value'], 'order': 1}
+        calculated_line = {'title': 'Расчетный', 'value': outputs['calculated']['value'], 'order': result_data.shape[0]+2}
+
+        result_data = pd.concat([result_data, pd.DataFrame([base_line, calculated_line])])
+
+        result_data = result_data.sort_values('order')
+
+        return result_data
+
+
+    def _get_fa_graph_bin(self, values: pd.DataFrame, out_indicator_name: str) -> str:
+
+        x_list = list(values['title'])
+        y_list = list(values['value'])
+
+        text_list = []
+        for index, item in enumerate(y_list):
+            if item > 0 and index != 0 and index != len(y_list) - 1:
+                text_list.append('+{0:.2f}'.format(y_list[index]))
+            else:
+                text_list.append('{0:.2f}'.format(y_list[index]))
+
+        for index, item in enumerate(text_list):
+            if item[0] == '+' and index != 0 and index != len(text_list) - 1:
+                text_list[index] = '<span style="color:#2ca02c">' + text_list[index] + '</span>'
+            elif item[0] == '-' and index != 0 and index != len(text_list) - 1:
+                text_list[index] = '<span style="color:#d62728">' + text_list[index] + '</span>'
+            if index == 0 or index == len(text_list) - 1:
+                text_list[index] = '<b>' + text_list[index] + '</b>'
+
+        dict_list = []
+        for i in range(0, 1200, 200):
+            dict_list.append(dict(
+                type="line",
+                line=dict(
+                    color="#666666",
+                    dash="dot"
+                ),
+                x0=-0.5,
+                y0=i,
+                x1=6,
+                y1=i,
+                line_width=1,
+                layer="below"))
+
+        fig = go.Figure(go.Waterfall(
+            name="Factor analysis", orientation="v",
+            measure=["absolute", *(values.shape[0]-2) * ["relative"], "total"],
+            x=x_list,
+            y=y_list,
+            text=text_list,
+            textposition="outside",
+            connector={"line": {"color": 'rgba(0,0,0,0)'}},
+            increasing={"marker": {"color": "#2ca02c"}},
+            decreasing={"marker": {"color": "#d62728"}},
+            totals={'marker': {"color": "#9467bd"}},
+            textfont={"family": "Open Sans, light",
+                      "color": "black"
+                      }
+        ))
+
+        fig.update_layout(
+            title=
+            {'text': '<b>Факторный анализ</b><br><span style="color:#666666">{}</span>'.format(out_indicator_name)},
+            showlegend=False,
+            height=650,
+            font={
+                'family': 'Open Sans, light',
+                'color': 'black',
+                'size': 14
+            },
+            plot_bgcolor='rgba(0,0,0,0)',
+            yaxis_title="руб.",
+            shapes=dict_list
+        )
+
+        fig.update_xaxes(tickangle=-45, tickfont=dict(family='Open Sans, light', color='black', size=14))
+        fig.update_yaxes(tickangle=0, tickfont=dict(family='Open Sans, light', color='black', size=14))
+
+        graph_str = fig.to_html()
+
+        return graph_str
+
 
 def get_additional_actions() -> dict[str, Callable]:
     return {'model_calculate_feature_importances': _calculate_feature_importances,
             'model_get_feature_importances': _get_feature_importances,
             'model_drop_fi_calculation': _drop_fi_calculation,
-            'model_get_sensitivity_analysis': _get_sensitivity_analysis
+            'model_get_sensitivity_analysis': _get_sensitivity_analysis,
+            'model_get_factor_analysis_data': _get_factor_analysis_data
             }
 
 
@@ -370,5 +602,31 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
     result = model.get_sensitivity_analysis(parameters['inputs_0'],
                                             parameters['inputs_plus'],
                                             parameters['inputs_minus'])
+
+    return result
+
+
+def _get_factor_analysis_data(parameters: dict[str, Any]) -> dict[str, Any]:
+
+    if not parameters.get('model'):
+        raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
+
+    if not parameters.get('db'):
+        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
+
+    check_fields = ['inputs', 'input_indicators', 'outputs', 'output_indicator']
+
+    for field in check_fields:
+        if field not in parameters:
+            raise ParameterNotFoundException('Parameter "{}" is not found in request parameters'.format(field))
+
+    model = VbmModel(parameters['model']['id'], parameters['db'])
+
+    result = model.get_factor_analysis(parameters['inputs'],
+                                        parameters['outputs'],
+                                        parameters['input_indicators'],
+                                        parameters['output_indicator'],
+                                        parameters.get('get_graph')
+                                        )
 
     return result

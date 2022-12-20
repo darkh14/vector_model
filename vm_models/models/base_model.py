@@ -232,7 +232,8 @@ class Model:
         x = self._data_to_x(data)
         input_number = len(self.fitting_parameters.x_columns)
         output_number = len(self.fitting_parameters.y_columns)
-        self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number, self._db_path)
+        if not self._engine:
+            self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number, self._db_path)
 
         y_pred = self._engine.predict(x)
 
