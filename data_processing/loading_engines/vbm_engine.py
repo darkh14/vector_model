@@ -20,7 +20,7 @@ class VbmEngine(BaseEngine):
             load_data - for loading data
             delete_data - for deleting data
     """
-    service_name: ClassVar = 'vbm'
+    service_name: ClassVar[str] = 'vbm'
 
     def load_data(self, data: list[dict[str, Any]], loading_id:  str,
                   package_id: str, loading_type: LoadingTypes) -> bool:

@@ -7,7 +7,7 @@
 
 """
 
-from typing import Any
+from typing import Any, ClassVar
 from datetime import datetime
 import pandas as pd
 
@@ -15,7 +15,7 @@ from .base_data_preprocessor import BaseDataPreprocessor
 from id_generator import IdGenerator
 
 class VbmDataPreprocessor(BaseDataPreprocessor):
-    service_name = 'vbm'
+    service_name: ClassVar[str] = 'vbm'
 
     def preprocess_data_for_predicting(self, data: list[dict[str, Any]]) -> pd.DataFrame:
         """ For preprocessing data before predicting

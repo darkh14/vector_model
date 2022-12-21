@@ -18,10 +18,15 @@ __all__ = ['MongoConnector', 'MongoFilter']
 
 
 class MongoFilter(DBFilter):
-    """ Class for converting filter for using with MONGO DB"""
+    """ Class for converting filter for using with MONGO DB
+        Methods:
+            get_filter - to get filter value for db
+    """
 
     def get_filter(self) -> db_filter_type:
-        """ No need to convert """
+        """ No need to convert
+        :return: filter value for db
+        """
         return self._condition
 
 
@@ -29,10 +34,13 @@ class MongoConnector(Connector):
     """ Class realises working with DB using MONGO DB.
         See docs of base class
     """
-    type: ClassVar = 'mongo_db'
+    type: ClassVar[str] = 'mongo_db'
 
-    def __init__(self, db_path: str = ''):
-
+    def __init__(self, db_path: str = '') -> None:
+        """
+        Defines _connection and _db values. No need to connect while __init__
+        :param db_path:
+        """
         super().__init__(db_path)
         self._connection: pymongo.MongoClient = self._get_connection()
         self._db = self._get_db()  # pymongo.database.Database
@@ -40,7 +48,7 @@ class MongoConnector(Connector):
     def _form_connection_string(self) -> str:
         """Forms connection string from setting vars
         for example 'mongodb://username:password@localhost:27017/?authSource=admin'
-
+        :return: connection string
         """
         user = vm_settings.get_var('DB_USER')
         password = vm_settings.get_secret_var('DB_PASSWORD')
@@ -59,7 +67,10 @@ class MongoConnector(Connector):
 
     @staticmethod
     def safe_db_action(method: Callable):
-        """ Provides actions with DB with try-except. Raises DBConnectorException """
+        """ Provides actions with DB with try-except. Raises DBConnectorException
+        :param method: decorating method
+        :return: decorated method
+        """
         @wraps(method)
         def wrapper(self, *args, **kwargs):
 
@@ -79,7 +90,11 @@ class MongoConnector(Connector):
     @safe_db_action
     @Connector.filter_processing_method
     def get_line(self, collection_name: str, db_filter: Optional[db_filter_type] = None) -> Optional[dict]:
-        """ See base method docs """
+        """ See base method docs
+        :param collection_name: required collection name
+        :param db_filter: optional, db filter value to find line
+        :return: dict of db line
+        """
         collection = self._get_collection(collection_name)
 
         c_filter = db_filter if db_filter else None
@@ -90,7 +105,11 @@ class MongoConnector(Connector):
     @safe_db_action
     @Connector.filter_processing_method
     def get_lines(self, collection_name: str, db_filter: Optional[db_filter_type] = None) -> list[dict]:
-        """ See base method docs """
+        """ See base method docs
+        :param collection_name: required collection name
+        :param db_filter: optional, db filter value to find lines
+        :return: list of db lines
+        """
         collection = self._get_collection(collection_name)
 
         c_filter = db_filter if db_filter else None
@@ -101,7 +120,12 @@ class MongoConnector(Connector):
     @safe_db_action
     @Connector.filter_processing_method
     def set_line(self, collection_name: str, value: dict[str, Any], db_filter: Optional[db_filter_type] = None) -> bool:
-        """ See base method docs """
+        """ See base method docs
+        :param collection_name: required collection name
+        :param value: dict of line to set
+        :param db_filter: optional, db filter value to find line
+        :return: result of setting line, True if successful
+        """
         collection = self._get_collection(collection_name)
 
         c_filter = db_filter if db_filter else None
@@ -116,7 +140,12 @@ class MongoConnector(Connector):
     @Connector.filter_processing_method
     def set_lines(self, collection_name: str, value: list[dict[str, Any]],
                   db_filter: Optional[db_filter_type] = None) -> bool:
-        """ See base method docs """
+        """ See base method docs
+        :param collection_name: required collection name
+        :param value: list of lines to set
+        :param db_filter: optional, db filter value to find lines
+        :return: result of setting line, True if successful
+        """
         collection = self._get_collection(collection_name)
 
         c_filter = db_filter if db_filter else None
@@ -133,7 +162,11 @@ class MongoConnector(Connector):
     @safe_db_action
     @Connector.filter_processing_method
     def delete_lines(self, collection_name: str, db_filter: Optional[db_filter_type] = None) -> bool:
-        """ See base method docs """
+        """ See base method docs
+        :param collection_name: required collection name
+        :param db_filter: optional, db filter value to find lines
+        :return: result of deleting lines, True if successful
+        """
         c_filter = db_filter if db_filter else None
         if c_filter:
             collection = self._get_collection(collection_name)
@@ -148,7 +181,11 @@ class MongoConnector(Connector):
     @safe_db_action
     @Connector.filter_processing_method
     def get_count(self, collection_name: str, db_filter: Optional[db_filter_type] = None) -> int:
-        """ See base method docs """
+        """ See base method docs
+        :param collection_name: required collection name
+        :param db_filter: optional, db filter value to find lines
+        :return: number of lines in collection
+        """
         c_filter = db_filter if db_filter else {}
 
         collection = self._get_collection(collection_name)
@@ -162,11 +199,15 @@ class MongoConnector(Connector):
         return True
 
     def _get_filter_class(self) -> Type[DBFilter]:
-        """ For getting filter object (to convert filter for DB)"""
+        """ For getting filter object (to convert filter for DB)
+        :return: filter object
+        """
         return MongoFilter
 
     def _get_connection(self) -> pymongo.MongoClient:
-        """ Gets db connection object from pymongo """
+        """ Gets db connection object from pymongo
+        :return: mongo connection client
+        """
         try:
             result = pymongo.MongoClient(self._connection_string)
         except ConfigurationError as conf_ex:
@@ -175,9 +216,14 @@ class MongoConnector(Connector):
         return result
 
     def _get_db(self):
-        """ Gets db object from connection object"""
+        """ Gets db object from connection object
+        :return: db object (pymongo.database.Database)
+        """
         return self._connection[self._db_name]
 
     def _get_collection(self, collection_name):
-        """ Gets collection object from db object """
+        """ Gets collection object from db object
+        :param collection_name: name of required collection
+        :return: collection object
+        """
         return self._db.get_collection(collection_name)
