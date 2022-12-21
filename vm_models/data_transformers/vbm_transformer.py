@@ -1,5 +1,17 @@
+"""
+    VBM (Vector budget model)
+    Module for transformer classes.
+    Classes:
+        VbmReader - for reading data from db
+        VbmChecker - for checking data (fail if data is empty)
+        VbmRowColumnTransformer - for forming data structure (indicator-analytics-period columns)
+        VbmCategoricalEncoder - for forming categorical fields (now is not categorical fields)
+        VbmNanProcessor - for working with nan values (deletes nan rows, columns, fills 0 to na values)
+        VbmScaler - for data scaling (min-max scaling)
 
-from typing import Any, Optional, TypeVar
+"""
+
+from typing import Any, Optional, TypeVar, ClassVar
 import pandas as pd
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -16,17 +28,29 @@ VbmScalerClass = TypeVar('VbmScalerClass', bound='VbmScaler')
 
 
 class VbmReader(Reader):
-    service_name = 'vbm'
-    def _read_while_predicting(self, data: list[dict[str, Any]]) -> pd.DataFrame:
+    """ For reading data from db. Data preprocessor added """
+    service_name: ClassVar[str] = 'vbm'
 
+    def _read_while_predicting(self, data: list[dict[str, Any]]) -> pd.DataFrame:
+        """
+        Added data preprocessor
+        :param data: input data
+        :return: preprocessed data
+        """
         data_preprocessor = get_data_preprocessing_class()()
         return data_preprocessor.preprocess_data_for_predicting(data)
 
 
 class VbmChecker(Checker):
-    service_name = 'vbm'
-    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
+    """ For data checking. Fail if data is empty """
+    service_name: ClassVar[str] = 'vbm'
 
+    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
+        """
+        Checking indicator columns, checking data emptiness. Raises ModelException if failed
+        :param x: input data
+        :return: input data without transforming
+        """
         if x.empty:
             raise ModelException('There are no data to {} model. Check loading data, '.format('fit'
                                 if self._fitting_mode else 'predict') + 'model settings and filter')
@@ -59,10 +83,15 @@ class VbmChecker(Checker):
 
 
 class VbmRowColumnTransformer(RowColumnTransformer):
-    service_name = 'vbm'
+    """ Transformer for forming data structure (indicator-analytics-period columns) """
+    service_name: ClassVar[str] = 'vbm'
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
-
+        """
+        Main method for row-column data transformation
+        :param x: input data
+        :return: data after transforming
+        """
         raw_data = self._get_raw_data_from_x(x)
 
         data_result = self._get_grouped_raw_data(raw_data)
@@ -116,7 +145,12 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
 
     def _add_data_while_predicting(self, data_result: pd.DataFrame, raw_data: pd.DataFrame) -> pd.DataFrame:
-
+        """
+        Adds special fields to data after transforming while predicting
+        :param data_result: data after transforming
+        :param raw_data: data before transforming
+        :return: data after fields added
+        """
         merge_data_columns = ['organisation', 'organisation_struct', 'scenario', 'scenario_struct', 'index']
         data_to_merge = raw_data[merge_data_columns]
 
@@ -130,6 +164,11 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
     @staticmethod
     def _get_raw_data_from_x(x: pd.DataFrame) -> pd.DataFrame:
+        """
+        transforms data list of dicts to pd.DataFrame
+        :param x: input data (list of dicts)
+        :return: data (pd.DataFrame)
+        """
         raw_data = x
 
         raw_data['index'] = raw_data.index
@@ -144,18 +183,33 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
     @staticmethod
     def _get_grouped_raw_data(raw_data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Groups raw data to use in transforming
+        :param raw_data: all raw data before transforming
+        :return: grouped data
+        """
         return raw_data[['organisation', 'scenario',
                         'period', 'index']].groupby(by=['organisation', 'scenario', 'period'], as_index=False).min()
 
     def _get_raw_data_by_indicator(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
-
+        """
+        Gets raw_data where indicator == required indicator
+        :param data: all data
+        :param indicator_parameters: parameters of required indicator
+        :return: data with one indicator
+        """
         fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytics_key_id','analytics', 'value']
         ind_data = data[fields].loc[data['indicator'] == indicator_parameters['short_id']]
 
         return ind_data
 
     def _get_raw_data_by_analytics(self, data: pd.DataFrame, analytic_id: str) -> pd.DataFrame:
-
+        """
+        Gets raw indicator data by analytic key
+        :param data: data with one indicator
+        :param analytic_id: id of required analytic key
+        :return: data with one indicator and one analytic key
+        """
         fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytics_key_id', 'value']
         if analytic_id:
             an_data = data[fields].loc[data['analytics_key_id'] == analytic_id]
@@ -169,7 +223,12 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
     def _get_analytic_parameters_from_data(self, data: pd.DataFrame,
                                     indicator_parameters: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
-
+        """
+        Gets all analytic keys and ids in data (for predicting and secondary fitting)
+        :param data: data with one indicator
+        :param indicator_parameters:
+        :return: analytic keys and ids
+        """
         if indicator_parameters['use_analytics']:
 
             if self._fitting_mode and self._fitting_parameters.is_first_fitting():
@@ -186,10 +245,14 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return keys, ids
 
-
     def _get_analytic_parameters_for_new_fitting(self, data: pd.DataFrame,
                                     indicator_parameters: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
-
+        """
+        Gets analytic keys and id for new fitting
+        :param data: data with one indicator
+        :param indicator_parameters: parameters of current indicator
+        :return: all analytic keys and ids found in data
+        """
         ids = list(data['analytics_key_id'].unique())
 
         data['number'] = data.index
@@ -227,15 +290,24 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return keys, ids
 
-
     def _is_y_indicator(self, indicator_parameters: dict[str, Any]) -> bool:
+        """
+        Returns True if current indicator is in y indicators, else False
+        :param indicator_parameters: parameters of current indicators
+        :return: True if current indicator is in y indicators, else False
+        """
         y_ids = [el['short_id'] for el in self._model_parameters.y_indicators]
 
         return indicator_parameters['short_id'] in y_ids
 
-
-    def _get_column_name(self, indicator_id, analytic_id, indicator_parameters):
-
+    def _get_column_name(self, indicator_id, analytic_id, indicator_parameters) -> str:
+        """
+        Form column name from indicator id, analytic key id and period parameters
+        :param indicator_id: id of current indicator
+        :param analytic_id: id of current analytic key
+        :param indicator_parameters: parameters of current indicator
+        :return: column name
+        """
         if indicator_parameters['use_analytics']:
             result = 'ind_{}_an_{}'.format(indicator_id, analytic_id)
         else:
@@ -257,7 +329,13 @@ class VbmRowColumnTransformer(RowColumnTransformer):
                                    x_columns: list[str],
                                    y_columns: list[str],
                                    indicator_parameters: dict[str, Any]) -> None:
-
+        """
+        Checks columns name and append it to all columns if it needs
+        :param column_name: name of currne t column
+        :param x_columns: x_columns array
+        :param y_columns: y_columns array
+        :param indicator_parameters: parameters of current indicator
+        """
         if self._is_y_indicator(indicator_parameters):
             y_columns.append(column_name)
         else:
@@ -272,9 +350,13 @@ class VbmRowColumnTransformer(RowColumnTransformer):
                 if column_name not in self._fitting_parameters.x_columns:
                     raise ModelException('Column name "{}" not in x columns'.format(column_name))
 
-
     def _process_data_periods(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
-
+        """
+        Forms period columns in data
+        :param data: data with one indicator
+        :param indicator_parameters: parameters of current indicator
+        :return: data with required period column
+        """
         result_data = data.copy()
 
         if indicator_parameters.get('period_shift'):
@@ -287,6 +369,12 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         return result_data
 
     def _process_data_periods_shift(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
+        """
+        Forms period columns in data when period shift
+        :param data: data with one indicator
+        :param indicator_parameters: parameters of current indicator
+        :return: data with required period column
+        """
         data['period_shift'] = indicator_parameters['period_shift']
         data['temp_period'] = data[['period', 'periodicity', 'period_shift']].apply(self._shift_data_period, axis=1)
 
@@ -296,6 +384,12 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         return data
 
     def _process_data_periods_number(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
+        """
+        Forms period columns in data when period number is fixed
+        :param data: data with one indicator
+        :param indicator_parameters: parameters of current indicator
+        :return: data with required period column
+        """
         data['period_number'] = data[['period', 'periodicity']].apply(self._get_period_number, axis=1)
         data['year'] = data['period'].apply(lambda x: x.year)
 
@@ -329,7 +423,11 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         return data
 
     def _process_data_periods_accumulation(self, data: pd.DataFrame) -> pd.DataFrame:
-
+        """
+        Forms period columns in data when period is accumulated
+        :param data: data with one indicator
+        :return: data with required period column
+        """
         temp_data = data.copy()
 
         temp_data['period_number'] =  temp_data[['period', 'periodicity']].apply(self._get_period_number, axis=1)
@@ -356,14 +454,23 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return result_data
 
-    def _shift_data_period(self, data:pd.DataFrame) -> datetime:
-
+    def _shift_data_period(self, data: pd.DataFrame) -> datetime:
+        """
+        Shifts period column in data
+        :param data: data before shifting
+        :return: data after shifting
+        """
         result =  self._add_to_period(data['period'], -data['period_shift'], data['periodicity'])
 
         return result
 
     def _form_all_periods_by_years(self, years: list[int], periodicity: str) -> list[datetime]:
-
+        """
+        returns all periods belonging to years in years array
+        :param years: list of years
+        :param periodicity: periodicity of periods
+        :return: list of periods
+        """
         all_periods = []
 
         for year in years:
@@ -378,7 +485,13 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
     @staticmethod
     def _add_to_period(period: datetime, shift: int, periodicity: str) -> datetime:
-
+        """
+        Adds some periods to period according to periodicity
+        :param period: period to add
+        :param shift: how many periods need to add
+        :param periodicity: periodicity of adding
+        :return: period after adding
+        """
         if periodicity not in ['day', 'week', 'decade', 'month', 'quarter', 'half_year', 'year']:
             raise ModelException('Unknown periodicity "{}"'.format(periodicity))
 
@@ -394,7 +507,11 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         return period + relativedelta(**shifting_parameters)
 
     def _get_period_number(self, data: pd.Series) -> int:
-
+        """
+        Returns number of period in year
+        :param data: series of period
+        :return: number in year
+        """
         if data['periodicity'] == 'month':
             result = data['period'].month
         else:
@@ -408,7 +525,11 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         return result
 
     def _get_period_numbers_in_year(self, periodicity: str) -> list[int]:
-
+        """
+        Gets all number of periods in year according to periodicity
+        :param periodicity: periodicity of period
+        :return: list of numbers in year
+        """
         if periodicity == 'day':
             result = 365
         elif periodicity == 'month':
@@ -434,9 +555,18 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
 
 class VbmCategoricalEncoder(CategoricalEncoder):
-    service_name = 'vbm'
+    """ Transformer for forming categorical fields (now is not categorical fields) """
+    service_name: ClassVar[str] = 'vbm'
 
-    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, db_path: str, **kwargs):
+    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters,
+                 db_path: str, **kwargs) -> None:
+        """
+        Defines fields parameter (fields to be encoded)
+        :param model_parameters: model parameters object
+        :param fitting_parameters: fitting parameters object
+        :param db_path: db path to create db connector
+        :param kwargs: additional parameters
+        """
         super().__init__(model_parameters, fitting_parameters, db_path, **kwargs)
         self._fields = []
 
@@ -444,7 +574,11 @@ class VbmCategoricalEncoder(CategoricalEncoder):
             self._fields = kwargs['fields']
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
-
+        """
+        Adds encoding fields
+        :param x: data before encoding
+        :return: data after encoding
+        """
         added_fields = []
 
         for field in self._fields:
@@ -467,7 +601,11 @@ class VbmCategoricalEncoder(CategoricalEncoder):
         return x
 
     def _check_model_field(self, field) -> bool:
-
+        """
+        Check is categorical field in fields
+        :param field: field to check
+        :return: result of checking
+        """
         result = False
         if self._fitting_mode and self._fitting_parameters.is_first_fitting():
             if field not in self._fitting_parameters.x_columns:
@@ -481,9 +619,14 @@ class VbmCategoricalEncoder(CategoricalEncoder):
 
 
 class VbmNanProcessor(NanProcessor):
-    service_name = 'vbm'
+    """ Transformer for working with nan values (deletes nan rows, columns, fills 0 to na values) """
+    service_name: ClassVar[str] = 'vbm'
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
-
+        """
+        Process nan values: removes all nan rows and columns, fills 0 instead single nan values
+        :param x: data before nan processing
+        :return: data after na  processing
+        """
         if self._fitting_mode:
 
             x_digit_columns = self._fitting_parameters.x_columns
@@ -539,10 +682,17 @@ class VbmNanProcessor(NanProcessor):
 
 
 class VbmScaler(Scaler):
-    service_name = 'vbm'
+    """ Transformer for data scaling (min-max scaling) """
+    service_name: ClassVar[str] = 'vbm'
 
     def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, db_path: str, **kwargs):
-
+        """
+        Defines model id, scaler engine. Reads from db if it is not new
+        :param model_parameters: model parameters object
+        :param fitting_parameters: fitting parameters object
+        :param db_path: db path to create db connector
+        :param kwargs: additional parameters
+        """
         super().__init__(model_parameters, fitting_parameters, db_path, **kwargs)
 
         if 'model_id' not in kwargs:
@@ -558,7 +708,12 @@ class VbmScaler(Scaler):
 
     def fit(self, x: Optional[list[dict[str, Any]] | pd.DataFrame] = None,
             y: Optional[list[dict[str, Any]] | pd.DataFrame] = None) -> VbmScalerClass:
-
+        """
+        Saves engine parameters to scale data
+        :param x: data to scale
+        :param y: None
+        :return: self scaling object
+        """
         non_categorical_columns = [el for el in self._fitting_parameters.x_columns
                                    if el not in self._fitting_parameters.categorical_columns]
 
@@ -569,7 +724,11 @@ class VbmScaler(Scaler):
         return self
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
-
+        """
+        Transforms data after saving scaler parameters
+        :param x: data before scaling
+        :return: data after scaling
+        """
         non_categorical_columns = [el for el in self._fitting_parameters.x_columns
                                    if el not in self._fitting_parameters.categorical_columns]
 
@@ -578,15 +737,18 @@ class VbmScaler(Scaler):
 
         return result
 
-    def drop(self):
+    def drop(self) -> None:
+        """ For deleting current scaler from db """
         self._db_connector.delete_lines('scalers', {'model_id': self._model_id})
 
-    def _write_to_db(self):
+    def _write_to_db(self) -> None:
+        """ For writing current scaler to db """
         line_to_db = {'model_id': self._model_id, 'engine': pickle.dumps(self._scaler_engine)}
 
         self._db_connector.set_line('scalers', line_to_db, {'model_id': self._model_id})
 
-    def _read_from_db(self):
+    def _read_from_db(self) -> None:
+        """ For reading current scaler from db """
         line_from_db = self._db_connector.get_line('scalers', {'model_id': self._model_id})
 
         if line_from_db:
