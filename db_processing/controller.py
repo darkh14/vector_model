@@ -16,9 +16,11 @@ DB_TYPE = ''
 __all__ = ['get_connector', 'check_connection']
 
 
-def get_connector(db_path: str):
+def get_connector(db_path: str) -> connectors.base_connector.Connector:
     """ Gets correct connector. Tries to get connector from cache (find by db_path).
         If it could not find correct connector, it creates connector by DB_TYPE and add to CONNECTORS cache
+        :param db_path: path to required db
+        :return: db connector object
     """
 
     global DB_TYPE, CONNECTORS
@@ -38,7 +40,9 @@ def get_connector(db_path: str):
 
 
 def _get_connector_class() -> Type[connectors.base_connector.Connector]:
-    """ Chooses right connector from subclasses of base Connector class by DB_TYPE"""
+    """ Chooses right connector from subclasses of base Connector class by DB_TYPE
+    :return: db connector class
+    """
     global DB_TYPE
 
     cls_list = [cls for cls in connectors.base_connector.Connector.__subclasses__() if cls.type == DB_TYPE]
@@ -50,7 +54,11 @@ def _get_connector_class() -> Type[connectors.base_connector.Connector]:
 
 
 def check_connection(parameters: dict[str, Any]) -> str:
-
+    """
+    For checking connection. Raises exception if checking is failed
+    :param parameters: dict of request parameters
+    :return: str result of checking
+    """
     if not parameters.get('db'):
         raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
