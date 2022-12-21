@@ -16,23 +16,34 @@ class IdGenerator:
     """
     @classmethod
     def get_random_id(cls) -> str:
-        """Returns random id string (UUID) in xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx where x - hex digit"""
+        """Returns random id string (UUID) in xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx where x - hex digit
+        :return: string of id
+        """
         return str(uuid.uuid4())
 
     @classmethod
     def get_id_by_name(cls, name: str) -> str:
-        """Returns id string (UUID) generates by name in xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx where x - hex digit"""
+        """Returns id string (UUID) generates by name in xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx where x - hex digit
+        :param name: name to generate id
+        :return: string of id
+        """
         return str(uuid.uuid3(uuid.NAMESPACE_DNS, name))
 
     @classmethod
     def get_short_id_from_dict_id_type(cls, dict_value: dict[str, str]) -> str:
-        """Returns short id string generates by dict in xxxxxxx where x - hex digit"""
+        """Returns short id string generates by dict in xxxxxxx where x - hex digit
+        :param dict_value: dict to generate id
+        :return: string of id
+        """
         str_val = dict_value['id'] + dict_value.get('type') or ''
         return cls._get_hash(str_val)
 
     @classmethod
     def get_short_id_from_list_of_dict_short_id(cls, list_value: list[dict[str, str]]) -> str:
-        """Returns short id string generates by dict in xxxxxxx where x - hex digit"""
+        """Returns short id string generates by dict in xxxxxxx where x - hex digit
+        :param list_value: list to generate id
+        :return: string of id
+        """
         if list_value:
             short_id_list = [el['short_id'] for el in list_value]
             short_id_list.sort()
@@ -43,6 +54,11 @@ class IdGenerator:
 
     @classmethod
     def _get_hash(cls, value: str) -> str:
+        """
+        For getting hash string from value
+        :param value: value string to generate hash
+        :return: hash string
+        """
         if not value.replace(' ', ''):
             return ''
         data_hash = hashlib.md5(value.encode())
