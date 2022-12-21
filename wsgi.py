@@ -5,16 +5,14 @@ functions:
     application - main function of module. See docs.
     """
 
-# import http_procession
 from typing import Callable, Any
 from processor import process
 
 
-def application(environ: dict[str, any], start_response: Callable[[str, list[bytes]], Callable]) -> dict[str, Any]:
+def application(environ: dict[str, any], start_response: Callable[[str, list[bytes]], Callable]) -> list[Any]:
     """the main entry point of the program.
     Executed when accessed via http request using the uwsgi service
-    Parameters:
-        environ: dict - keys and example values:
+        :param environ: dict - keys and example values:
             REQUEST_METHOD - POST
             CONTENT_TYPE - application/json
             CONTENT_LENGTH - 515
@@ -52,10 +50,10 @@ def application(environ: dict[str, any], start_response: Callable[[str, list[byt
             wsgi.url_scheme - https
             uwsgi.version - b'2.0.19.1'
             uwsgi.node - b'vps-15617'
-        start_response: function object - for sending response, has 2 parameters -
+        :param start_response: function object - for sending response, has 2 parameters -
             status - str, ex. "200 OK",
             headers - list of tuples, ex. [('Content-Type','application/json')]
-        returns dict of response
+        :returns dict of response
     """
     output = process(environ, start_response)
 

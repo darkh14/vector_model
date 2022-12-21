@@ -9,5 +9,7 @@ __all__ = ['get_version']
 
 
 def get_version() -> str:
-    """ Gets current version of service"""
+    """ Gets current version of service
+    :return: version str
+    """
     return VERSION
