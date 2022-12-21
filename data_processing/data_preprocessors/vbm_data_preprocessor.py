@@ -36,7 +36,7 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
         return self._preprocess_data(data, loading_id, package_id)
 
     def _preprocess_data(self, data: list[dict[str, Any]],
-                                    loading_id:  str = '', package_id: str = ''):
+                                    loading_id:  str = '', package_id: str = '') -> pd.DataFrame:
         """ Adds additional fields to data array and converts data list to pandas DataFrame.
                 :param data: list - data array to preprocess
                 :param loading_id: str - id of loading object, which uses to load data, will be added as field to data

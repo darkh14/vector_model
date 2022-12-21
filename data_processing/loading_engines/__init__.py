@@ -21,6 +21,7 @@ SERVICE_NAME: str = ''
 def get_engine_class() -> Type[base_engine.BaseEngine]:
     """ Function for getting loading engine class. Choosing from subclasses of BaseEngine class where service name =
         SERVICE_NAME var
+        :return: required loading engine class
     """
     global SERVICE_NAME
 
