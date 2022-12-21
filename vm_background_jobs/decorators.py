@@ -13,7 +13,10 @@ __all__ = ['execute_in_background']
 
 
 def execute_in_background(func: Callable) -> Callable:
-    """ Decorator for executing functions in subprocess. Uses BackgroundJob class """
+    """ Decorator for executing functions in subprocess. Uses BackgroundJob class
+    :param func: decorating method
+    :return: decorated method
+    """
 
     def wrapper(wrapper_parameters: dict[str, Any], **kwargs) -> dict[str, Any]:
 

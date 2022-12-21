@@ -48,7 +48,7 @@ class BackgroundJob:
 
                 job_name - property for _job_name
     """
-    def __init__(self, job_id: str = '',  db_path: str = '', subprocess_mode: bool = False):
+    def __init__(self, job_id: str = '',  db_path: str = '', subprocess_mode: bool = False) -> None:
         """ Fields:
                 _id - unique job id
                 _job_name - name of job - match to name executing function
@@ -64,6 +64,9 @@ class BackgroundJob:
                 _output - info from stdout of executing function
                 _temp_name - name of temp collection. filled when collection contains data
                 _temp_settings - defines what data saves in temp collection
+                :param job_id: id of current job
+                :param db_path: db path to create db connector
+                :param subprocess_mode: True if job launched in subprocess, else False
         """
         self._subprocess_mode = subprocess_mode
 
@@ -111,9 +114,12 @@ class BackgroundJob:
         """ For executing function in initial mode
                 Parameters:
                     func - function object to execute
-                    wrapper_parameters - parameters to be trs=ansmitted to function
+                    wrapper_parameters - parameters to be transmitted to function
                 Returns:
-                    description of execiting function
+                    description of executing function
+            :param func: function to execute in background mode
+            :param wrapper_parameters: parameters executing function
+            :return:decorated result of launching in background mode
         """
 
         if self._subprocess_mode:
@@ -183,7 +189,7 @@ class BackgroundJob:
             if self._db_connector:
                 self._write_to_db()
 
-    def delete(self):
+    def delete(self) -> None:
         """ For deleting job from db. Also kills process, drops temp collections and clears logs"""
         self._kill_job_process()
 
@@ -192,8 +198,8 @@ class BackgroundJob:
         job_logger.clear_old_logs()
         self._db_connector.delete_lines('background_jobs', {'id': self._id})
 
-    def set_interrupted(self):
-
+    def set_interrupted(self) -> None:
+        """ Interrupts background job, kills job process, set required status, drop additional job data """
         self._kill_job_process()
         self._drop_temp()
         job_logger = JobContextLoggerManager(self._id, context_mode=False)
@@ -220,7 +226,11 @@ class BackgroundJob:
 
     @classmethod
     def get_jobs_info(cls, job_filter:  dict[str, Any], db_path: str) -> list[dict[str, Any]]:
-        """ Class method for getting jobs inf. Can get info of many job according to filter """
+        """ Class method for getting jobs inf. Can get info of many job according to filter
+        :param job_filter: filter to find required jobs
+        :param db_path: db path to create db processor object
+        :return: dict of jobs information
+        """
         db_connector = get_connector(db_path)
         job_list = db_connector.get_lines('background_jobs', job_filter)
 
@@ -238,7 +248,9 @@ class BackgroundJob:
         return result
 
     def _execute_function(self) -> Any:
-        """ Executes function in subprocess inside try-except block """
+        """ Executes function in subprocess inside try-except block
+        :return: result of function execution, type depends on function
+        """
         if not self._subprocess_mode:
             raise BackgroundJobException('For executing function in background "subprocess_mode" must be True ')
 
@@ -291,6 +303,7 @@ class BackgroundJob:
     def _get_path_command(self) -> [str, str]:
         """ Gets path to launcher script and pythin command. Python command may be
             in venv (saves in PYTHON_VENV_PATH)
+            :return: strings of python command and path to pyton
         """
         venv_python = get_var('PYTHON_VENV_PATH')
         if not venv_python:
@@ -392,7 +405,9 @@ class BackgroundJob:
             temp_data[path_list[-1]] = None
 
     def _get_parameters_from_temp(self) -> list[dict[str, Any]]:
-        """ Gets emp data from db """
+        """ Gets emp data from db
+        :return: list of tem parameters
+        """
         return self._db_connector.get_lines(self._temp_name)
 
     def _drop_temp(self) -> None:
@@ -402,7 +417,9 @@ class BackgroundJob:
             self._temp_name = ''
 
     def _get_module_function_from_name(self) -> [str, str]:
-        """ Gets module name and function name to execute from self._job_name """
+        """ Gets module name and function name to execute from self._job_name
+        :return: string of module name and function name
+        """
 
         name_list = self._job_name.split('.')
         module_name = '.'.join(name_list[:-1])
@@ -412,13 +429,23 @@ class BackgroundJob:
 
     @staticmethod
     def _get_temp_parameters_settings() -> dict[str, str]:
-        """ Define what data will be saved to temp """
+        """ Define what data will be saved to temp
+        :return: dict of functions used temp data and its parameters
+        """
         return {'data_load_package': 'loading.package.data'}
 
     @property
     def job_name(self) -> str:
+        """
+        Returns value of job name.
+        :return: job name
+        """
         return self._job_name
 
     @job_name.setter
     def job_name(self, value: str) -> None:
+        """
+        Setter of job_name
+        :param value: value of job name
+        """
         self._job_name = value
