@@ -29,7 +29,6 @@ import general
 
 from vm_logging.exceptions import RequestProcessException
 from vm_settings import controller as settings_controller
-# from db_processing import connector as db_controller
 
 PROCESSOR = None
 """ Current class for processing request (for caching) """
@@ -51,17 +50,27 @@ class Processor(ABC):
         process (abstract).
     """
 
-    def __init__(self):
-
+    def __init__(self) -> None:
+        """
+        Defines available request methods
+        """
         self._request_methods: dict[str, Callable] = self._get_requests_methods()
 
     @abstractmethod
-    def process(self, environ: dict[str, Any], start_response: Callable): ...
-    """ Abstract method for processing requests"""
+    def process(self, environ: dict[str, Any], start_response: Callable) -> list[Any]:
+        """
+        Abstract method for processing requests
+        :param environ: dict of environ variable
+        :param start_response: function for response
+        :return list of request result
+        """
 
-    def _process_request(self, environ: dict[str, Any], start_response: Optional[Callable] = None) -> list:
+    def _process_request(self, environ: dict[str, Any], start_response: Optional[Callable] = None) -> list[Any]:
         """ Method for processing request after forming environ dict (when http environ is ready)
             performs request method and converts output to bytes
+            :param environ: dict of environ variable
+            :param start_response: function for response
+            :return: list of request result
         """
         if not start_response:
             start_response = self.t_start_response
@@ -89,16 +98,17 @@ class Processor(ABC):
     @staticmethod
     def t_start_response(result: str, headers: list[tuple[str, str]]) -> None:
         """ function for response
-            parameters:
-                result - status of response
-                headers - http headers, ex. content type
+        :param result: status of response
+        :param headers: http headers, ex. content type
         """
         pass
 
-    def _process_with_parameters(self, parameters: dict[str, Any]):
+    def _process_with_parameters(self, parameters: dict[str, Any]) -> dict[str, Any]:
         """ Method for processing request after forming parameters.
             Performs checking service_name, request_type n parameters.
             Determines method according to request type and executes it
+            :param parameters: request parameters
+            :return: dict of request result
         """
         if parameters.get('service_name') != SERVICE_NAME:
             raise RequestProcessException('Service name "{}" is not allowed. '.format(parameters.get('service_name')) +
@@ -120,8 +130,11 @@ class Processor(ABC):
         return {'status': 'OK', 'error': '', 'result': result}
 
     @staticmethod
-    def _transform_output_parameters_to_str(output: dict[str, Any]) -> list:
-        """Transform output from dict to list with one element contains bytes using json"""
+    def _transform_output_parameters_to_str(output: dict[str, Any]) -> list[bytes]:
+        """Transform output from dict to list with one element contains bytes using json
+        :param output: output dict
+        :return: list with transformed output bytes
+        """
         output_str = json.dumps(output, ensure_ascii=False).encode()
 
         return [output_str]
@@ -130,8 +143,8 @@ class Processor(ABC):
         """ Gets the necessary parameters from environ
             Checks REQUEST_METHOD -  must be POST
             parameters get from environ['wsgi.input']
-
-
+            :param environ: dict of environ
+            :return: transformed request parameters
         """
         request_parameters = dict()
         if environ.get('REQUEST_METHOD') == 'POST':
@@ -158,7 +171,11 @@ class Processor(ABC):
 
     @staticmethod
     def _parameters_from_json(json_string: str|bytes) -> dict[str, Any]:
-
+        """
+        Gets parameters dict from json string
+        :param json_string: input json string
+        :return: result dict of parameters
+        """
         if type(json_string) == bytes:
             json_string = json_string.decode('utf-8-sig')
         else:
@@ -170,8 +187,11 @@ class Processor(ABC):
         return json.loads(json_string)
 
     @staticmethod
-    def _get_requests_methods():
-
+    def _get_requests_methods() -> dict[str, Callable]:
+        """
+        Gets available request methods
+        :return: dict of actions (functions)
+        """
         imported_modules = ['data_processing',
                             'db_processing',
                             'vm_logging',
@@ -191,46 +211,41 @@ class Processor(ABC):
 
 class _HttpProcessor(Processor):
     """Class for processing http requests
-
         Methods:
             process - main method for processing
     """
 
-    def process(self, environ: dict[str, any], start_response: Callable[[str, list[bytes]], Callable]) -> list:
+    def process(self, environ: dict[str, any], start_response: Callable[[str, list[bytes]], Callable]) -> list[Any]:
         """ Main method for processing requests (http)
-
-            Parameters:
-                environ - dict, parameters of request
-                start_response - callable, function object, using for response
-            Return:
-                dict - response of request
+        :param environ: parameters of request
+        :param start_response: function object, using for response
+        :return response of request
         """
+
         output = self._process_request(environ, start_response)
         return output
 
 
 class _FileProcessor(Processor):
     """Class for processing test requests from files
-
         Methods:
             process - main method for processing
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """
+        Defines _request_types_for_choosing variable
+        """
         super().__init__()
 
         self._request_types_for_choosing: dict[int, str] = self._get_request_types_for_choosing()
 
-    def process(self, environ: None, start_response: None) -> list:
-        """ Main method for processing requests (file while testing)
-
-            Parameters:
-                environ - None
-                start_response - None
-
-                Parameters are for compatible. In file mode they are not needed
-            Return:
-                dict - response of request
+    def process(self, environ: None, start_response: None) -> list[Any]:
+        """ Main method for processing requests (file while testing).
+        Parameters are for compatible. In file mode they are not needed
+        :param environ: None
+        :param start_response: None
+        :return response of request
         """
 
         request_type = self._choose_request_type()
@@ -242,10 +257,16 @@ class _FileProcessor(Processor):
         return output
 
     def _get_request_types_for_choosing(self) -> dict[int, str]:
+        """
+        Returns dict with numbers and request methods for choosing
+        :return: dict of request methods
+        """
         return {key + 1: value for key, value in enumerate(self._request_methods.keys())}
 
     def _choose_request_type(self) -> str:
-
+        """ For choosing request method interactively (using input)
+        :return: chosen str of request type
+        """
         print('Available request types:')
         for key, value in self._request_types_for_choosing.items():
             print('   {} - {}'.format(key, value))
@@ -261,7 +282,11 @@ class _FileProcessor(Processor):
 
     @staticmethod
     def _get_environ_from_json(request_type: str) -> dict[str, Any]:
-
+        """
+        Forms environ dict to imitate http request
+        :param request_type: string of request type
+        :return: inviron dict
+        """
         file_path = 'parameters_test/' + request_type + '.json'
 
         if not os.path.exists(file_path):
@@ -279,16 +304,13 @@ class _FileProcessor(Processor):
         return environ
 
 
-def process(environ: Optional[dict[str, any]] = None,
-            start_response: Optional[Callable[[str, list[bytes]], Callable]] = None) -> dict[str, Any]:
+def process(environ: Optional[dict[str, any]] = list[bytes],
+            start_response: Optional[Callable[[str, list[bytes]], Callable]] = None) -> list[Any]:
     """ Main function for processing requests
         Processes all requests (at product and test modes)
-        Parameters:
-            environ: dict - of request parameters:
-            start_response: function object - for sending response
-        returns dict of response.
-
-        For more information, see the module wsgi.py docs
+        :param environ: dict - of request parameters
+        :param start_response: function object - for sending response
+        :return list of bytes - response
     """
     global PROCESSOR
 
@@ -301,8 +323,11 @@ def process(environ: Optional[dict[str, any]] = None,
     return output
 
 
-def _get_processor(environ: dict[str, Any]) -> Processor:
-    """ Chooses type of processor according to http request or direct launch """
+def _get_processor(environ: Optional[dict[str, Any]]) -> Processor:
+    """ Chooses type of processor according to http request or direct launch
+    :param environ: dict of environ (http request)
+    :return: processor object
+    """
     if environ:
         return _HttpProcessor()
     else:
