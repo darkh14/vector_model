@@ -5,49 +5,21 @@
 """
 from datetime import datetime
 from typing import Any
-from db_processing.controller import get_connector
 
 
 def test(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For testing and debugging """
-    db_connector = get_connector(parameters['db'])
-
-    # data = db_connector.get_line('test')
-    # print(data)
-    #
-    # data = db_connector.get_line('test', {'author': 'user'})
-    # print(data)
-    #
-    # data = db_connector.get_line('test', {'author': 'user11'})
-    # print(data)
-
-    # data = db_connector.get_lines('test', {'author': 'user111'})
-    # print(data)
-
-    # data = db_connector.set_line('test', {'author': 'user111', 'title': 'var 5', 'data': 'some data 4'}, {'author': 'user111'})
-    # print(data)
-
-    data = db_connector.delete_lines('test')
-    #
-    # lines = []
-    # lines.append({'author': 'admin', 'title': 'var 1', 'data': 'big data'})
-    # lines.append({'author': 'admin', 'title': 'var 2', 'data': 'small data'})
-    # lines.append({'author': 'user', 'title': 'var 3', 'data': 'user data'})
-    #
-    # data = db_connector.set_lines('test', lines)
-
-    # lines = []
-    # lines.append({'author': 'admin', 'title': 'var 4', 'data': 'ddddd'})
-    # lines.append({'author': 'user', 'title': 'var 5', 'data': 'sssss'})
-    #
-    # data = db_connector.set_lines('test', lines, {'author': 'user'})
-
-    # data = db_connector.set_line('test', {'author': 'admin', 'title': 'var 666', 'data': '666'}, {'author': 'admin'})
+    """ For testing and debugging
+    :param parameters: dict of request parameters
+    :return: result of testing
+    """
 
     print('Test!')
-    return {'result': data}
+    return {'result': 'Test is passed'}
 
 
 def ping(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For testing connection """
+    """ For testing connection
+    :param parameters: dict of request parameters
+    :return: result of checking connection
+    """
     return {'description': 'ping OK', 'current_date': datetime.utcnow().strftime('%d.%m.%Y %H:%M:%S')}
