@@ -304,7 +304,7 @@ class _FileProcessor(Processor):
         return environ
 
 
-def process(environ: Optional[dict[str, any]] = list[bytes],
+def process(environ: Optional[dict[str, any]] = None,
             start_response: Optional[Callable[[str, list[bytes]], Callable]] = None) -> list[Any]:
     """ Main function for processing requests
         Processes all requests (at product and test modes)
