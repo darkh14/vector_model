@@ -27,6 +27,8 @@ class JobContextLoggerManager:
             _context_mode - True if object uses as a context manager, else False
             _out_file, _err_file - io wrapper objects for writes streams into files
             _file_access_error - for saving error text of permission error while accessing to file
+            :param job_id: current job id
+            :param context_mode: True if object uses as a context manager, else False
         """
         self._job_id: str = job_id
         self._dir_name: str = 'logs/background_jobs'
@@ -48,7 +50,9 @@ class JobContextLoggerManager:
         self._file_access_error: str = ''
 
     def read_logs(self) -> [str, str]:
-        """ Method to read logs from files. Using in non _context_mode"""
+        """ Method to read logs from files. Using in non _context_mode
+        :return: strs of stdout, stderr
+        """
         sys.stdout.flush()
         sys.stderr.flush()
 
@@ -76,7 +80,9 @@ class JobContextLoggerManager:
             path_to_log_dir.mkdir(parents=True)
 
     def _get_log_file_names(self) -> [str, str]:
-        """ Returns out and err log file names - creates from job id """
+        """ Returns out and err log file names - creates from job id
+        :return: stdout, stderr log file names
+        """
         out_file_name = 'out_' + self._job_id + '.log'
         out_file_name = os.path.join(self._dir_name, out_file_name)
         err_file_name = 'err_' + self._job_id + '.log'
@@ -96,11 +102,18 @@ class JobContextLoggerManager:
                 self._file_access_error = str(ex)
 
     def __enter__(self) -> [io.TextIOWrapper, io.TextIOWrapper]:
-        """ For context manager. Returns out and err file objects """
+        """ For context manager. Returns out and err file objects
+        :return: io wrappers for stdout, stderr
+        """
         return self._out_file, self._err_file
 
     def __exit__(self, ex_type, ex_val, ex_trace) -> bool:
-        """ For context manager. Closes out and err files """
+        """ For context manager. Closes out and err files
+        :param ex_type: None
+        :param ex_val: None
+        :param ex_trace: None
+        :return: result of contex manager exit, True if successful
+        """
         self._out_file.close()
         self._err_file.close()
         return True

@@ -11,5 +11,7 @@ from typing import Callable
 
 
 def get_actions() -> dict[str, Callable]:
-    """ forms actions dict available for vm_logging"""
+    """ forms actions dict available for vm_logging
+    :return: dict of actions of vm_logging package
+    """
     return dict()
