@@ -1,6 +1,6 @@
 """
-    Package of data preprocessors. For data preprocessing. Performs data preprocessing
-    loading data before loading. And preprocessing input predicting data
+    Package of data preprocessors. For data preprocessing. Performs preprocessing
+    data before loading. And preprocessing input predicting data
         Modules:
             base_data_preprocessor - for defining abstract class for data preprocessor
             vbm_data_preprocessor - for preprocessing data in "vector budget model"
@@ -21,6 +21,7 @@ SERVICE_NAME: str = ''
 def get_data_preprocessing_class() -> Type[BaseDataPreprocessor]:
     """ Function for getting loading engine class. Choosing from subclasses of BaseEngine class where service name =
         SERVICE_NAME var
+        :return: required class for preprocessing data
     """
     global SERVICE_NAME
 

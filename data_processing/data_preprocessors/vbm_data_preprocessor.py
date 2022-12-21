@@ -18,7 +18,7 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
     service_name = 'vbm'
 
     def preprocess_data_for_predicting(self, data: list[dict[str, Any]]) -> pd.DataFrame:
-        """ Fro preprocessing data before predicting
+        """ For preprocessing data before predicting
 
         :param data: list of loading data
         :return: data after preprocessing
@@ -28,7 +28,6 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
     def preprocess_data_for_loading(self, data: list[dict[str, Any]],
                                     loading_id: str, package_id: str) -> pd.DataFrame:
         """ For preprocessing data before loading
-
         :param data: list of loading data
         :param loading_id: id of loading object, which uses to load data, will be added as field to data;
         :param package_id: id of package object, which uses to load data, will be added as field to data.
@@ -39,10 +38,10 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
     def _preprocess_data(self, data: list[dict[str, Any]],
                                     loading_id:  str = '', package_id: str = ''):
         """ Adds additional fields to data array and converts data list to pandas DataFrame.
-            Parameters:
-                data: list - data array to preprocess;
-                loading_id: str - id of loading object, which uses to load data, will be added as field to data;
-                package_id: str - id of package object, which uses to load data, will be added as field to data.
+                :param data: list - data array to preprocess
+                :param loading_id: str - id of loading object, which uses to load data, will be added as field to data
+                :param package_id: str - id of package object, which uses to load data, will be added as field to data
+                :return: pd.Dataframe data after preprocessing
         """
         pd_data = pd.DataFrame(data)
 
@@ -72,8 +71,8 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
 
     def _add_short_ids_to_data(self, pd_data: pd.DataFrame) -> pd.DataFrame:
         """ Adds short ids to indicators, analytics and analytic keys
-            Parameters:
-                pd_data: pandas.DataFrame - data array
+                :param pd_data: pd.DataFrame - data array
+                :return: pd.DataFrame - data array with short ids added
         """
         pd_data['indicator_short_id'] = pd_data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
         pd_data['analytics'] = pd_data['analytics'].apply(self._add_short_id_to_analytics)
@@ -84,9 +83,9 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
 
     @staticmethod
     def _add_short_id_to_indicator(ind_value: pd.Series) -> dict[str, Any]:
-        """ Adds short id to indicator.
-            Parameters:
-                ind_value: pandas.Series - value of indicator
+        """ Adds short id to indicator. Used in pandas data series apply() method
+                :param ind_value: pd.Series - value of indicator
+                :return: value with short id added
         """
         result = ind_value[0]
         result['short_id'] = ind_value[1]
@@ -94,9 +93,9 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
 
     @staticmethod
     def _add_short_id_to_analytics(analytics_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """ Adds short id to analytics.
-            Parameters:
-                analytics_list: list - array of analytics
+        """ Adds short id to analytics. Used in pandas data series apply() method
+                :param analytics_list: list - array of analytics
+                :return: analytics with short ids added
         """
         for an_el in analytics_list:
             an_el['short_id'] = IdGenerator.get_short_id_from_dict_id_type(an_el)
