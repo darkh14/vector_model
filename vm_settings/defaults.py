@@ -22,18 +22,23 @@ PYTHON_VENV_PATH = ''
 
 
 def get_keys() -> list[str]:
-    """Returns list of all keys of settings"""
+    """Returns list of all keys of settings
+    :return: names of vars in settings
+    """
     return [el for el in globals() if isinstance(el, str) and el.upper() == el]
 
 
 def get_secret_keys() -> dict[str, str]:
-    """Returns dict of secret keys (passwords) as keys of dict and user value keys as values of dict"""
+    """Returns dict of secret keys (passwords) as keys of dict and user value keys as values of dict
+    :return: names of secret vars (passwords) in settings
+    """
     return {'DB_PASSWORD': 'DB_USER'}
 
 
 def get_var_special_types() -> dict[str, str]:
     """ returns dict of vars with not 'str' types.
         supported types - dict, list, int, float, bool
+        :return: dict of vars and types
     """
     result = dict()
     result['DB_NAMES'] = 'dict'

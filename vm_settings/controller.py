@@ -41,7 +41,7 @@ class SettingsController:
             set_var - for setting variables (ordinary and secret)
 
     """
-    def __init__(self):
+    def __init__(self) -> None:
         """ initialisation of path to .env file, keys and secret keys,
             loading settings from .env file to environ,
             setting default values for vars, which are not set"""
@@ -66,7 +66,10 @@ class SettingsController:
                 self.set_var(key, value)
 
     def get_var(self, key: str) -> Any:
-        """ For getting value. Supports non str types"""
+        """ For getting value. Supports non str types
+        :param key: name of var to get
+        :return: value of required var
+        """
 
         if key not in self._keys:
             raise SettingsControlException('Key "{}" is not available'.format(key))
@@ -86,7 +89,10 @@ class SettingsController:
         return result
 
     def get_secret_var(self, key: str) -> str:
-        """ For getting secret value."""
+        """ For getting secret value
+        :param key: name of var to get
+        :return: value of required var
+        """
 
         if key not in self._secret_keys:
             raise SettingsControlException('Key "{}" is not secret key (password)'.format(key))
@@ -96,7 +102,11 @@ class SettingsController:
         return result
 
     def set_var(self, key: str, value: Any) -> bool:
-        """ For setting value. Supports non str types and passwords"""
+        """ For setting value. Supports non str types and passwords
+        :param key: name of var to set
+        :param value: value of var to set
+        :return: result of var setting, True if successful
+        """
 
         if key not in self._keys:
             raise SettingsControlException('Key "{}" is not available'.format(key))
@@ -128,6 +138,9 @@ class SettingsController:
     def _special_type_to_str(value: Any, type_str: str) -> str:
         """ Converts vars to str according to types in self._special_type_keys
             available types - dict, list, int, float, bool
+            :param value: value to convert
+            :param type_str: type of value for converting
+            :return: converted value
         """
         if type_str in ('dict', 'list'):
             result = json.dumps(value)
@@ -143,6 +156,9 @@ class SettingsController:
     def _str_to_special_type(str_value: str, type_str: str) -> Any:
         """ Converts str vars to type specified in self._special_type_keys
             available types - dict, list, int, float, bool
+            :param str_value: value to convert from str
+            :param type_str: type of converted value
+            :return: converted value
         """
         if type_str in ('dict', 'list'):
             if not str_value:
@@ -166,33 +182,60 @@ class SettingsController:
         return result
 
     def _get_secret_value(self, key: str) -> str:
-        """ Get password value """
+        """ Get password value
+        :param key: name of var to get
+        :return: value of var
+        """
         user_value = self.get_var(self._secret_keys[key])
         return passwords.get_password(key, user_value)
 
-    def _set_secret_value(self, key: str, value: str) -> str:
-        """ Set password value. Supports only str type of value """
+    def _set_secret_value(self, key: str, value: str) -> bool:
+        """ Set password value. Supports only str type of value
+        :param key: name of value to set
+        :param value: value to set
+        :return: result of setting value, true if successful
+        """
         user_value = self.get_var(self._secret_keys[key])
         passwords.set_password(key, user_value, value)
 
+        return True
+
 
 def get_var(key: str) -> Any:
+    """
+    For getting value. Supports non str types
+    :param key: name of var to get
+    :return: value of var
+    """
     settings_controller = _get_settings_controller()
     return settings_controller.get_var(key)
 
 
 def get_secret_var(key: str) -> str:
+    """
+    For getting secret value (password)
+    :param key: name of var to get
+    :return: value of var
+    """
     settings_controller = _get_settings_controller()
     return settings_controller.get_secret_var(key)
 
 
 def set_var(key: str, value: Any) -> bool:
+    """
+    For setting value of var. Supports non-str types
+    :param key: name of var to set
+    :param value: value of var to set
+    :return: result of setting var, True if successful
+    """
     settings_controller = _get_settings_controller()
     return settings_controller.set_var(key, value)
 
 
 def _get_settings_controller() -> SettingsController:
-    """ caching settings controller object """
+    """ caching settings controller object
+    :return: settings controller object
+    """
     global CONTROLLER
 
     if not CONTROLLER:
