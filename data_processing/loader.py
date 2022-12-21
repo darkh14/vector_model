@@ -8,7 +8,7 @@
             delete_all_data - to delete all data according to filter
 """
 
-from typing import Any, Optional, Set, Dict, List
+from typing import Any, Optional
 from _datetime import datetime
 
 import db_processing.connectors.base_connector
@@ -52,6 +52,13 @@ class Package:
     def __init__(self, loading_id: str, package_id: str,
                  db_connector: db_processing.connectors.base_connector.Connector,
                  package_parameters: Optional[dict[str, Any]]):
+        """
+        Defines all inner variable of package. Then variables are read from db if it is not new package
+        :param loading_id: id of loading of current package
+        :param package_id: id of current package
+        :param db_connector: object for working with db
+        :param package_parameters: additional parameters of package
+        """
         self._loading_id: str = loading_id
         self._id: str = package_id
 
@@ -73,7 +80,8 @@ class Package:
         self._read_from_db()
 
     def initialize(self) -> None:
-        """ Initializing NEW package (with writing to db) """
+        """ Initializing NEW package (with writing to db)
+        """
         if self._status != LoadingStatuses.NEW:
             raise LoadingProcessException('loading id "{}", package id - "{}" is '
                                           'always initialized'.format(self._loading_id, self._id))
@@ -82,7 +90,7 @@ class Package:
 
         self.write_to_db()
 
-    def check_before_initializing(self):
+    def check_before_initializing(self) -> None:
         """ Checking package fields fullness before initializing """
         if not self._id:
             raise LoadingProcessException('Package id is not defined')
@@ -96,11 +104,11 @@ class Package:
         if not self._type:
             raise LoadingProcessException('Loading id - "{}" type is not defined'.format(self._id))
 
-    def drop(self, need_to_delete_data: bool = False):
+    def drop(self, need_to_delete_data: bool = False) -> None:
         """ For deleting package object from db. Possible to delete loaded data together.
-            Parameters:
-                need_to_delete_data: bool - if True - also delete data, else only package object
+        :param need_to_delete_data: if True - also delete data, else only package object
         """
+
         if need_to_delete_data:
             self._engine.delete_data(self._loading_id, self._id)
 
@@ -108,10 +116,11 @@ class Package:
         self._status = LoadingStatuses.NEW
 
     def load_data(self, data: list[dict[str, Any]]) -> bool:
-        """ For loading data.
-            Parameters:
-                data: list - array of data to load to db
+        """ For loading data
+        :param data: array of data to load to db
+        :return result of package data loading
         """
+
         if not data:
             raise LoadingProcessException('Data parameter is not set')
 
@@ -140,8 +149,10 @@ class Package:
 
         return True
 
-    def delete_data(self):
-        """ For deleting data from db. Don not delete package object from db. """
+    def delete_data(self) -> bool:
+        """ For deleting data from db. Don not delete package object from db.
+        :return: result of package data deleting. True if successful
+        """
         self._engine.delete_data(self._loading_id, self._id)
         self._status = LoadingStatuses.DELETED
         self._start_date = None
@@ -150,8 +161,10 @@ class Package:
 
         return True
 
-    def get_package_info(self):
-        """ For getting package info (status, type, start date, end date, error text) """
+    def get_package_info(self) -> dict[str, Any]:
+        """ For getting package info (status, type, start date, end date, error text)
+        :return: dict of package info
+        """
         package_info = {'id': self._id,
                         'type': self._type.value,
                         'status': self._status.value,
@@ -164,20 +177,25 @@ class Package:
         return package_info
 
     @property
-    def status(self):
-        """ _status field getter """
+    def status(self) -> LoadingStatuses:
+        """ _status field getter
+        :return: value of inner variable _status
+        """
         return self._status
 
     @status.setter
-    def status(self, value: LoadingStatuses | str):
-        """ _status field setter """
+    def status(self, value: LoadingStatuses | str) -> None:
+        """ _status field setter
+        :param value: value of status to set (LoadingStatuses and str are supported)
+        """
         self.set_status(value)
 
     def set_status(self, status_parameter: LoadingStatuses | str) -> bool:
         """ For setting status with checking input parameter
-            Parameters:
-                status_parameter: str or LoadingStatus - status to set
+        :param status_parameter: status to set
+        :return result of status setting - true if successful
         """
+
         if not status_parameter:
             raise LoadingProcessException('Status parameter is not defined')
 
@@ -213,13 +231,17 @@ class Package:
         return True
 
     @property
-    def id(self):
-        """ _id filed getter """
+    def id(self) -> str:
+        """ _id filed getter. Cannot be set outside __init__
+        :return: value of inner variable _id
+        """
         return self._id
 
     @property
     def type(self) -> LoadingTypes:
-        """ _type field getter"""
+        """ _type field getter
+        :return: value of inner variable _type
+        """
         return self._type
 
     @type.setter
@@ -227,7 +249,7 @@ class Package:
         """ _type field setter """
         self._type = value
 
-    def _read_from_db(self):
+    def _read_from_db(self) -> None:
         """ For reading package object from db """
         package_from_db = self._db_connector.get_line('packages', {'loading_id': self._loading_id, 'id': self._id})
 
@@ -242,7 +264,7 @@ class Package:
 
             self._number = package_from_db['number']
 
-    def write_to_db(self):
+    def write_to_db(self) -> None:
         """ For writing package object to db """
         package_to_db = {'id': self._id,
                          'loading_id': self._loading_id,
@@ -256,11 +278,11 @@ class Package:
 
         self._db_connector.set_line('packages', package_to_db, {'id': self._id, 'loading_id': self._loading_id})
 
-    def _check_data(self, data: list[dict[str, Any]]):
-        """ For checking data before loading
-            Parameters:
-                data: list - data array for checking
+    def _check_data(self, data: list[dict[str, Any]]) -> None:
+        """ For checking data before loading. Raises LoadingProcessException exception if check is failed
+        :param data: data array for checking
         """
+
         if not isinstance(data, list):
             raise LoadingProcessException('Data must be list like type')
 
@@ -269,7 +291,7 @@ class Package:
 
     def _get_engine(self) -> BaseEngine:
         """ For getting engine object to load data
-                Return: loading engine
+        :return loading engine
         """
         return get_engine_class()(self._db_connector)
 
@@ -305,9 +327,14 @@ class Loading:
             _write_to_db - for writing loading object to db
             _get_package - for getting package of loading by package id
     """
-    def __init__(self, loading_parameters: dict[str, Any],
-                 db_connector: db_processing.connectors.base_connector.Connector):
 
+    def __init__(self, loading_parameters: dict[str, Any],
+                 db_connector: db_processing.connectors.base_connector.Connector) -> None:
+        """
+        Defines all inner variable of loading. Then variables are read from db if it is not new loading
+        :param loading_parameters: parameters to define variables of loading
+        :param db_connector: object for working with db
+        """
         self._check_input_parameters(loading_parameters)
 
         self._id: str = loading_parameters['id']
@@ -342,7 +369,9 @@ class Loading:
                                           'but real number is {}'.format(self._number_of_packages, len(self._packages)))
 
     def initialize(self) -> dict[str, Any]:
-        """ For initializing NEW loading"""
+        """ For initializing NEW loading
+        :return: information of loading
+        """
         self._check_before_initializing()
 
         self._status = LoadingStatuses.REGISTERED
@@ -357,9 +386,10 @@ class Loading:
         return self.get_loading_info()
 
     def drop(self, need_to_delete_data: bool = False) -> dict[str, Any]:
-        """ For deleting loading object from db. Provides deleting previously loaded data together
-            Parameters:
-                need_to_delete_data - deletes previously loaded data if True
+        """ For deleting loading object from db. Provides deleting previously loaded data together.
+        Also deletes packages of loading
+        :param need_to_delete_data: deletes previously loaded data if True
+        :return result of dropping loading
         """
 
         loading_info = self.get_loading_info()
@@ -380,10 +410,11 @@ class Loading:
         return loading_info
 
     def load_package(self, package_parameters: dict[str, Any]) -> bool:
-        """ For loading package data to db.
-            Parameters:
-                package_parameters: dict - contains id (package id) and data (data array for loading)
+        """ For loading package data to db
+        :param package_parameters: contains id (package id) and data (data array for loading)
+        :return result of loading package data. true if successful
         """
+
         if not package_parameters:
             raise LoadingProcessException('Package parameters is not set')
 
@@ -434,8 +465,10 @@ class Loading:
 
         return True
 
-    def delete_data(self):
-        """ For deleting data from db without deleting loading object """
+    def delete_data(self) -> bool:
+        """ For deleting data from db without deleting loading object
+        :return: result of deleting data. True if successful
+        """
         for package in self._packages:
             package.delete_data()
 
@@ -457,6 +490,7 @@ class Loading:
                 end_date: date of finishing loading last package,
                 number_of_packages: number of packages of current loading,
                 error: text of error while loading
+                :return: dict of loading info
         """
         loading_info = {'id': self._id,
                         'type': self._type.value,
@@ -475,12 +509,13 @@ class Loading:
 
     def set_status(self, status_parameter: LoadingStatuses | str, set_for_packages: bool = False,
                    from_outside: bool = False) -> bool:
-        """ For setting loading status.
-            Parameters:
-                status_parameter: str | loadingStatuses - value of setting status
-                set_for_packages: - bool - set this status for all packages in loading if True
-                from_outside: bool - True when status is set directly from http request, else False
+        """ For setting loading status
+        :param status_parameter: value of setting status
+        :param set_for_packages: set this status for all packages in loading if True
+        :param from_outside: True when status is set directly from http request, else False
+        :return result of setting status, True if successful
         """
+
         if not status_parameter:
             raise LoadingProcessException('Status parameter is not defined')
 
@@ -523,9 +558,9 @@ class Loading:
         return True
 
     def set_package_status(self, package_parameter: dict[str, Any]) -> bool:
-        """ For setting status of transmitted package.
-            parameters:
-                package_parameter: dict - parameters of package that needs to set status
+        """ For setting status of transmitted package
+        :param package_parameter: parameters of package that needs to set status
+        :return result of setting package status, True if successful
         """
         if not package_parameter:
             raise LoadingProcessException('Package parameter is not defined')
@@ -589,8 +624,8 @@ class Loading:
 
     @staticmethod
     def _check_input_parameters(loading_parameters: dict[str, Any]) -> None:
-        """ For checking loading parameters while __init__
-            loading_parameters: dict - parameters of initialization of loading
+        """ For checking loading parameters while __init__. Raises LoadingProcessException if check is failed
+        :param loading_parameters: parameters of initialization of loading
         """
         check_fields = ['id']
 
@@ -608,8 +643,8 @@ class Loading:
                                               'but really packages '
                                               'type is {}'.format(type(loading_parameters['packages'])))
 
-    def _check_before_initializing(self):
-        """ Check fullness of fields before initialization """
+    def _check_before_initializing(self) -> None:
+        """ Check fullness of fields before initialization. Raises LoadingProcessException if checking is failed """
         if not self._id:
             raise LoadingProcessException('Loading id is not defined')
 
@@ -624,7 +659,10 @@ class Loading:
 
     @staticmethod
     def _get_loading_type_from_parameter(type_parameter: str) -> Optional[LoadingTypes]:
-        """ Gets loading type from str """
+        """ Gets loading type from str
+        :param type_parameter: string of loading type
+        :return: loading type (LoadingTypes) object
+        """
         if not type_parameter:
             return None
 
@@ -658,7 +696,9 @@ class Loading:
                 self._packages.append(package)
 
     def _write_to_db(self, write_packages: bool = True) -> None:
-        """ For writing loading object to db """
+        """ For writing loading object to db
+        :param write_packages: also writes packages to db if True
+        """
         loading_to_db = {'id': self._id,
                          'type': self._type.value,
                          'status': self._status.value,
@@ -675,19 +715,19 @@ class Loading:
                 package.write_to_db()
 
     def _get_package(self, package_id: str, package_parameters: Optional[dict[str, Any]] = None) -> Package:
-        """ For getting required package object.
-            Parameters:
-                package_id: str - id of required package;
-                package_parameters: - optional parameters, using, when we want to get NEW package
+        """ For getting required package object
+        :param package_id: id of required package
+        :param package_parameters: optional parameters, using, when we want to get NEW package
+        :return package object
         """
         return Package(self._id, package_id, self._db_connector, package_parameters)
 
 
-def delete_all_data(db_connector: db_processing.connectors.base_connector.Connector, data_filter: dict[str, Any]):
-    """ Deletes all data according to filter.
-        Parameters:
-            db_connector: - connector object to work with db
-            data_filter: dict - filter according to which data is deleted
+def delete_all_data(db_connector: db_processing.connectors.base_connector.Connector, data_filter: dict[str, Any])-> bool:
+    """ Deletes all data according to filter
+    :param db_connector: connector object to work with db
+    :param data_filter: filter according to which data is deleted
+    :return result of deleting data, True if successful
     """
     db_connector.delete_lines('raw_data', data_filter)
     return True
