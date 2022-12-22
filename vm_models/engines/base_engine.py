@@ -4,7 +4,7 @@
 """
 
 
-from typing import Any, Optional
+from typing import Any, Optional, ClassVar
 import numpy as np
 from abc import ABC, abstractmethod
 
@@ -18,8 +18,8 @@ class BaseEngine(ABC):
              predict - for predicting data
              drop - for deleting engine from db
     """
-    service_name: str = ''
-    model_type = ''
+    service_name: ClassVar[str] = ''
+    model_type: ClassVar[str] = ''
 
     def __init__(self, model_id: str, input_number: int, output_number: int, db_path: str, new_engine: bool = False,
                  **kwargs) -> None:
