@@ -91,12 +91,17 @@ class FittingParameters:
         self.fitting_is_started = parameters.get('fitting_is_started') or False
         self.fitting_is_error = parameters.get('fitting_is_error') or False
 
-        self.fitting_date = (datetime.strptime(parameters['fitting_date'], '%d.%m.%Y %H:%M:%S')
-                             if parameters.get('fitting_date') else None)
-        self.fitting_start_date = (datetime.strptime(parameters['fitting_start_date'], '%d.%m.%Y %H:%M:%S')
-                                   if parameters.get('fitting_start_date') else None)
-        self.fitting_error_date = (datetime.strptime(parameters['fitting_error_date'], '%d.%m.%Y %H:%M:%S')
-                                   if parameters.get('fitting_error_date') else None)
+        if without_processing:
+            self.fitting_date = parameters['fitting_date']
+            self.fitting_start_date = parameters['fitting_start_date']
+            self.fitting_error_date = parameters['fitting_error_date']
+        else:
+            self.fitting_date = (datetime.strptime(parameters['fitting_date'], '%d.%m.%Y %H:%M:%S')
+                                 if parameters.get('fitting_date') else None)
+            self.fitting_start_date = (datetime.strptime(parameters['fitting_start_date'], '%d.%m.%Y %H:%M:%S')
+                                       if parameters.get('fitting_start_date') else None)
+            self.fitting_error_date = (datetime.strptime(parameters['fitting_error_date'], '%d.%m.%Y %H:%M:%S')
+                                       if parameters.get('fitting_error_date') else None)
 
         self.fitting_error_text = parameters.get('fitting_error_text') or ''
 
@@ -110,16 +115,16 @@ class FittingParameters:
 
         self.metrics = parameters.get('metrics') or {}
 
-    def get_all(self) -> dict[str, Any]:
+    def get_all(self, for_db: bool = False) -> dict[str, Any]:
         parameters = {
             'is_fit': self.is_fit,
             'fitting_is_started': self.fitting_is_started,
             'fitting_is_error': self.fitting_is_error,
-            'fitting_date': self.fitting_date.strftime('%d.%m.%Y %H:%M:%S') if self.fitting_date else None,
-            'fitting_start_date': self.fitting_start_date.strftime('%d.%m.%Y %H:%M:%S')
-                                    if self.fitting_start_date else None,
-            'fitting_error_date': self.fitting_error_date.strftime('%d.%m.%Y %H:%M:%S')
-                                    if self.fitting_error_date else None,
+
+            'fitting_date': self.fitting_date,
+            'fitting_start_date': self.fitting_start_date,
+            'fitting_error_date': self.fitting_error_date,
+
             'fitting_error_text': self.fitting_error_text,
             'fitting_job_id': self.fitting_job_id,
             'fitting_job_pid': self.fitting_job_pid,
@@ -129,6 +134,14 @@ class FittingParameters:
             'categorical_columns': self.categorical_columns,
             'metrics': self.metrics
         }
+
+        if not for_db:
+            parameters['fitting_date'] = (parameters['fitting_date'].strftime('%d.%m.%Y %H:%M:%S')
+                                    if parameters['fitting_date'] else None)
+            parameters['fitting_start_date'] = (parameters['fitting_start_date'].strftime('%d.%m.%Y %H:%M:%S')
+                                    if parameters['fitting_start_date'] else None)
+            parameters['fitting_error_date'] = (parameters['fitting_error_date'].strftime('%d.%m.%Y %H:%M:%S')
+                                    if parameters['fitting_error_date'] else None)
 
         return parameters
 

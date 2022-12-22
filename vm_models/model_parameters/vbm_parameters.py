@@ -123,7 +123,7 @@ class VbmFittingParameters(FittingParameters):
         self.feature_importances = {}
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
-        super().set_all(parameters)
+        super().set_all(parameters, without_processing=without_processing)
 
         super_fields = [el.name for el in fields(super()) if el.name not in ['service_name']]
         self_fields =  [el.name for el in fields(self) if el.name not in super_fields + ['service_name']]
@@ -144,12 +144,17 @@ class VbmFittingParameters(FittingParameters):
         self.fi_calculation_is_started = parameters.get('fi_calculation_is_started') or False
         self.fi_calculation_is_error = parameters.get('fi_calculation_is_error') or False
 
-        self.fi_calculation_date = (datetime.strptime(parameters['fi_calculation_date'], '%d.%m.%Y %H:%M:%S')
-                             if parameters.get('fi_calculation_date') else None)
-        self.fi_calculation_start_date = (datetime.strptime(parameters['fi_calculation_start_date'], '%d.%m.%Y %H:%M:%S')
-                                   if parameters.get('fi_calculation_start_date') else None)
-        self.fi_calculation_error_date = (datetime.strptime(parameters['fi_calculation_error_date'], '%d.%m.%Y %H:%M:%S')
-                                   if parameters.get('fi_calculation_error_date') else None)
+        if without_processing:
+            self.fi_calculation_date = parameters['fi_calculation_date']
+            self.fi_calculation_start_date = parameters['fi_calculation_start_date']
+            self.fi_calculation_error_date = parameters['fi_calculation_error_date']
+        else:
+            self.fi_calculation_date = (datetime.strptime(parameters['fi_calculation_date'], '%d.%m.%Y %H:%M:%S')
+                                 if parameters.get('fi_calculation_date') else None)
+            self.fi_calculation_start_date = (datetime.strptime(parameters['fi_calculation_start_date'], '%d.%m.%Y %H:%M:%S')
+                                       if parameters.get('fi_calculation_start_date') else None)
+            self.fi_calculation_error_date = (datetime.strptime(parameters['fi_calculation_error_date'], '%d.%m.%Y %H:%M:%S')
+                                       if parameters.get('fi_calculation_error_date') else None)
 
         self.fi_calculation_error_text = parameters.get('fi_calculation_error_text') or ''
 
@@ -158,8 +163,8 @@ class VbmFittingParameters(FittingParameters):
 
         self.feature_importances = parameters.get('feature_importances') or {}
 
-    def get_all(self) -> dict[str, Any]:
-        result = super().get_all()
+    def get_all(self, for_db: bool = False) -> dict[str, Any]:
+        result = super().get_all(for_db=for_db)
 
         super_fields = [el.name for el in fields(super()) if el.name not in ['service_name']]
         self_fields = [el.name for el in fields(self) if el.name not in super_fields + ['service_name']]
@@ -173,17 +178,24 @@ class VbmFittingParameters(FittingParameters):
             'fi_is_calculated': self.fi_is_calculated,
             'fi_calculation_is_started': self.fi_calculation_is_started,
             'fi_calculation_is_error': self.fi_calculation_is_error,
-            'fi_calculation_date': self.fi_calculation_date.strftime('%d.%m.%Y %H:%M:%S')
-            if self.fi_calculation_date else None,
-            'fi_calculation_start_date': self.fi_calculation_start_date.strftime('%d.%m.%Y %H:%M:%S')
-            if self.fi_calculation_start_date else None,
-            'fi_calculation_error_date': self.fi_calculation_error_date.strftime('%d.%m.%Y %H:%M:%S')
-            if self.fi_calculation_error_date else None,
+
+            'fi_calculation_date': self.fi_calculation_date,
+            'fi_calculation_start_date': self.fi_calculation_start_date,
+            'fi_calculation_error_date': self.fi_calculation_error_date,
+
             'fi_calculation_error_text': self.fi_calculation_error_text,
             'fi_calculation_job_id': self.fi_calculation_job_id,
             'fi_calculation_job_pid': self.fi_calculation_job_pid,
             'feature_importances': self.feature_importances
         }
+
+        if not for_db:
+            fi_parameters['fi_calculation_date'] = (fi_parameters['fi_calculation_date'].strftime('%d.%m.%Y %H:%M:%S')
+                                                    if fi_parameters['fi_calculation_date'] else None)
+            fi_parameters['fi_calculation_start_date'] = (fi_parameters['fi_calculation_start_date'].strftime('%d.%m.%Y %H:%M:%S')
+                                                    if fi_parameters['fi_calculation_start_date'] else None)
+            fi_parameters['fi_calculation_error_date']  = (fi_parameters['fi_calculation_error_date'].strftime('%d.%m.%Y %H:%M:%S')
+                                                    if fi_parameters['fi_calculation_error_date'] else None)
 
         result.update(fi_parameters)
 
@@ -223,8 +235,8 @@ class VbmFittingParameters(FittingParameters):
         self.fi_calculation_is_started = True
         self.fi_calculation_is_error = False
 
-        self.fi_calculation_date = datetime.utcnow()
-        self.fi_calculation_start_date = None
+        self.fi_calculation_date = None
+        self.fi_calculation_start_date = datetime.utcnow()
         self.fi_calculation_error_date = None
 
         self.fi_calculation_error_text = ''
