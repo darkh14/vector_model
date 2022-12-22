@@ -191,7 +191,9 @@ class VbmFittingParameters(FittingParameters):
 
     def set_start_fitting(self, fitting_parameters: dict[str, Any]) -> None:
         super().set_start_fitting(fitting_parameters)
-        self.set_drop_fi_calculation()
+
+        if self.fi_is_calculated or self.fi_calculation_is_started:
+            self.set_drop_fi_calculation()
 
     def set_drop_fitting(self):
         super().set_drop_fitting()
@@ -202,7 +204,8 @@ class VbmFittingParameters(FittingParameters):
         self._x_analytic_keys = []
         self._y_analytic_keys = []
 
-        self.set_drop_fi_calculation()
+        if self.fi_is_calculated or self.fi_calculation_is_started:
+            self.set_drop_fi_calculation()
 
     def set_error_fitting(self, error_text: str = '') -> None:
         super().set_error_fitting(error_text)

@@ -17,6 +17,8 @@ SERVICE_NAME: str = ''
 def get_engine_class(model_type: str) -> Type[base_engine.BaseEngine]:
     """ Function for getting engine class. Choosing from subclasses of ModelParameters class where
         service name = SERVICE_NAME var
+        :param model_type: type of model to get
+        :return: required engine class
     """
     global SERVICE_NAME
 
@@ -32,7 +34,13 @@ def get_engine_class(model_type: str) -> Type[base_engine.BaseEngine]:
 
 def _get_class_from_subclasses(parent_class: Type[base_engine.BaseEngine], service_name: str = '',
                                model_type: str = '') -> Optional[Type[base_engine.BaseEngine]]:
-
+    """
+    Returns required engine class from subclasses of parent class (recursively)
+    :param parent_class: the class from whose subclasses the required class is selected
+    :param service_name: filter service_name = csl.service_name
+    :param model_type: filter model_type = csl.model_type
+    :return: required engine class
+    """
     result_class = None
 
     for subclass in parent_class.__subclasses__():
