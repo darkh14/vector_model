@@ -21,7 +21,12 @@ from .model_filters import get_fitting_filter_class
 __all__ = ['fit', 'predict', 'initialize', 'drop', 'get_info', 'drop_fitting', 'get_additional_actions']
 
 
-def _check_input_parameters(func: Callable):
+def _check_input_parameters(func: Callable) -> Callable:
+    """
+    Decorator for checking input parameters
+    :param func: function to decorate
+    :return: decorated function
+    """
     @wraps(func)
     def wrapper(parameters: dict[str, Any]):
 
@@ -36,7 +41,13 @@ def _check_input_parameters(func: Callable):
 
     return wrapper
 
+
 def _transform_model_parameters_for_fitting(func: Callable):
+    """
+    Decorator to transform model parameters
+    :param func: function to decorate
+    :return: decorated function
+    """
     @wraps(func)
     def wrapper(parameters: dict[str, Any]):
 
@@ -57,11 +68,15 @@ def _transform_model_parameters_for_fitting(func: Callable):
 
     return wrapper
 
+
 @_check_input_parameters
 @_transform_model_parameters_for_fitting
 @execute_in_background
 def fit(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For fitting model """
+    """ For fitting model
+    :param parameters: request parameters
+    :return: result of fitting
+    """
     model = _get_model(parameters['model'], parameters['db'])
 
     if 'fitting_parameters' not in parameters['model']:
@@ -71,9 +86,14 @@ def fit(parameters: dict[str, Any]) -> dict[str, Any]:
 
     return result
 
-@_check_input_parameters
-def predict(parameters: dict[str, Any]) -> list[dict[str, Any]]:
 
+@_check_input_parameters
+def predict(parameters: dict[str, Any]) -> dict[str, Any]:
+    """
+    For predicting data using model
+    :param parameters: request parameters
+    :return: predicted data with description
+    """
     if 'inputs' not in parameters:
         raise ParameterNotFoundException('Parameter "inputs" is not in request parameters')
 
@@ -86,7 +106,10 @@ def predict(parameters: dict[str, Any]) -> list[dict[str, Any]]:
 
 @_check_input_parameters
 def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For initializing new model """
+    """ For initializing new model
+    :param parameters: request parameters
+    :return: result of initializing
+    """
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
@@ -102,7 +125,10 @@ def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
 
 @_check_input_parameters
 def drop(parameters: dict[str, Any]) -> str:
-    """ For deleting model from db """
+    """ For deleting model from db
+    :param parameters: request parameters
+    :return: result of dropping
+    """
 
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
@@ -119,7 +145,10 @@ def drop(parameters: dict[str, Any]) -> str:
 
 @_check_input_parameters
 def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For getting model info """
+    """ For getting model info
+    :param parameters: request parameters
+    :return: model info
+    """
 
     model = _get_model(parameters['model'], parameters['db'])
 
@@ -129,7 +158,10 @@ def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
 
 
 def drop_fitting(parameters: dict[str, Any]) -> str:
-    """ For deleting fit data from model """
+    """ For deleting fit data from model
+    :param parameters: request parameters
+    :return: result of dropping
+    """
     model = _get_model(parameters['model'], parameters['db'])
 
     result = model.drop_fitting()
@@ -138,10 +170,20 @@ def drop_fitting(parameters: dict[str, Any]) -> str:
 
 
 def get_additional_actions() -> dict[str|Callable]:
+    """
+    Forms dict of additional action from model package
+    :return: dict of actions (functions)
+    """
     return model_get_actions()
 
-def _get_model(input_model: dict[str, Any], db_path: str) -> base_model.Model:
 
+def _get_model(input_model: dict[str, Any], db_path: str) -> base_model.Model:
+    """
+    Gets model object from parameters
+    :param input_model: model parameters
+    :param db_path: path to db to create db connector
+    :return: required model object
+    """
     if not input_model.get('id'):
         raise ModelException('Parameter "id" is not found in model parameters')
 

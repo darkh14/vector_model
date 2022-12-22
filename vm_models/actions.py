@@ -19,7 +19,9 @@ from . import controller
 
 
 def get_actions() -> dict[str, Callable]:
-    """ forms actions dict available for vm_models"""
+    """ forms actions dict available for vm_models
+    :return: dict of actions (functions)
+    """
     actions =  {
         'model_fit': _fit,
         'model_predict': _predict,
@@ -35,30 +37,48 @@ def get_actions() -> dict[str, Callable]:
 
 
 def _fit(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For fitting model """
+    """ For fitting model
+    :param parameters: request parameters
+    :return: result of fitting
+    """
     return controller.fit(parameters)
 
 
 def _predict(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For predicting data with model """
+    """ For predicting data with model
+    :param parameters: request parameters
+    :return: predicted data with description
+    """
     return controller.predict(parameters)
 
 
 def _initialize(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For initializing new model """
+    """ For initializing new model
+    :param parameters: request parameters
+    :return: model info
+    """
     return controller.initialize(parameters)
 
 
 def _drop(parameters: dict[str, Any]) -> str:
-    """ For deleting model from db """
+    """ For deleting model from db
+    :param parameters: request parameters
+    :return: result of dropping
+    """
     return controller.drop(parameters)
 
 
 def _get_info(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ For getting model info """
+    """ For getting model info
+    :param parameters: request parameters
+    :return: model info
+    """
     return controller.get_info(parameters)
 
 
 def _drop_fitting(parameters: dict[str, Any]) -> str:
-    """ For deleting fit data from model """
+    """ For deleting fit data from model
+    :param parameters: request parameters
+    :return: result of dropping
+    """
     return controller.drop_fitting(parameters)
