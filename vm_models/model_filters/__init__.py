@@ -16,6 +16,7 @@ SERVICE_NAME: str = ''
 def get_fitting_filter_class() -> Type[base_filter.FittingFilter]:
     """ Function for getting model filter class. Choosing from subclasses of BaseFilter class where
         service name = SERVICE_NAME var
+        :return: required fitting filter class
     """
     global SERVICE_NAME
 

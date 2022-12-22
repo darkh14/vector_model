@@ -1,5 +1,12 @@
+"""
+    VBM (Vector budget model)
+    Module for fitting filter class.
+    Classes:
+        VbmFittingFilter -  class to transform input filter parameters for reading data
+        for fitting to filter, which we can use in db (mongo)
+"""
 
-from typing import Any, Optional
+from typing import Any, Optional, ClassVar
 from datetime import datetime
 import pickle
 
@@ -8,9 +15,17 @@ from .base_filter import FittingFilter
 __all__ = ['VbmFittingFilter']
 
 class VbmFittingFilter(FittingFilter):
-    service_name: str = 'vbm'
+    """ Class to transform input filter parameters for reading data
+        for fitting to filter, which we can use in db (mongo)
+    """
+    service_name: ClassVar[str] = 'vbm'
 
     def __init__(self, filter_value: bytes | dict[str, Any], for_model: bool = False) -> None:
+        """
+        Defines local filter value
+        :param filter_value: input filter value
+        :param for_model: parameter says that filter will be used in model, not in fitting
+        """
         super().__init__(filter_value, for_model)
 
         if isinstance(self._value, bytes):
@@ -21,17 +36,27 @@ class VbmFittingFilter(FittingFilter):
             else:
                 self._value = self._transform_period_value(self._value)
 
-    def get_value_as_model_parameter(self):
+    def get_value_as_model_parameter(self) -> bytes:
+        """
+        Converts value to write it to db as a model parameter. Uses pickle
+        :return: value as a model parameter
+        """
         return pickle.dumps(self._value, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def get_value_as_json_serializable(self):
-
+    def get_value_as_json_serializable(self) -> Optional[dict|list|int|float|str|datetime]:
+        """
+        Convert value to use it as a json serializable value to send it as model info
+        :return: value as a json serializable
+        """
         result = self._value.copy()
 
         return self._transform_dates_to_str(result)
 
     def _get_value_db_for_model(self) -> dict[str, Any]:
-
+        """
+        Return value to use as db filter for model
+        :return: value as db filter
+        """
         data_filter = {}
 
         for name, value in self._value.items():
@@ -65,7 +90,12 @@ class VbmFittingFilter(FittingFilter):
         return result_filter
 
     def _transform_period_value(self, value, transform_to_date: bool = False) -> Any:
-
+        """
+        Transforms str fields in value as dates. Uses recursion
+        :param value: value to transform
+        :param transform_to_date: transform current value to date
+        :return: transformed value
+        """
         if isinstance(value, list):
             result = []
             for el in value:
@@ -86,7 +116,11 @@ class VbmFittingFilter(FittingFilter):
 
     def _transform_dates_to_str(self, value: dict|list|int|float|str|datetime) -> \
             Optional[dict|list|int|float|str|datetime]:
-
+        """
+        Transforms date fields in value to str. Uses recursion
+        :param value: value to transform
+        :return: transformed value
+        """
         if isinstance(value, list):
             result = []
             for el in value:
