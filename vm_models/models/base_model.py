@@ -1,8 +1,10 @@
 """ Contains model class, that provides working with models including
-fitting and predicting
+    fitting and predicting
+    Classes:
+        Model - base model class, provides fitting and predicting. Saves itself to db
 """
 
-from typing import Any, Callable,Optional
+from typing import Any, Callable, Optional, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -21,9 +23,26 @@ __all__ = ['Model']
 
 
 class Model:
-    service_name: str = ''
-    def __init__(self, model_id: str, db_path: str):
+    """ Base model class, provides fitting and predicting. Saves itself to db
+        Methods:
+            initialize - to initialize model in db
+            drop - to delete model from db
+            get_info - gets all model info (statuses, dates, metrics etc.)
+            fit - to fit model
+            predict - to predict data using this model
+            drop_fitting - to drop model fitting
+        Properties:
+            id
+            initialized
+    """
+    service_name: ClassVar[str] = ''
 
+    def __init__(self, model_id: str, db_path: str) -> None:
+        """
+        Defines all model parameters and read model from db if it is necessary
+        :param model_id: id of model
+        :param db_path: path to db to create db connector
+        """
         self._id: str = model_id
         self._initialized: bool = False
         self._db_path: str = db_path
@@ -38,6 +57,11 @@ class Model:
         self._read_from_db()
 
     def initialize(self, model_parameters: dict[str, Any]) -> dict[str, Any]:
+        """
+        For initializing model in db
+        :param model_parameters:
+        :return: model info dict
+        """
         if self._initialized:
             raise ModelException('Model "{}" id - "{}" is always initialized'.format(self.parameters.name, self._id))
 
@@ -51,6 +75,9 @@ class Model:
         return self.get_info()
 
     def drop(self) -> str:
+        """ Deletes model from db. sets initializing = False
+        :return: result of dropping
+        """
         if not self._initialized:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
 
@@ -67,6 +94,10 @@ class Model:
         return 'model id {} is dropped'.format(self._id)
 
     def get_info(self) -> dict[str, Any]:
+        """
+        Gest model information - statuses, dates, metrics etc.
+        :return: model info dict
+        """
         model_info = {'id': self._id, 'initialized': self._initialized}
 
         model_info.update(self.parameters.get_all())
@@ -77,7 +108,11 @@ class Model:
         return model_info
 
     def fit(self, fitting_parameters: dict[str, Any]) -> dict[str, Any]:
-
+        """
+        For fitting model
+        :param fitting_parameters: parameters of fitting (ex. epochs)
+        :return: fitting history
+        """
         self._check_before_fitting(fitting_parameters)
 
         self.fitting_parameters.set_start_fitting(fitting_parameters)
@@ -100,6 +135,11 @@ class Model:
         return result
 
     def predict(self, x: list[dict[str, Any]]) -> dict[str, Any]:
+        """
+        For predicting data with model
+        :param x: input data for predicting
+        :return: predicted output data
+        """
         self._check_before_predicting()
 
         result = self._predict_model(x)
@@ -107,7 +147,10 @@ class Model:
         return result
 
     def drop_fitting(self) -> str:
-
+        """
+        Deletes results of fitting from db
+        :return: resul of dropping
+        """
         self._interrupt_fitting_job()
 
         self.fitting_parameters.set_drop_fitting()
@@ -115,12 +158,20 @@ class Model:
 
         return 'Model "{}" id "{}" fitting is dropped'.format(self.parameters.name, self.id)
 
-    def _interrupt_fitting_job(self):
+    def _interrupt_fitting_job(self) -> None:
+        """
+        Interrupts fitting job process when fitting is launched in background mode
+        """
         if self.fitting_parameters.fitting_is_started:
             set_background_job_interrupted(self.fitting_parameters.fitting_job_id, self._db_path)
 
     def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None) -> Any:
-
+        """
+        For fitting model after checking, and preparing parameters
+        :param epochs: number of epochs for fitting
+        :param fitting_parameters: additional fitting parameters
+        :return: fitting history
+        """
         pipeline = self._get_model_pipeline(for_predicting=False, fitting_parameters=fitting_parameters)
         data = pipeline.fit_transform(None)
 
@@ -134,15 +185,35 @@ class Model:
         return result
 
     def _data_to_x_y(self, data: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Converts read pd data to np array x and y for fitting
+        :param data: input read data
+        :return: x, y data tuple
+        """
         return data[self.fitting_parameters.x_columns].to_numpy(), data[self.fitting_parameters.y_columns].to_numpy()
 
     def _data_to_x(self, data: pd.DataFrame) -> np.ndarray:
+        """
+        Converts input pd data to np array x
+        :param data: input data
+        :return: x data for predicting
+        """
         return data[self.fitting_parameters.x_columns].to_numpy()
 
     def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) ->  pd.DataFrame:
+        """
+        Converts output np array y to output pd. data
+        :param y: y output predicted np array
+        :param x_data: input x data
+        :return: predicted output pd data
+        """
         return pd.DataFrame(y, columns=self.fitting_parameters.y_columns)
 
-    def _check_before_fitting(self, fitting_parameters: dict[str, Any]):
+    def _check_before_fitting(self, fitting_parameters: dict[str, Any]) -> None:
+        """
+        For checking statuses and other parameters before fitting. Raises ModelException if checking is failed
+        :param fitting_parameters: parameters to check
+        """
         if not self._initialized:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
 
@@ -152,8 +223,10 @@ class Model:
         if self.fitting_parameters.fitting_is_started:
             raise ModelException('Another fitting is started yet. Wait for end of fitting')
 
-    def _check_before_predicting(self):
-
+    def _check_before_predicting(self) -> None:
+        """
+        For checking statuses and other parameters before predicting. Raises ModelException if checking is failed
+        """
         if not self._initialized:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
 
@@ -163,7 +236,12 @@ class Model:
 
     def _get_model_estimators(self, for_predicting: bool = False,
                               fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
-
+        """
+        Gets list of estimators for data transforming before fitting or predicting
+        :param for_predicting: True is need to form estimators for predicting
+        :param fitting_parameters: parameters for fitting
+        :return: list of estimators
+        """
         estimator_types_list = [
                                 DataTransformersTypes.READER,
                                 DataTransformersTypes.CHECKER,
@@ -182,7 +260,12 @@ class Model:
 
     def _get_estimator(self, transformer_type: DataTransformersTypes,
                              fitting_parameters: Optional[dict[str, Any]] = None) -> base_transformer.BaseTransformer:
-
+        """
+        Gets estimator according to type
+        :param transformer_type: type of estimator
+        :param fitting_parameters: parameters of fitting
+        :return: required estimator
+        """
         estimator_class = get_transformer_class(transformer_type, self.parameters.type)
         estimator = estimator_class(self.parameters, self.fitting_parameters, self._db_path, model_id=self._id)
         if fitting_parameters:
@@ -192,12 +275,20 @@ class Model:
 
     def _get_model_pipeline(self, for_predicting: bool = False,
                             fitting_parameters: Optional[dict[str, Any]] = None) -> Pipeline:
-
+        """
+        Gets pipeline of transformers for fitting or predicting
+        :param for_predicting: True is need to form pipeline for predicting
+        :param fitting_parameters: parameters of fitting
+        :return: pipeline of estimators to transform data
+        """
         estimators = self._get_model_estimators(for_predicting, fitting_parameters)
 
         return Pipeline(estimators)
 
-    def _write_to_db(self):
+    def _write_to_db(self) -> None:
+        """
+        Writes model to db
+        """
         model_to_db = {'id': self._id}
         model_to_db.update(self.parameters.get_all())
         model_to_db.update(self.fitting_parameters.get_all(for_db=True))
@@ -206,9 +297,10 @@ class Model:
 
         self._db_connector.set_line('models', model_to_db, {'id': self._id})
 
-    def _add_fields_to_write_to_db(self, model_to_db: dict[str, Any])-> None: ...
-
     def _read_from_db(self):
+        """
+        Reads model from db
+        """
         model_from_db = self._db_connector.get_line('models', {'id': self._id})
 
         if model_from_db:
@@ -225,7 +317,11 @@ class Model:
             self._engine = None
 
     def _predict_model(self, x_input: list[dict[str, Any]]) -> dict[str, Any]:
-
+        """
+        For predicting data after check and prepare parameters
+        :param x_input: list of input data
+        :return: dict of result of predicting
+        """
         pipeline = self._get_model_pipeline(for_predicting=True)
         data = pipeline.transform(x_input)
 
@@ -241,16 +337,32 @@ class Model:
         return {'output': result_data.to_dict('records'), 'description': self._form_output_columns_description()}
 
     def _form_output_columns_description(self):
+        """
+        Creates columns description
+        :return: description
+        """
         return self.fitting_parameters.y_columns
 
     @property
     def id(self) -> str:
+        """
+        Property gets value of model id. Cannot be set out of __init__
+        :return: value of property
+        """
         return self._id
 
     @property
     def initialized(self) -> bool:
+        """
+        Property gets value of status initialized. Cannot be set out of __init__
+        :return: value of property
+        """
         return self._initialized
 
 
 def get_additional_actions() -> dict[str, Callable]:
+    """
+    Forms dict of additional actions of models package. In base model result is empty
+    :return: dict of actions (functions)
+    """
     return {}

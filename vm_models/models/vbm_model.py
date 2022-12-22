@@ -1,13 +1,17 @@
-""" VBM (Vector Budget model) Contains model class for VBM
+""" VBM (Vector Budget model)
+    Contains model class for VBM
+    Classes:
+        VbmModel - main model class. Compared with base class it provides feature importances calculation,
+            sensitivity analysis calculation and factor analysis calculation
 """
 
-from typing import Any, Optional, Callable
+from typing import Any, Optional, Callable, ClassVar
 import numpy as np
 import pandas as pd
 import math
 
 from keras.wrappers.scikit_learn import KerasRegressor
-from keras.models import clone_model
+from keras.models import Sequential, clone_model
 from eli5.sklearn import PermutationImportance
 import plotly.graph_objects as go
 
@@ -21,13 +25,27 @@ from vm_background_jobs.controller import set_background_job_interrupted
 from id_generator import IdGenerator
 
 
-
 __all__ = ['VbmModel', 'get_additional_actions']
 
 class VbmModel(Model):
-    service_name = 'vbm'
-    def _form_output_columns_description(self) -> dict[str, Any]:
+    """ Main model class. Compared with base class it provides feature importances calculation,
+            sensitivity analysis calculation and factor analysis calculation
 
+        Methods:
+            calculate_feature_importances - for calculating feature importances and saving them to db
+            get_feature_importances - for getting calculated feature importances
+            drop_fi_calculation - to delete calculated feature importances from db
+            get_sensitivity_analysis - for calculating and getting sensitivity analysis data
+            get_factor_analysis - for calculating and getting factor analysis data
+    """
+
+    service_name: ClassVar[str] = 'vbm'
+
+    def _form_output_columns_description(self) -> dict[str, Any]:
+        """
+        Forms and gets output columns description
+        :return: formed description
+        """
         result_description = {}
 
         for col_name in self.fitting_parameters.y_columns:
@@ -51,6 +69,12 @@ class VbmModel(Model):
         return result_description
 
     def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) ->  pd.DataFrame:
+        """
+        Converts output np array y to output pd. data
+        :param y: y output predicted np array
+        :param x_data: input x data
+        :return: predicted output pd data
+        """
         result = pd.DataFrame(y, columns=self.fitting_parameters.y_columns)
 
         result[['organisation', 'scenario', 'period']] = x_data[['organisation_struct', 'scenario_struct', 'period']]
@@ -60,14 +84,24 @@ class VbmModel(Model):
 
     def _get_model_estimators(self, for_predicting: bool = False,
                               fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
-
+        """
+        Gets list of estimators for data transforming before fitting or predicting.
+        Excludes scaler compared to base class method
+        :param for_predicting: True is need to form estimators for predicting
+        :param fitting_parameters: parameters for fitting
+        :return: list of estimators
+        """
         estimators = super()._get_model_estimators(for_predicting, fitting_parameters)
 
         estimators = [es for es in estimators if es[0] != DataTransformersTypes.SCALER.value]
         return estimators
 
     def calculate_feature_importances(self, fi_parameters: dict[str, Any]) -> dict[str, Any]:
-
+        """
+        For calculating feature importances and saving them to db
+        :param fi_parameters: parameters for fi calculation
+        :return: result of fi calculation. calculated data is saved in model
+        """
         self._check_before_fi_calculating(fi_parameters)
 
         self.fitting_parameters.set_start_fi_calculation(fi_parameters)
@@ -88,14 +122,20 @@ class VbmModel(Model):
         return result
 
     def get_feature_importances(self) -> dict[str, Any]:
-
+        """
+        For getting calculated feature importances
+        :return: calculated fi data
+        """
         if not self.fitting_parameters.fi_is_calculated:
             raise ModelException('FI is not calculated. Calculate feature importances first')
 
         return self.fitting_parameters.feature_importances
 
     def drop_fi_calculation(self) -> str:
-
+        """
+        Deletes calculated feature importances from db
+        :return: result of deleting
+        """
         self._interrupt_fi_calculation_job()
         self.fitting_parameters.set_drop_fi_calculation()
         self._write_to_db()
@@ -105,7 +145,13 @@ class VbmModel(Model):
     def get_sensitivity_analysis(self, inputs_0: list[dict[str, Any]],
                                  inputs_plus: list[dict[str, Any]],
                                  inputs_minus: list[dict[str, Any]]) -> dict[str, Any]:
-
+        """
+        For calculating and getting sensitivity analysis data
+        :param inputs_0: main input data
+        :param inputs_plus: plus deviation input data
+        :param inputs_minus: minus deviation input data
+        :return: calculated sensitivity analysis data
+        """
         pipeline = self._get_model_pipeline(for_predicting=True)
         data_0 = pipeline.transform(inputs_0)
 
@@ -181,13 +227,20 @@ class VbmModel(Model):
             sa['ind_' + ind_id] = sa_ind_data
 
         return sa
-
     def get_factor_analysis(self, inputs: list[dict[str, Any]],
                                  outputs: dict[str, Any],
                                  input_indicators: list[dict[str, Any]],
                                  output_indicator: dict[str, Any],
                                  get_graph: bool = False) -> dict[str, Any]:
-
+        """
+        For calculating and getting factor analysis data
+        :param inputs: input data
+        :param outputs: output data - scenarios
+        :param input_indicators: input indicators list
+        :param output_indicator: output indicator for fa calculation
+        :param get_graph: true if we want to return also graph data
+        :return: calculated fa data
+        """
         self._check_before_fa_calculation()
 
         # method of chain substitutions
@@ -247,9 +300,11 @@ class VbmModel(Model):
 
         return {'fa': result_data, 'graph_data': graph_string}
 
-
     def _check_before_fi_calculating(self, fi_parameters:  dict[str, Any]) -> None:
-
+        """
+        For checking parameters before fi calculation
+        :param fi_parameters: parameters to check
+        """
         if not self._initialized:
             raise ModelException('Model is not initialized. Check model id before')
 
@@ -263,7 +318,12 @@ class VbmModel(Model):
             raise ModelException('Another fi calculation is started yet. Wait for end of fi calculation')
 
     def _fi_calculate_model(self, epochs, fi_parameters):
-
+        """
+        For fi calculation after prepare and check parameters. Method - permutation importances
+        :param epochs: number of epochs to fit
+        :param fi_parameters: parameters to calculate fi
+        :return: info of calculating
+        """
         pipeline = self._get_model_pipeline(for_predicting=False, fitting_parameters=fi_parameters)
         data = pipeline.fit_transform(None)
 
@@ -287,13 +347,23 @@ class VbmModel(Model):
 
         return result
 
-    def _get_engine_for_fi(self):
+    def _get_engine_for_fi(self) -> Sequential:
+        """
+        Returns inner engine for calculating fi
+        :return: keras sequential engine
+        """
         inner_engine = clone_model(self._engine.inner_engine)
         self._engine.compile_engine(inner_engine)
 
         return inner_engine
 
     def _calculate_fi_from_model(self, fi_model: KerasRegressor, x: np.ndarray, y: np.ndarray) -> None:
+        """
+        Calculates fi using permutation importances
+        :param fi_model: keras regressor model for permutation importances
+        :param x: inputs to calculate fi
+        :param y: outputs to calculate fi
+        """
         perm = PermutationImportance(fi_model, random_state=42).fit(x, y)
 
         fi = pd.DataFrame(perm.feature_importances_, columns=['error_delta'])
@@ -328,20 +398,32 @@ class VbmModel(Model):
         self.fitting_parameters.feature_importances = {'extended': fi, 'grouped': fi_ind}
 
     def _get_indicator_from_column_name(self, column_name: str) -> dict[str, Any]:
-
+        """
+        Gets dict of indicator from column name
+        :param column_name: name of columns
+        :return: indicator dict
+        """
         short_id = column_name.split('_')[1]
 
         return self._get_indicator_from_short_id(short_id)
 
     def _get_indicator_from_short_id(self, short_id: str) -> dict[str, Any]:
-
+        """
+        Gets dict of indicator from its short id
+        :param short_id: short id if indicator
+        :return: indicator dict
+        """
         indicators = [ind for ind in (self.parameters.x_indicators + self.parameters.y_indicators)
                       if ind['short_id'] == short_id]
 
         return indicators[0]
 
     def _get_analytics_from_column_name(self, column_name: str) -> list[dict[str, Any]]:
-
+        """
+        Gets analytic list from column name
+        :param column_name: name of column
+        :return: analytic list
+        """
         column_list = column_name.split('_')
 
         if 'an' in column_list:
@@ -352,12 +434,17 @@ class VbmModel(Model):
 
         return result
 
-    def _interrupt_fi_calculation_job(self):
+    def _interrupt_fi_calculation_job(self) -> None:
+        """
+        Interrupt process of fi calculation if it launched in subprocess
+        """
         if self.fitting_parameters.fi_calculation_is_started:
             set_background_job_interrupted(self.fitting_parameters.fi_calculation_job_id, self._db_path)
 
-    def _check_before_fa_calculation(self):
-
+    def _check_before_fa_calculation(self) -> None:
+        """
+        Checks parameters before fa calculation. Raises ModelException if checking is failed
+        """
         if not self._initialized:
             raise ModelException('Error of calculating factor analysis data. Model is not initialized')
 
@@ -371,7 +458,16 @@ class VbmModel(Model):
                                  main_periods: list[str],
                                  output_columns: list[str],
                                  current_ind_short_id: str = ''):
-
+        """
+        Forms output data according to one indicator while fa calculating
+        :param input_data: main input data
+        :param outputs: output data - scenarios
+        :param used_indicator_ids: ids of indicators, which is previously used
+        :param main_periods: periods of fa calculating
+        :param output_columns: list of columns of output indicator
+        :param current_ind_short_id: id of current input indicator
+        :return: one indicator fa data
+        """
         c_input_data = input_data.copy()
 
         c_input_data['scenario'] = c_input_data['organisation'].apply(lambda sc: outputs['calculated'])
@@ -415,7 +511,11 @@ class VbmModel(Model):
 
     @staticmethod
     def _get_value_for_fa(input_parameters):
-
+        """
+        Calculates fa value of one row. Used in pd.DataFrame.apply()
+        :param input_parameters: values for calculating fa value
+        :return: fa value
+        """
         (value_based, value_calculated, used_indicator_ids,
          indicator_short_id, current_indicator_short_id) = input_parameters
 
@@ -428,8 +528,13 @@ class VbmModel(Model):
 
         return value
 
-    def _get_data_for_fa_graph(self, result_data: list[dict[str, Any]], outputs: dict[str, Any]):
-
+    def _get_data_for_fa_graph(self, result_data: list[dict[str, Any]], outputs: dict[str, Any]) -> pd.DataFrame:
+        """
+        Forms dataframe using to create fa graph html
+        :param result_data: fa data to form fa graph data
+        :param outputs: based and calculated values
+        :return: prepared dataframe
+        """
         result_data = pd.DataFrame(result_data)
         result_data['title'] = result_data['indicator'].apply(lambda x: x['name'])
         result_data['order'] = list(range(2, result_data.shape[0]+2))
@@ -447,7 +552,12 @@ class VbmModel(Model):
 
 
     def _get_fa_graph_bin(self, values: pd.DataFrame, out_indicator_name: str) -> str:
-
+        """
+        Forms fa graph html str
+        :param values: values to form html
+        :param out_indicator_name: name of output indicator, used in titles
+        :return: formed html str
+        """
         x_list = list(values['title'])
         y_list = list(values['value'])
 
@@ -521,6 +631,10 @@ class VbmModel(Model):
 
 
 def get_additional_actions() -> dict[str, Callable]:
+    """
+    Formed additional actions of vbm model module
+    :return: actions dict (functions)
+    """
     return {'model_calculate_feature_importances': _calculate_feature_importances,
             'model_get_feature_importances': _get_feature_importances,
             'model_drop_fi_calculation': _drop_fi_calculation,
@@ -531,6 +645,11 @@ def get_additional_actions() -> dict[str, Callable]:
 
 @execute_in_background
 def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]:
+    """
+    For calculating feature importances
+    :param parameters: request parameters
+    :return: result (info) of calculating fi
+    """
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
@@ -557,6 +676,11 @@ def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]
 
 
 def _get_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]:
+    """
+    For getting calculated feature importances
+    :param parameters: request parameters
+    :return: fi data
+    """
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
@@ -571,6 +695,11 @@ def _get_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]:
 
 
 def _drop_fi_calculation(parameters: dict[str, Any]) -> str:
+    """
+    To drop calculated feature importances data
+    :param parameters: request parameters
+    :return: result of dropping
+    """
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
@@ -585,6 +714,11 @@ def _drop_fi_calculation(parameters: dict[str, Any]) -> str:
 
 
 def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
+    """
+    For calculating and getting sensitivity analysis data
+    :param parameters: request parameters
+    :return: calculated sa data
+    """
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
@@ -607,7 +741,11 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
 
 
 def _get_factor_analysis_data(parameters: dict[str, Any]) -> dict[str, Any]:
-
+    """
+    For calculating and getting factor analysis data
+    :param parameters: request parameters
+    :return: calculated fa data
+    """
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 

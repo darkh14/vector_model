@@ -18,6 +18,7 @@ SERVICE_NAME: str = ''
 def get_model_class() -> Type[base_model.Model]:
     """ Function for getting model class. Choosing from subclasses of Model class where
         service name = SERVICE_NAME var
+        :return required model class
     """
     global SERVICE_NAME
 
@@ -34,7 +35,10 @@ def get_model_class() -> Type[base_model.Model]:
 
 
 def get_additional_actions() -> dict[str, Callable]:
-
+    """
+    Gets additional actions of modules of model package
+    :return: dict of actions (functions)
+    """
     additional_actions = {}
 
     package_modules = []
