@@ -1,6 +1,10 @@
-""" Module contains base class for saving and getting fitting parameters of model """
+""" Module contains base class for saving and getting fitting parameters of model
+    Classes:
+        ModelParameters - base dataclass for storing, saving and getting model parameters
+        FittingParameters - base dataclass for storing, saving and getting fitting parameters
+"""
 
-from typing import Any, Optional
+from typing import Any, Optional, ClassVar
 from dataclasses import dataclass
 from datetime import datetime
 import os
@@ -11,17 +15,31 @@ from vm_logging.exceptions import ModelException
 
 @dataclass
 class ModelParameters:
-
-    service_name: str = ''
+    """ Base dataclass for storing, saving and getting model parameters
+        Methods:
+            set_all - to set all input parameters in object
+            get_all - to get all parameters
+            get_data_filter_for_db - to get data filter for using as sa db filter
+            _check_new_parameters - checks parameters
+    """
+    service_name: ClassVar[str] = ''
 
     name: str = ''
     type: str = ''
     data_filter: Optional[base_filter.FittingFilter] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        """
+        Defines data filter object
+        """
         self.data_filter = get_fitting_filter_class()({}, for_model=True)
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
+        """
+        For setting all parameters, defined in "parameters" parameter
+        :param parameters: input parameters to set
+        :param without_processing: no need to convert parameters if True
+        """
         self._check_new_parameters(parameters)
 
         self.name = parameters['name']
@@ -30,7 +48,11 @@ class ModelParameters:
         self.data_filter = get_fitting_filter_class()(parameters.get('filter'), for_model=True)
 
     def _check_new_parameters(self, parameters: dict[str, Any], checking_names:Optional[list] = None) -> None:
-
+        """
+        For checking parameters. Raises ModelException if checking is failed
+        :param parameters: parameters to check
+        :param checking_names: optional names of checking parameters
+        """
         if not checking_names:
             checking_names = ['name', 'type']
 
@@ -40,9 +62,17 @@ class ModelParameters:
             ModelException('Parameter(s) {} not found in model parameters'.format(', '.join("{}".format(error_names))))
 
     def get_data_filter_for_db(self) -> dict[str, Any]:
+        """
+        Gets data filter value to use it as a db filter
+        :return: db filter value
+        """
         return self.data_filter.get_value_as_db_filter()
 
     def get_all(self) -> dict[str, Any]:
+        """
+        For getting values of all parameters
+        :return: dict of values of all parameters
+        """
         parameters = {
             'name': self.name,
             'type': self.type,
@@ -54,8 +84,17 @@ class ModelParameters:
 
 @dataclass
 class FittingParameters:
-
-    service_name: str = ''
+    """ Base dataclass for storing, saving and getting fitting parameters
+        Methods:
+            set_all - to set all input parameters in object
+            get_all - to get all parameters
+            set_start_fitting - to set statuses and other parameters before starting fitting
+            set_end_fitting - to set statuses and other parameters after finishing fitting
+            set_drop_fitting - to set statuses and other parameters when dropping fitting
+            set_error_fitting - to set statuses and other parameters when error is while fitting
+            is_first_fitting - returns True if it is first fitting after dropping or when model is new
+    """
+    service_name: ClassVar[str] = ''
 
     is_fit: bool = False
     fitting_is_started: bool = False
@@ -78,7 +117,10 @@ class FittingParameters:
 
     _first_fitting: bool = False
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        """
+        Converts x, y categorical columns values to empty lists, metrics value to empty dict
+        """
         self.x_columns = []
         self.y_columns = []
 
@@ -86,7 +128,11 @@ class FittingParameters:
         self.metrics = {}
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
-
+        """
+        For setting all parameters, defined in "parameters" parameter
+        :param parameters: input parameters to set
+        :param without_processing: no need to convert parameters if True
+        """
         self.is_fit = parameters.get('is_fit') or False
         self.fitting_is_started = parameters.get('fitting_is_started') or False
         self.fitting_is_error = parameters.get('fitting_is_error') or False
@@ -116,6 +162,11 @@ class FittingParameters:
         self.metrics = parameters.get('metrics') or {}
 
     def get_all(self, for_db: bool = False) -> dict[str, Any]:
+        """
+        For getting values of all parameters
+        :param for_db: True if we need to get parameters for writing them to db
+        :return: dict of values of all parameters
+        """
         parameters = {
             'is_fit': self.is_fit,
             'fitting_is_started': self.fitting_is_started,
@@ -146,6 +197,10 @@ class FittingParameters:
         return parameters
 
     def set_start_fitting(self, fitting_parameters: dict[str, Any]) -> None:
+        """
+        For setting statuses and other parameters before starting fitting
+        :param fitting_parameters: parameters of fitting, which will be started
+        """
         self.is_fit = False
         self.fitting_is_started = True
         self.fitting_is_error = False
@@ -163,8 +218,10 @@ class FittingParameters:
 
         self._first_fitting = not self.x_columns and not self.y_columns
 
-    def set_end_fitting(self):
-
+    def set_end_fitting(self) -> None:
+        """
+        For setting statuses and other parameters after finishing fitting
+        """
         if not self.fitting_is_started:
             raise ModelException('Can not finish fitting. Fitting is not started. Start fitting before')
 
@@ -178,7 +235,9 @@ class FittingParameters:
         self._first_fitting = False
 
     def set_drop_fitting(self) -> None:
-
+        """
+        For setting statuses and other parameters when dropping fitting
+        """
         if not self.is_fit and not self.fitting_is_started and not self.fitting_is_error:
             raise ModelException('Can not drop fitting. Model is not fit')
 
@@ -200,7 +259,10 @@ class FittingParameters:
         self._first_fitting = True
 
     def set_error_fitting(self, error_text: str = '') -> None:
-
+        """
+        For setting statuses and other parameters when error is while fitting
+        :param error_text: text of fitting error
+        """
         self.is_fit = False
         self.fitting_is_started = False
         self.fitting_is_error = True
@@ -217,6 +279,10 @@ class FittingParameters:
             self.categorical_columns = []
 
     def is_first_fitting(self):
+        """
+        Returns True if it is first fitting after dropping or when model is new else False
+        :return: bool result
+        """
         return self._first_fitting
 
 

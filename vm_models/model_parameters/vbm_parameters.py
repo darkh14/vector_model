@@ -1,6 +1,11 @@
-""" Module contains VBM class for saving and getting fitting parameters of model """
+""" VBM (Vector budget model)
+    Module contains VBM classes for saving and getting fitting parameters of model
+    Classes:
+        VbmModelParameters - for model parameters
+        VbmFittingParameters - for fitting parameters
+"""
 
-from typing import Any, Optional
+from typing import Any, Optional, ClassVar
 from dataclasses import dataclass, fields
 from copy import deepcopy
 from datetime import datetime
@@ -14,18 +19,34 @@ __all__ = ['VbmModelParameters', 'VbmFittingParameters']
 
 @dataclass
 class VbmModelParameters(ModelParameters):
+    """ Dataclass for storing, saving and getting model parameters. Inherited by ModelParameters class
+        Methods:
+            set_all - to set all input parameters in object
+            get_all - to get all parameters
+            _check_new_parameters - checks parameters
+        Properties:
+            x_indicators
+            y_indicators
+    """
+    service_name: ClassVar[str] = 'vbm'
 
-    service_name: str = 'vbm'
     _x_indicators: list[dict[str, Any]] = None
     _y_indicators: list[dict[str, Any]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        """
+        Defines x, y indicators as empty lists
+        """
         super().__post_init__()
         self._x_indicators = []
         self._y_indicators = []
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
-
+        """
+        For setting all parameters, defined in "parameters" parameter
+        :param parameters: input parameters to set
+        :param without_processing: no need to convert parameters if True
+        """
         super().set_all(parameters)
 
         self._check_new_parameters(parameters)
@@ -40,6 +61,10 @@ class VbmModelParameters(ModelParameters):
                 setattr(self, name, parameters[par_name])
 
     def get_all(self) -> dict[str, Any]:
+        """
+        For getting values of all parameters
+        :return: dict of values of all parameters
+        """
         result = super().get_all()
 
         super_fields = [el.name for el in fields(super()) if el.name not in ['service_name']]
@@ -53,21 +78,37 @@ class VbmModelParameters(ModelParameters):
         return result
 
     def _check_new_parameters(self, parameters: dict[str, Any], checking_names: Optional[list] = None) -> None:
-
+        """
+        For checking parameters. Raises ModelException if checking is failed
+        :param parameters: parameters to check
+        :param checking_names: optional names of checking parameters
+        """
         super()._check_new_parameters(parameters, checking_names)
         if not checking_names:
             super()._check_new_parameters(parameters, ['x_indicators', 'y_indicators'])
 
     @property
-    def x_indicators(self):
+    def x_indicators(self) -> list[dict[str, Any]]:
+        """
+        Property x_indicators getter. Returns self._x_indicators value
+        :return: property value
+        """
         return self._x_indicators
 
     @property
     def y_indicators(self):
+        """
+        Property y_indicators getter. Returns self._y_indicators value
+        :return: property value
+        """
         return self._y_indicators
 
     @x_indicators.setter
-    def x_indicators(self, value):
+    def x_indicators(self, value) -> None:
+        """
+        Property x_indicators setter. Sets self._x_indicators value
+        :param value: value to set
+        """
         x_indicators = deepcopy(value)
 
         for el in x_indicators:
@@ -78,6 +119,10 @@ class VbmModelParameters(ModelParameters):
 
     @y_indicators.setter
     def y_indicators(self, value):
+        """
+        Property y_indicators setter. Sets self._y_indicators value
+        :param value: value to set
+        """
         y_indicators = deepcopy(value)
 
         for el in y_indicators:
@@ -89,7 +134,24 @@ class VbmModelParameters(ModelParameters):
 
 @dataclass
 class VbmFittingParameters(FittingParameters):
-    service_name = 'vbm'
+    """ Dataclass for storing, saving and getting fitting parameters
+        Methods:
+            set_all - to set all input parameters in object
+            get_all - to get all parameters
+            set_start_fitting - to set statuses and other parameters before starting fitting
+            set_drop_fitting - to set statuses and other parameters when dropping fitting
+            set_error_fitting - to set statuses and other parameters when error is while fitting
+            set_start_fi_calculation - to set statuses and other parameters before starting fi calculation
+            set_end_fi_calculation - to set statuses and other parameters after finishing fi calculation
+            set_error_fi_calculation - to set statuses and other parameters when error is while fi calculating
+            set_drop_fi_calculation - to set statuses and other parameters when dropping fi calculation
+        Properties:
+            x_analytics
+            y_analytics
+            x_analytic_keys
+            y_analytic_keys
+     """
+    service_name: ClassVar[str] = 'vbm'
 
     _x_analytics: Optional[list[dict[str, Any]]] = None
     _y_analytics: Optional[list[dict[str, Any]]] = None
@@ -110,8 +172,11 @@ class VbmFittingParameters(FittingParameters):
     fi_calculation_job_pid: int = 0
     feature_importances: Optional[dict[str, Any]] = None
 
-    def __post_init__(self):
-
+    def __post_init__(self) -> None:
+        """
+        Converts _x_analytics, _y_analytics, _x_analytic_keys, _y_analytic_keys to empty lists, feature_importances to
+        empty dict
+        """
         super().__post_init__()
 
         self._x_analytics = []
@@ -123,6 +188,11 @@ class VbmFittingParameters(FittingParameters):
         self.feature_importances = {}
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
+        """
+        For setting all parameters, defined in "parameters" parameter
+        :param parameters: input parameters to set
+        :param without_processing: no need to convert parameters if True
+        """
         super().set_all(parameters, without_processing=without_processing)
 
         super_fields = [el.name for el in fields(super()) if el.name not in ['service_name']]
@@ -164,6 +234,11 @@ class VbmFittingParameters(FittingParameters):
         self.feature_importances = parameters.get('feature_importances') or {}
 
     def get_all(self, for_db: bool = False) -> dict[str, Any]:
+        """
+        For getting values of all parameters
+        :param for_db: True if we need to get parameters for writing them to db
+        :return: dict of values of all parameters
+        """
         result = super().get_all(for_db=for_db)
 
         super_fields = [el.name for el in fields(super()) if el.name not in ['service_name']]
@@ -202,12 +277,19 @@ class VbmFittingParameters(FittingParameters):
         return result
 
     def set_start_fitting(self, fitting_parameters: dict[str, Any]) -> None:
+        """
+        For setting statuses and other parameters before starting fitting
+        :param fitting_parameters: parameters of fitting, which will be started
+        """
         super().set_start_fitting(fitting_parameters)
 
         if self.fi_is_calculated or self.fi_calculation_is_started:
             self.set_drop_fi_calculation()
 
-    def set_drop_fitting(self):
+    def set_drop_fitting(self) -> None:
+        """
+        For setting statuses and other parameters when dropping fitting
+        """
         super().set_drop_fitting()
 
         self._x_analytics = []
@@ -220,6 +302,10 @@ class VbmFittingParameters(FittingParameters):
             self.set_drop_fi_calculation()
 
     def set_error_fitting(self, error_text: str = '') -> None:
+        """
+        For setting statuses and other parameters when error is while fitting
+        :param error_text: text of fitting error
+        """
         super().set_error_fitting(error_text)
 
         if self._first_fitting:
@@ -230,7 +316,10 @@ class VbmFittingParameters(FittingParameters):
             self._y_analytic_keys = []
 
     def set_start_fi_calculation(self, fi_parameters: dict[str, Any]) -> None:
-
+        """
+        For setting statuses and other parameters before starting fi calculation
+        :param fi_parameters: parameters of fi calculation, which will be started
+        """
         self.fi_is_calculated = False
         self.fi_calculation_is_started = True
         self.fi_calculation_is_error = False
@@ -246,8 +335,10 @@ class VbmFittingParameters(FittingParameters):
         if fi_parameters.get('job_id'):
             self.fitting_job_id = fi_parameters['job_id']
 
-    def set_end_fi_calculation(self):
-
+    def set_end_fi_calculation(self) -> None:
+        """
+        For setting statuses and other parameters after finishing fi calculation
+        """
         if not self.fi_calculation_is_started:
             raise ModelException('Can not finish fi calculation. Fi calculation is not started. ' +
                                  'Start fi calculation before')
@@ -259,8 +350,11 @@ class VbmFittingParameters(FittingParameters):
         self.fi_calculation_date = datetime.utcnow()
         self.fi_calculation_error_date = None
 
-    def set_error_fi_calculation(self, error_text):
-
+    def set_error_fi_calculation(self, error_text) -> None:
+        """
+        For setting statuses and other parameters when error is while fi calculating
+        :param error_text: text of fitting error
+        """
         self.fi_is_calculated = False
         self.fi_calculation_is_started = False
         self.fi_calculation_is_error = True
@@ -272,8 +366,10 @@ class VbmFittingParameters(FittingParameters):
 
         self.feature_importances = {}
 
-    def set_drop_fi_calculation(self):
-
+    def set_drop_fi_calculation(self) -> None:
+        """
+        For setting statuses and other parameters when dropping fi calculation
+        """
         if not self.fi_is_calculated and not self.fi_calculation_is_started and not self.fi_calculation_is_error:
             raise ModelException('Can not drop fi calculation. FI is not calculated')
 
@@ -293,15 +389,27 @@ class VbmFittingParameters(FittingParameters):
         self.feature_importances = {}
 
     @property
-    def x_analytics(self):
+    def x_analytics(self) -> list[dict[str, Any]]:
+        """
+        Property x_analytics getter. Returns self._x_analytics value
+        :return: property value
+        """
         return self._x_analytics
 
     @property
     def y_analytics(self):
+        """
+        Property y_analytics getter. Returns self._y_analytics value
+        :return: property value
+        """
         return self._y_analytics
 
     @x_analytics.setter
-    def x_analytics(self, value):
+    def x_analytics(self, value: list[dict[str, Any]]) -> None:
+        """
+        Property x_analytics setter. Sets self._x_analytics value
+        :param value: value to set
+        """
         x_analytics = deepcopy(value)
 
         for el in x_analytics:
@@ -311,7 +419,11 @@ class VbmFittingParameters(FittingParameters):
         self._x_analytics = x_analytics
 
     @y_analytics.setter
-    def y_analytics(self, value):
+    def y_analytics(self, value: list[dict[str, Any]]) -> None:
+        """
+        Property y_analytics setter. Sets self._y_analytics value
+        :param value: value to set
+        """
         y_analytics = deepcopy(value)
 
         for el in y_analytics:
@@ -321,15 +433,27 @@ class VbmFittingParameters(FittingParameters):
         self._y_analytics = y_analytics
 
     @property
-    def x_analytic_keys(self):
+    def x_analytic_keys(self) -> list[dict[str, Any]]:
+        """
+        Property x_analytic_keys getter. Returns self.x_analytic_keys value
+        :return: property value
+        """
         return self._x_analytic_keys
 
     @property
-    def y_analytic_keys(self):
+    def y_analytic_keys(self) ->list[dict[str, Any]] :
+        """
+        Property y_analytic_keys getter. Returns self.y_analytic_keys value
+        :return: property value
+        """
         return self._y_analytic_keys
 
     @x_analytic_keys.setter
-    def x_analytic_keys(self, value):
+    def x_analytic_keys(self, value: list[dict[str, Any]]) -> None:
+        """
+        Property x_analytic_keys setter. Sets self.x_analytic_keys value
+        :param value: value to set
+        """
         x_analytic_keys = deepcopy(value)
 
         for el in x_analytic_keys:
@@ -339,7 +463,11 @@ class VbmFittingParameters(FittingParameters):
         self._x_analytic_keys = x_analytic_keys
 
     @y_analytic_keys.setter
-    def y_analytic_keys(self, value):
+    def y_analytic_keys(self, value: list[dict[str, Any]]) -> None:
+        """
+        Property y_analytic_keys setter. Sets self.y_analytic_keys value
+        :param value: value to set
+        """
         y_analytic_keys = deepcopy(value)
 
         for el in y_analytic_keys:

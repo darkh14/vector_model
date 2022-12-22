@@ -17,8 +17,11 @@ SERVICE_NAME: str = ''
 
 def get_model_parameters_class(fitting: bool = False) -> \
         Type[base_parameters.ModelParameters]|Type[base_parameters.FittingParameters]:
-    """ Function for getting model parameters or fitting parameters class. Choosing from subclasses of ModelParameters class where
+    """ Function for getting model parameters or fitting parameters class.
+        Choosing from subclasses of ModelParameters class where
         service name = SERVICE_NAME var
+        :param fitting: returns fitting parameters if True else model parameters
+        :return: required parameters class
     """
     global SERVICE_NAME
 
@@ -38,4 +41,8 @@ def get_model_parameters_class(fitting: bool = False) -> \
 
 
 def get_additional_actions() -> dict[str, Callable]:
+    """
+    Gets additional actions of model parameters package
+    :return actions dict
+    """
     return {}
