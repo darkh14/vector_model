@@ -48,7 +48,7 @@ class BackgroundJob:
 
                 job_name - property for _job_name
     """
-    def __init__(self, job_id: str = '',  db_path: str = '', subprocess_mode: bool = False) -> None:
+    def __init__(self, job_id: str = '',  subprocess_mode: bool = False) -> None:
         """ Fields:
                 _id - unique job id
                 _job_name - name of job - match to name executing function
@@ -65,7 +65,6 @@ class BackgroundJob:
                 _temp_name - name of temp collection. filled when collection contains data
                 _temp_settings - defines what data saves in temp collection
                 :param job_id: id of current job
-                :param db_path: db path to create db connector
                 :param subprocess_mode: True if job launched in subprocess, else False
         """
         self._subprocess_mode = subprocess_mode
@@ -73,7 +72,7 @@ class BackgroundJob:
         self._error: str = ''
 
         try:
-            self._db_connector: Optional[db_processing.connectors.base_connector.Connector] = get_connector(db_path)
+            self._db_connector: Optional[db_processing.connectors.base_connector.Connector] = get_connector()
             self._status: JobStatuses = JobStatuses.NEW
         except DBConnectorException as db_ex:
             self._db_connector = None
@@ -225,13 +224,12 @@ class BackgroundJob:
                 self._error = 'Process termination error. {}'.format(str(ex))
 
     @classmethod
-    def get_jobs_info(cls, job_filter:  dict[str, Any], db_path: str) -> list[dict[str, Any]]:
+    def get_jobs_info(cls, job_filter:  dict[str, Any]) -> list[dict[str, Any]]:
         """ Class method for getting jobs inf. Can get info of many job according to filter
         :param job_filter: filter to find required jobs
-        :param db_path: db path to create db processor object
         :return: dict of jobs information
         """
-        db_connector = get_connector(db_path)
+        db_connector = get_connector()
         job_list = db_connector.get_lines('background_jobs', job_filter)
 
         fields = ['id', 'job_name', 'status', 'pid', 'error', 'output']

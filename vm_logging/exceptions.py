@@ -3,7 +3,6 @@
     classes:
         VMBaseException - base custom exception. Writing error text to DB added
         RequestProcessException - Custom exception for request processing
-
 """
 
 __all__ = ['VMBaseException',

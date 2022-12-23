@@ -27,18 +27,17 @@ class VbmNeuralNetwork(BaseEngine):
     service_name: ClassVar[str] = 'vbm'
     model_type: ClassVar[str] = 'neural_network'
 
-    def __init__(self, model_id: str, input_number: int, output_number: int, db_path: str, new_engine: bool = False,
+    def __init__(self, model_id: str, input_number: int, output_number: int, new_engine: bool = False,
                  **kwargs) -> None:
         """
         Defines inner engine = None, _validation_split and reads from db if necessary
         :param model_id: id of model object
         :param input_number: number of inputs
         :param output_number: umber of outputs (labels)
-        :param db_path: path to db to create db connector
         :param new_engine: if is True  - not need to read from db
         :param kwargs: additional parameters
         """
-        super().__init__(model_id, input_number, output_number, db_path, new_engine, **kwargs)
+        super().__init__(model_id, input_number, output_number, new_engine, **kwargs)
 
         self._inner_engine: Optional[Sequential] = None
         self._validation_split: float = 0.2

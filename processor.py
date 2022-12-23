@@ -16,6 +16,7 @@ import json
 import os.path
 from typing import Any, Callable, Optional
 from abc import ABC, abstractmethod
+import inspect
 
 import vm_logging
 import vm_models
@@ -27,8 +28,9 @@ import actions
 
 import general
 
-from vm_logging.exceptions import RequestProcessException
+from vm_logging.exceptions import RequestProcessException, ParameterNotFoundException
 from vm_settings import controller as settings_controller
+from db_processing.controller import initialize_connector, drop_connector
 
 PROCESSOR = None
 """ Current class for processing request (for caching) """
@@ -120,12 +122,24 @@ class Processor(ABC):
             raise RequestProcessException('Property "request type" is not in parameters. '
                                           'property "request type" is required')
 
+        names_without_db = self._get_action_names_without_db_using()
+
+        if request_type not in names_without_db:
+            if 'db' not in parameters:
+                raise ParameterNotFoundException('Parameter "db" not found in parameters')
+
+            initialize_connector(parameters['db'])
+
+
         method = self._request_methods.get(request_type)
 
         if not method:
             raise RequestProcessException('Request type "{}" is not supported'.format(request_type))
 
         result = method(parameters)
+
+        if request_type not in names_without_db:
+            drop_connector()
 
         return {'status': 'OK', 'error': '', 'result': result}
 
@@ -186,19 +200,13 @@ class Processor(ABC):
 
         return json.loads(json_string)
 
-    @staticmethod
-    def _get_requests_methods() -> dict[str, Callable]:
+
+    def _get_requests_methods(self) -> dict[str, Callable]:
         """
         Gets available request methods
         :return: dict of actions (functions)
         """
-        imported_modules = ['data_processing',
-                            'db_processing',
-                            'vm_logging',
-                            'vm_models',
-                            'vm_settings',
-                            'vm_background_jobs',
-                            'actions']
+        imported_modules = self._get_imported_module_names()
 
         methods = dict()
 
@@ -207,6 +215,40 @@ class Processor(ABC):
             methods.update(module_obj.get_actions())
 
         return methods
+
+    def _get_action_names_without_db_using(self) -> list[str]:
+        """
+        Gets available request methods
+        :return: dict of actions (functions)
+        """
+        imported_modules = self._get_imported_module_names()
+
+        names = list()
+
+        for module_name in imported_modules:
+            module_obj = globals()[module_name]
+
+            module_function_names = [el[0] for el in inspect.getmembers(module_obj, predicate=inspect.isfunction)]
+
+            if 'get_action_names_without_db_using' in module_function_names:
+                action_names = module_obj.get_action_names_without_db_using()
+                names = names + action_names
+
+        return names
+
+    @staticmethod
+    def _get_imported_module_names() -> list[str]:
+        """
+        Gets names of imported modules to get actions from them
+        :return: list of names of imported modules
+        """
+        return ['data_processing',
+                'db_processing',
+                'vm_logging',
+                'vm_models',
+                'vm_settings',
+                'vm_background_jobs',
+                'actions']
 
 
 class _HttpProcessor(Processor):

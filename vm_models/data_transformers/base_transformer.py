@@ -42,19 +42,17 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
     model_type: ClassVar[str] = ''
     transformer_type: ClassVar[DataTransformersTypes] = DataTransformersTypes.NONE
 
-    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters,
-                 db_path: str, **kwargs) -> None:
+    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, **kwargs) -> None:
         """
         Defines model and fitting parameters, create db connector
         :param model_parameters: model parameters object
         :param fitting_parameters: fitting parameters object
-        :param db_path: db path to create db connector
         :param kwargs: additional parameters
         """
         self._model_parameters: ModelParameters = model_parameters
         self._fitting_parameters: FittingParameters = fitting_parameters
 
-        self._db_connector: base_connector.Connector = get_connector(db_path)
+        self._db_connector: base_connector.Connector = get_connector()
 
         self._fitting_mode = False
 
@@ -92,15 +90,14 @@ class Reader(BaseTransformer):
     service_name: ClassVar[str] = ''
     transformer_type: ClassVar[DataTransformersTypes] = DataTransformersTypes.READER
 
-    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, db_path: str, **kwargs):
+    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, **kwargs):
         """
         Defines fitting filter
         :param model_parameters: model parameters object
         :param fitting_parameters: fitting parameters object
-        :param db_path: db path to create db connector
         :param kwargs: additional parameters
         """
-        super().__init__(model_parameters, fitting_parameters, db_path)
+        super().__init__(model_parameters, fitting_parameters)
         self._fitting_filter: Optional[base_filter.FittingFilter] = None
 
     def transform(self, x: Optional[list[dict[str, Any]]]) -> pd.DataFrame:

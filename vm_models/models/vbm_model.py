@@ -162,7 +162,7 @@ class VbmModel(Model):
 
         input_number = len(self.fitting_parameters.x_columns)
         output_number = len(self.fitting_parameters.y_columns)
-        self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number, self._db_path)
+        self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number)
         y_0 = self._engine.predict(x_0)
 
         data_0[self.fitting_parameters.y_columns] = y_0
@@ -330,7 +330,7 @@ class VbmModel(Model):
         x, y = self._data_to_x_y(data)
         input_number = len(self.fitting_parameters.x_columns)
         output_number = len(self.fitting_parameters.y_columns)
-        self._engine = get_engine_class(self.parameters.type)('', input_number, output_number, self._db_path, True)
+        self._engine = get_engine_class(self.parameters.type)('', input_number, output_number, True)
 
         validation_split = fi_parameters.get('validation_split') or 0.2
 
@@ -439,7 +439,7 @@ class VbmModel(Model):
         Interrupt process of fi calculation if it launched in subprocess
         """
         if self.fitting_parameters.fi_calculation_is_started:
-            set_background_job_interrupted(self.fitting_parameters.fi_calculation_job_id, self._db_path)
+            set_background_job_interrupted(self.fitting_parameters.fi_calculation_job_id)
 
     def _check_before_fa_calculation(self) -> None:
         """
@@ -494,7 +494,7 @@ class VbmModel(Model):
         input_number = len(self.fitting_parameters.x_columns)
         output_number = len(self.fitting_parameters.y_columns)
         if not self._engine:
-            self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number, self._db_path)
+            self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number)
         y = self._engine.predict(x)
 
         data[self.fitting_parameters.y_columns] = y
@@ -653,9 +653,6 @@ def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
-    if not parameters.get('db'):
-        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
-
     if 'fi_parameters' not in parameters['model']:
         raise ParameterNotFoundException('Parameter "fi_parameters" not found in model parameters')
 
@@ -668,7 +665,7 @@ def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]
         if 'job_id' in parameters:
             parameters['model']['fi_parameters']['job_id'] = parameters['job_id']
 
-    model = VbmModel(parameters['model']['id'], parameters['db'])
+    model = VbmModel(parameters['model']['id'])
 
     result = model.calculate_feature_importances(parameters['model']['fi_parameters'])
 
@@ -684,10 +681,7 @@ def _get_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]:
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
-    if not parameters.get('db'):
-        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
-
-    model = VbmModel(parameters['model']['id'], parameters['db'])
+    model = VbmModel(parameters['model']['id'])
 
     result = model.get_feature_importances()
 
@@ -703,10 +697,7 @@ def _drop_fi_calculation(parameters: dict[str, Any]) -> str:
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
-    if not parameters.get('db'):
-        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
-
-    model = VbmModel(parameters['model']['id'], parameters['db'])
+    model = VbmModel(parameters['model']['id'])
 
     result = model.drop_fi_calculation()
 
@@ -722,8 +713,6 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
-    if not parameters.get('db'):
-        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
     check_fields = ['inputs_0', 'inputs_plus', 'inputs_minus']
 
@@ -731,7 +720,7 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
         if field not in parameters:
             raise ParameterNotFoundException('Parameter "{}" is not found in request parameters'.format(field))
 
-    model = VbmModel(parameters['model']['id'], parameters['db'])
+    model = VbmModel(parameters['model']['id'])
 
     result = model.get_sensitivity_analysis(parameters['inputs_0'],
                                             parameters['inputs_plus'],
@@ -749,16 +738,13 @@ def _get_factor_analysis_data(parameters: dict[str, Any]) -> dict[str, Any]:
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
-    if not parameters.get('db'):
-        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
-
     check_fields = ['inputs', 'input_indicators', 'outputs', 'output_indicator']
 
     for field in check_fields:
         if field not in parameters:
             raise ParameterNotFoundException('Parameter "{}" is not found in request parameters'.format(field))
 
-    model = VbmModel(parameters['model']['id'], parameters['db'])
+    model = VbmModel(parameters['model']['id'])
 
     result = model.get_factor_analysis(parameters['inputs'],
                                         parameters['outputs'],

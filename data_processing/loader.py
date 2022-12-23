@@ -13,6 +13,7 @@ from _datetime import datetime
 
 import db_processing.connectors.base_connector
 from vm_logging.exceptions import LoadingProcessException
+from db_processing import get_connector
 from .loading_engines import BaseEngine, get_engine_class
 from .loading_types import LoadingTypes, LoadingStatuses
 
@@ -49,14 +50,11 @@ class Package:
             _check_data - for checking loading data array before loading
             _get_engine - for getting loading engine object
     """
-    def __init__(self, loading_id: str, package_id: str,
-                 db_connector: db_processing.connectors.base_connector.Connector,
-                 package_parameters: Optional[dict[str, Any]]):
+    def __init__(self, loading_id: str, package_id: str, package_parameters: Optional[dict[str, Any]]):
         """
         Defines all inner variable of package. Then variables are read from db if it is not new package
         :param loading_id: id of loading of current package
         :param package_id: id of current package
-        :param db_connector: object for working with db
         :param package_parameters: additional parameters of package
         """
         self._loading_id: str = loading_id
@@ -68,7 +66,7 @@ class Package:
         self._start_date: Optional[datetime] = None
         self._end_date: Optional[datetime] = None
 
-        self._db_connector = db_connector
+        self._db_connector = get_connector()
 
         self._number: int = package_parameters['number'] if package_parameters else 0
 
@@ -293,7 +291,7 @@ class Package:
         """ For getting engine object to load data
         :return loading engine
         """
-        return get_engine_class()(self._db_connector)
+        return get_engine_class()()
 
 
 class Loading:
@@ -328,12 +326,10 @@ class Loading:
             _get_package - for getting package of loading by package id
     """
 
-    def __init__(self, loading_parameters: dict[str, Any],
-                 db_connector: db_processing.connectors.base_connector.Connector) -> None:
+    def __init__(self, loading_parameters: dict[str, Any]) -> None:
         """
         Defines all inner variable of loading. Then variables are read from db if it is not new loading
         :param loading_parameters: parameters to define variables of loading
-        :param db_connector: object for working with db
         """
         self._check_input_parameters(loading_parameters)
 
@@ -346,7 +342,7 @@ class Loading:
         self._start_date: Optional[datetime] = None
         self._end_date: Optional[datetime] = None
 
-        self._db_connector = db_connector
+        self._db_connector = get_connector()
 
         if loading_parameters.get('packages'):
             package_num = 1
@@ -720,14 +716,14 @@ class Loading:
         :param package_parameters: optional parameters, using, when we want to get NEW package
         :return package object
         """
-        return Package(self._id, package_id, self._db_connector, package_parameters)
+        return Package(self._id, package_id, package_parameters)
 
 
-def delete_all_data(db_connector: db_processing.connectors.base_connector.Connector, data_filter: dict[str, Any])-> bool:
+def delete_all_data(data_filter: dict[str, Any])-> bool:
     """ Deletes all data according to filter
-    :param db_connector: connector object to work with db
     :param data_filter: filter according to which data is deleted
     :return result of deleting data, True if successful
     """
+    db_connector = get_connector()
     db_connector.delete_lines('raw_data', data_filter)
     return True

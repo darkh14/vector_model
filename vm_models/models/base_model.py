@@ -37,22 +37,20 @@ class Model:
     """
     service_name: ClassVar[str] = ''
 
-    def __init__(self, model_id: str, db_path: str) -> None:
+    def __init__(self, model_id: str) -> None:
         """
         Defines all model parameters and read model from db if it is necessary
         :param model_id: id of model
-        :param db_path: path to db to create db connector
         """
         self._id: str = model_id
         self._initialized: bool = False
-        self._db_path: str = db_path
 
         self.parameters: base_parameters.ModelParameters = get_model_parameters_class()()
         self.fitting_parameters:base_parameters.FittingParameters = get_model_parameters_class(fitting=True)()
 
         self._engine: Optional[base_engine.BaseEngine] = None
 
-        self._db_connector: base_connector.Connector = get_db_connector(db_path)
+        self._db_connector: base_connector.Connector = get_db_connector()
 
         self._read_from_db()
 
@@ -85,7 +83,7 @@ class Model:
         self._initialized = False
 
         scaler = get_transformer_class(DataTransformersTypes.SCALER, self.parameters.type)(self.parameters,
-                                            self.fitting_parameters, self._db_path, model_id=self._id)
+                                            self.fitting_parameters, model_id=self._id)
         scaler.drop()
 
         if self._engine:
@@ -163,7 +161,7 @@ class Model:
         Interrupts fitting job process when fitting is launched in background mode
         """
         if self.fitting_parameters.fitting_is_started:
-            set_background_job_interrupted(self.fitting_parameters.fitting_job_id, self._db_path)
+            set_background_job_interrupted(self.fitting_parameters.fitting_job_id)
 
     def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None) -> Any:
         """
@@ -178,7 +176,7 @@ class Model:
         x, y = self._data_to_x_y(data)
         input_number = len(self.fitting_parameters.x_columns)
         output_number = len(self.fitting_parameters.y_columns)
-        self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number, self._db_path,
+        self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number,
                                                               self.fitting_parameters.is_first_fitting())
         result = self._engine.fit(x, y, epochs, fitting_parameters)
 
@@ -267,7 +265,7 @@ class Model:
         :return: required estimator
         """
         estimator_class = get_transformer_class(transformer_type, self.parameters.type)
-        estimator = estimator_class(self.parameters, self.fitting_parameters, self._db_path, model_id=self._id)
+        estimator = estimator_class(self.parameters, self.fitting_parameters, model_id=self._id)
         if fitting_parameters:
             estimator.set_additional_parameters(fitting_parameters)
 
@@ -329,7 +327,7 @@ class Model:
         input_number = len(self.fitting_parameters.x_columns)
         output_number = len(self.fitting_parameters.y_columns)
         if not self._engine:
-            self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number, self._db_path)
+            self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number)
 
         y_pred = self._engine.predict(x)
 

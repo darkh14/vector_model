@@ -14,7 +14,7 @@ from vm_logging.exceptions import ParameterNotFoundException
 from vm_versions import get_version
 from general import test, ping
 
-__all__ = ['get_actions']
+__all__ = ['get_actions', 'get_action_names_without_db_using']
 
 
 def get_actions() -> dict[str, Callable]:
@@ -23,6 +23,13 @@ def get_actions() -> dict[str, Callable]:
     """
     return dict({'test': _test, 'get_version': _get_version, 'ping': _ping})
 
+
+def get_action_names_without_db_using() -> list[str]:
+    """
+    Returns action names without db using not to initialize db connector
+    :return: action names list
+    """
+    return ['ping']
 
 def _get_version(parameters: dict[str, Any]) -> str:
     """

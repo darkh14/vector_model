@@ -93,8 +93,7 @@ def delete_data(parameters: dict[str, Any]) -> str:
 
     if 'loading' not in parameters:
         data_filter = parameters.get('filter') or {}
-        db_connector = get_connector(parameters.get('db'))
-        delete_all_data(db_connector, data_filter)
+        delete_all_data(data_filter)
     else:
         loading = _get_loading(parameters)
         loading.delete_data()
@@ -108,7 +107,7 @@ def get_data_count(parameters: dict[str, Any]) -> int:
     :return: number of documents in data collection
     """
     data_filter = parameters.get('filter') or {}
-    db_connector = get_connector(parameters.get('db'))
+    db_connector = get_connector()
     return db_connector.get_count('raw_data', data_filter)
 
 
@@ -120,5 +119,4 @@ def _get_loading(parameters: dict[str | Any]) -> Loading:
     if 'loading' not in parameters:
         raise RequestProcessException('Property "loading" is not found in request parameters')
 
-    db_connector = get_connector(parameters.get('db'))
-    return Loading(parameters['loading'], db_connector)
+    return Loading(parameters['loading'])

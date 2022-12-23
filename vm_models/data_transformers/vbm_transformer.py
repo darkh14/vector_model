@@ -558,16 +558,14 @@ class VbmCategoricalEncoder(CategoricalEncoder):
     """ Transformer for forming categorical fields (now is not categorical fields) """
     service_name: ClassVar[str] = 'vbm'
 
-    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters,
-                 db_path: str, **kwargs) -> None:
+    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, **kwargs) -> None:
         """
         Defines fields parameter (fields to be encoded)
         :param model_parameters: model parameters object
         :param fitting_parameters: fitting parameters object
-        :param db_path: db path to create db connector
         :param kwargs: additional parameters
         """
-        super().__init__(model_parameters, fitting_parameters, db_path, **kwargs)
+        super().__init__(model_parameters, fitting_parameters, **kwargs)
         self._fields = []
 
         if kwargs.get('fields'):
@@ -685,15 +683,14 @@ class VbmScaler(Scaler):
     """ Transformer for data scaling (min-max scaling) """
     service_name: ClassVar[str] = 'vbm'
 
-    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, db_path: str, **kwargs):
+    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, **kwargs):
         """
         Defines model id, scaler engine. Reads from db if it is not new
         :param model_parameters: model parameters object
         :param fitting_parameters: fitting parameters object
-        :param db_path: db path to create db connector
         :param kwargs: additional parameters
         """
-        super().__init__(model_parameters, fitting_parameters, db_path, **kwargs)
+        super().__init__(model_parameters, fitting_parameters, **kwargs)
 
         if 'model_id' not in kwargs:
             raise ModelException('Parameter "model_id" not found in additional parameter for VbmScaler object')

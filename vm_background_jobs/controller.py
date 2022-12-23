@@ -17,12 +17,8 @@ def get_jobs_info(parameters: dict[str, Any]) -> dict[str, Any]:
     :return: dict if job information
     """
     job_filter = parameters.get('filter')
-    db_path = parameters.get('db')
 
-    if not db_path:
-        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
-
-    return {'jobs': BackgroundJob.get_jobs_info(job_filter, db_path)}
+    return {'jobs': BackgroundJob.get_jobs_info(job_filter)}
 
 
 def delete_background_job(parameters: dict[str, Any]) -> str:
@@ -30,10 +26,6 @@ def delete_background_job(parameters: dict[str, Any]) -> str:
     :param parameters: dict of request parameters
     :return: result of job deleting
     """
-    db_path = parameters.get('db')
-
-    if not db_path:
-        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
     job_from_parameters = parameters.get('job')
     if not job_from_parameters:
@@ -43,19 +35,18 @@ def delete_background_job(parameters: dict[str, Any]) -> str:
     if not job_id:
         raise ParameterNotFoundException('Parameter "id" is not found in job parameter')
 
-    background_job = BackgroundJob(job_id, db_path)
+    background_job = BackgroundJob(job_id)
     background_job.delete()
 
     return 'Background job is deleted'
 
-def set_background_job_interrupted(job_id: str, db_path: str) -> str:
+def set_background_job_interrupted(job_id: str) -> str:
     """ set status "interrupted" if background job
     :param job_id: id of current job
-    :param db_path: path to db to create db connector
     :return: result of interrupting job
     """
 
-    background_job = BackgroundJob(job_id, db_path)
+    background_job = BackgroundJob(job_id)
     background_job.set_interrupted()
 
     return 'Background job is deleted'

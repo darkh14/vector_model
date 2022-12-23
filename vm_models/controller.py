@@ -33,9 +33,6 @@ def _check_input_parameters(func: Callable) -> Callable:
         if not parameters.get('model'):
             raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
-        if not parameters.get('db'):
-            raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
-
         result = func(parameters)
         return result
 
@@ -77,7 +74,7 @@ def fit(parameters: dict[str, Any]) -> dict[str, Any]:
     :param parameters: request parameters
     :return: result of fitting
     """
-    model = _get_model(parameters['model'], parameters['db'])
+    model = _get_model(parameters['model'])
 
     if 'fitting_parameters' not in parameters['model']:
         raise ModelException('Can not find fitting parameters in model parameters')
@@ -97,7 +94,7 @@ def predict(parameters: dict[str, Any]) -> dict[str, Any]:
     if 'inputs' not in parameters:
         raise ParameterNotFoundException('Parameter "inputs" is not in request parameters')
 
-    model = _get_model(parameters['model'], parameters['db'])
+    model = _get_model(parameters['model'])
 
     result = model.predict(parameters['inputs'])
 
@@ -116,7 +113,7 @@ def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
     if not parameters.get('db'):
         raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
-    model = _get_model(parameters['model'], parameters['db'])
+    model = _get_model(parameters['model'])
 
     result = model.initialize(parameters['model'])
 
@@ -136,7 +133,7 @@ def drop(parameters: dict[str, Any]) -> str:
     if not parameters.get('db'):
         raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
-    model = _get_model(parameters['model'], parameters['db'])
+    model = _get_model(parameters['model'])
 
     result = model.drop()
 
@@ -150,7 +147,7 @@ def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
     :return: model info
     """
 
-    model = _get_model(parameters['model'], parameters['db'])
+    model = _get_model(parameters['model'])
 
     result = model.get_info()
 
@@ -162,7 +159,7 @@ def drop_fitting(parameters: dict[str, Any]) -> str:
     :param parameters: request parameters
     :return: result of dropping
     """
-    model = _get_model(parameters['model'], parameters['db'])
+    model = _get_model(parameters['model'])
 
     result = model.drop_fitting()
 
@@ -177,16 +174,15 @@ def get_additional_actions() -> dict[str|Callable]:
     return model_get_actions()
 
 
-def _get_model(input_model: dict[str, Any], db_path: str) -> base_model.Model:
+def _get_model(input_model: dict[str, Any]) -> base_model.Model:
     """
     Gets model object from parameters
     :param input_model: model parameters
-    :param db_path: path to db to create db connector
     :return: required model object
     """
     if not input_model.get('id'):
         raise ModelException('Parameter "id" is not found in model parameters')
 
-    model = get_model_class()(input_model['id'], db_path)
+    model = get_model_class()(input_model['id'])
 
     return model

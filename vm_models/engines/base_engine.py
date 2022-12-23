@@ -21,20 +21,19 @@ class BaseEngine(ABC):
     service_name: ClassVar[str] = ''
     model_type: ClassVar[str] = ''
 
-    def __init__(self, model_id: str, input_number: int, output_number: int, db_path: str, new_engine: bool = False,
+    def __init__(self, model_id: str, input_number: int, output_number: int, new_engine: bool = False,
                  **kwargs) -> None:
         """
         Defines model_id, db connector, input, output number, _new_engine and metrics
         :param model_id: id of model class
         :param input_number: number of inputs
         :param output_number: number of outputs
-        :param db_path: path to db to create db connector
         :param new_engine: is new engine (no need to read from db)
         :param kwargs: additional parameters (for subclasses)
         """
         self._model_id: str = model_id
 
-        self._db_connector: connectors.base_connector.Connector  = get_connector(db_path)
+        self._db_connector: connectors.base_connector.Connector  = get_connector()
 
         self._input_number: int = input_number
         self._output_number: int = output_number

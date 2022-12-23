@@ -7,23 +7,34 @@
 
 from . import connectors
 import vm_settings
-from typing import Type, Any
+from typing import Type, Any, Optional
 from vm_logging.exceptions import DBConnectorException, ParameterNotFoundException
 
 CONNECTORS: list[connectors.base_connector.Connector] = []
+CURRENT_CONNECTOR: Optional[connectors.base_connector.Connector] = None
 DB_TYPE = ''
 
-__all__ = ['get_connector', 'check_connection']
+__all__ = ['get_connector', 'check_connection', 'initialize_connector', 'drop_connector']
 
 
-def get_connector(db_path: str) -> connectors.base_connector.Connector:
+def get_connector(db_path: str = '') -> connectors.base_connector.Connector:
     """ Gets correct connector. Tries to get connector from cache (find by db_path).
         If it could not find correct connector, it creates connector by DB_TYPE and add to CONNECTORS cache
         :param db_path: path to required db
         :return: db connector object
     """
 
-    global DB_TYPE, CONNECTORS
+    if not CURRENT_CONNECTOR:
+        if db_path:
+            initialize_connector(db_path)
+        else:
+            raise DBConnectorException('Can not initialize db connector with empty db path')
+
+    return CURRENT_CONNECTOR
+
+def initialize_connector(db_path: str) -> None:
+
+    global DB_TYPE, CONNECTORS, CURRENT_CONNECTOR
 
     if not DB_TYPE:
         DB_TYPE = vm_settings.get_var('DB_TYPE')
@@ -31,12 +42,15 @@ def get_connector(db_path: str) -> connectors.base_connector.Connector:
     c_connectors = [con for con in CONNECTORS if con.get_db_path() == db_path]
 
     if c_connectors:
-        c_connector = c_connectors[0]
+        CURRENT_CONNECTOR = c_connectors[0]
     else:
-        c_connector = _get_connector_class()(db_path)
-        CONNECTORS.append(c_connector)
+        CURRENT_CONNECTOR = _get_connector_class()(db_path)
+        CONNECTORS.append(CURRENT_CONNECTOR)
 
-    return c_connector
+def drop_connector() -> None:
+    """ To drop current connector in the end of request """
+    global CURRENT_CONNECTOR
+    CURRENT_CONNECTOR = None
 
 
 def _get_connector_class() -> Type[connectors.base_connector.Connector]:
