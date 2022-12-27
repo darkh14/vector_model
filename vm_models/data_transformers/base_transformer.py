@@ -91,7 +91,7 @@ class Reader(BaseTransformer):
     service_name: ClassVar[str] = ''
     transformer_type: ClassVar[DataTransformersTypes] = DataTransformersTypes.READER
 
-    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters):
+    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, **kwargs):
         """
         Defines fitting filter
         :param model_parameters: model parameters object
