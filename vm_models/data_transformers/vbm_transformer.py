@@ -53,8 +53,7 @@ class VbmChecker(Checker):
         """
         if x.empty:
             raise ModelException('There are no data to {} model. Check loading data, '.format('fit'
-                                if self._fitting_mode else 'predict') + 'model settings and filter')
-
+                                  if self._fitting_mode else 'predict') + 'model settings and filter')
 
         if self._fitting_mode and self._fitting_parameters.is_first_fitting():
 
@@ -66,7 +65,7 @@ class VbmChecker(Checker):
 
             model_indicator_ids = set(model_indicator_ids)
 
-            error_ids =  []
+            error_ids = []
 
             for el in model_indicator_ids:
                 if el not in indicator_ids:
@@ -74,7 +73,7 @@ class VbmChecker(Checker):
 
             if error_ids:
                 error_names = [el['name'] for el in self._model_parameters.x_indicators +
-                                   self._model_parameters.x_indicators if el['short_id'] in error_ids]
+                               self._model_parameters.x_indicators if el['short_id'] in error_ids]
                 error_names = ['"{}"'.format(el) for el in error_names]
 
                 raise ModelException('Indicator(s) {} are not in fitting data'.format(', '.join(error_names)))
@@ -132,7 +131,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
             all_columns = self._fitting_parameters.x_columns
             if self._fitting_mode:
-                all_columns = all_columns +  self._fitting_parameters.y_columns
+                all_columns = all_columns + self._fitting_parameters.y_columns
 
             for col in all_columns:
                 if col not in x_columns + y_columns and col not in self._fitting_parameters.categorical_columns:
@@ -142,7 +141,6 @@ class VbmRowColumnTransformer(RowColumnTransformer):
             data_result = self._add_data_while_predicting(data_result, raw_data)
 
         return data_result
-
 
     def _add_data_while_predicting(self, data_result: pd.DataFrame, raw_data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -198,7 +196,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         :param indicator_parameters: parameters of required indicator
         :return: data with one indicator
         """
-        fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytics_key_id','analytics', 'value']
+        fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytics_key_id', 'analytics', 'value']
         ind_data = data[fields].loc[data['indicator'] == indicator_parameters['short_id']]
 
         return ind_data
@@ -331,7 +329,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
                                    indicator_parameters: dict[str, Any]) -> None:
         """
         Checks columns name and append it to all columns if it needs
-        :param column_name: name of currne t column
+        :param column_name: name of current column
         :param x_columns: x_columns array
         :param y_columns: y_columns array
         :param indicator_parameters: parameters of current indicator
@@ -390,15 +388,21 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         :param indicator_parameters: parameters of current indicator
         :return: data with required period column
         """
-        data['period_number'] = data[['period', 'periodicity']].apply(self._get_period_number, axis=1)
-        data['year'] = data['period'].apply(lambda x: x.year)
 
-        data = data.loc[data['period_number'] == indicator_parameters['period_number']]
+        data_result = data.copy()
 
-        years_scenarios = data[['year', 'scenario', 'periodicity']].groupby(['year',
+        data_result['period_number'] = data_result[['period', 'periodicity']].apply(self._get_period_number, axis=1)
+        data_result['year'] = data_result['period'].apply(lambda x: x.year)
+
+        data_values = data_result.loc[data_result['period_number'] == indicator_parameters['period_number']]
+        data_values = data_values[['organisation', 'scenario', 'analytics_key_id', 'year', 'value']]
+
+        data_result = data_result.drop(['value', 'period'], axis=1)
+
+        years_scenarios = data_result[['year', 'scenario', 'periodicity']].groupby(['year',
                                        'scenario', 'periodicity'], as_index=False).sum().to_dict('records')
 
-        all_scenarios_periods = pd.DataFrame(columns=['period_temp', 'scenario'])
+        all_scenarios_periods = pd.DataFrame(columns=['period', 'scenario', 'year'])
 
         scenarios_periodicity = []
         scenarios = []
@@ -411,16 +415,23 @@ class VbmRowColumnTransformer(RowColumnTransformer):
             years = [el['year'] for el in years_scenarios if el['scenario'] == sc_p['scenario']]
             sc_periods = self._form_all_periods_by_years(years, sc_p['periodicity'])
 
-            periods_df = pd.DataFrame(sc_periods, columns=['period_temp'])
+            periods_df = pd.DataFrame(sc_periods, columns=['period'])
             periods_df['scenario'] = sc_p['scenario']
+            periods_df['year'] = periods_df['period'].apply(lambda x: x.year)
 
             all_scenarios_periods = pd.concat([all_scenarios_periods, periods_df])
 
-        data = data.merge(all_scenarios_periods, on=['scenario'], how='left')
-        data = data.drop(['period_number', 'period', 'year'], axis=1)
-        data = data.rename({'period_temp': 'period'}, axis=1)
+        data_result = data_result[['organisation', 'scenario', 'periodicity', 'analytics_key_id',
+        'year']].groupby(['organisation', 'scenario', 'year', 'periodicity', 'analytics_key_id'], as_index=False).sum()
 
-        return data
+        data_result = data_result.merge(all_scenarios_periods, on=['scenario', 'year'], how='left')
+
+        data_result = data_result.merge(data_values, on=['organisation',
+                                                         'analytics_key_id', 'scenario', 'year'], how='left')
+
+        data_result = data_result.drop(['year'], axis=1)
+
+        return data_result
 
     def _process_data_periods_accumulation(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -430,7 +441,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         """
         temp_data = data.copy()
 
-        temp_data['period_number'] =  temp_data[['period', 'periodicity']].apply(self._get_period_number, axis=1)
+        temp_data['period_number'] = temp_data[['period', 'periodicity']].apply(self._get_period_number, axis=1)
 
         scenarios_periodicity = data[['scenario', 'periodicity']].groupby(['scenario',
                                 'periodicity'], as_index=False).sum().to_dict('records')
@@ -460,7 +471,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         :param data: data before shifting
         :return: data after shifting
         """
-        result =  self._add_to_period(data['period'], -data['period_shift'], data['periodicity'])
+        result = self._add_to_period(data['period'], -data['period_shift'], data['periodicity'])
 
         return result
 
@@ -496,13 +507,13 @@ class VbmRowColumnTransformer(RowColumnTransformer):
             raise ModelException('Unknown periodicity "{}"'.format(periodicity))
 
         if periodicity == 'decade':
-            shifting_parameters ={'days': 10*shift}
+            shifting_parameters = {'days': 10*shift}
         elif periodicity == 'quarter':
-            shifting_parameters ={'months': 3*shift}
+            shifting_parameters = {'months': 3*shift}
         elif periodicity == 'half_year':
-            shifting_parameters ={'months': 6*shift}
+            shifting_parameters = {'months': 6*shift}
         else:
-            shifting_parameters ={periodicity + 's': shift}
+            shifting_parameters = {periodicity + 's': shift}
 
         return period + relativedelta(**shifting_parameters)
 
@@ -583,7 +594,6 @@ class VbmCategoricalEncoder(CategoricalEncoder):
 
             values = list(x[field].unique())
 
-
             for value in values:
                 model_field = '{}_{}'.format(field, value)
                 need_to_add = self._check_model_field(model_field)
@@ -619,6 +629,7 @@ class VbmCategoricalEncoder(CategoricalEncoder):
 class VbmNanProcessor(NanProcessor):
     """ Transformer for working with nan values (deletes nan rows, columns, fills 0 to na values) """
     service_name: ClassVar[str] = 'vbm'
+
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
         """
         Process nan values: removes all nan rows and columns, fills 0 instead single nan values
@@ -672,7 +683,7 @@ class VbmNanProcessor(NanProcessor):
                 if not self._fitting_parameters.y_columns:
                     raise ModelException('All y columns are empty. Fitting is impossible')
 
-                x= x.drop(cols_to_delete, axis=1)
+                x = x.drop(cols_to_delete, axis=1)
 
         x = x.fillna(0)
 

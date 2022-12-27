@@ -257,7 +257,7 @@ class Model:
         return estimators
 
     def _get_estimator(self, transformer_type: DataTransformersTypes,
-                             fitting_parameters: Optional[dict[str, Any]] = None) -> base_transformer.BaseTransformer:
+                       fitting_parameters: Optional[dict[str, Any]] = None) -> base_transformer.BaseTransformer:
         """
         Gets estimator according to type
         :param transformer_type: type of estimator
