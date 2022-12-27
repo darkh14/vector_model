@@ -8,9 +8,7 @@
 
 """
 
-from functools import wraps
-from typing import Optional, Callable, Any
-from vm_logging.exceptions import ParameterNotFoundException
+from typing import Callable, Any
 from vm_versions import get_version
 from general import test, ping
 
@@ -30,6 +28,7 @@ def get_action_names_without_db_using() -> list[str]:
     :return: action names list
     """
     return ['ping']
+
 
 def _get_version(parameters: dict[str, Any]) -> str:
     """

@@ -18,6 +18,7 @@ SERVICE_NAME: str = ''
 
 __all__ = ['base_transformer', 'vbm_transformer', 'get_transformer_class']
 
+
 def get_transformer_class(transformer_type: DataTransformersTypes, model_type: str) -> Type[BaseTransformer]:
     """ Function for getting data transformer class. Choosing from subclasses of DataTransformer class where
         service name = SERVICE_NAME var
@@ -40,13 +41,13 @@ def get_transformer_class(transformer_type: DataTransformersTypes, model_type: s
 
             if not transformer_class:
                 raise ModelException('Can not find right transformer class' +
-                'with type "{}" '.format(transformer_type.value))
+                                     'with type "{}" '.format(transformer_type.value))
 
     return transformer_class
 
 
 def _get_class_from_subclasses(parent_class: Type[BaseTransformer], service_name: str = '', model_type: str = '',
-                               transformer_type: Optional[DataTransformersTypes] = None) -> Optional[Type[BaseTransformer]]:
+                        transformer_type: Optional[DataTransformersTypes] = None) -> Optional[Type[BaseTransformer]]:
     """
     Recursive function to seek required class from subclasses
     :param parent_class: class to get subclasses for seek required class
@@ -59,9 +60,8 @@ def _get_class_from_subclasses(parent_class: Type[BaseTransformer], service_name
 
     for subclass in parent_class.__subclasses__():
         if ((not service_name or subclass.service_name == service_name)
-            and (not model_type or subclass.model_type == model_type)
-            and (not transformer_type or subclass.transformer_type == transformer_type)):
-
+                and (not model_type or subclass.model_type == model_type)
+                and (not transformer_type or subclass.transformer_type == transformer_type)):
             result_class = subclass
 
             break
@@ -73,4 +73,3 @@ def _get_class_from_subclasses(parent_class: Type[BaseTransformer], service_name
             break
 
     return result_class
-

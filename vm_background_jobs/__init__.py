@@ -6,7 +6,7 @@
             launcher - for running background job in subprocess
             background_jobs - defines BackgroundJob class
             decorators - for defining decorators to execute function in background mode
-            job_types - for defining enums of job sattuses
+            job_types - for defining enums of job statuses
 """
 
 from .actions import get_actions

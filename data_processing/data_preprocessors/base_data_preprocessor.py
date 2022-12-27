@@ -7,7 +7,6 @@ from typing import ClassVar, Any
 import pandas as pd
 
 
-
 class BaseDataPreprocessor:
     """ Abstract class for preprocessing data. Providing primary data processing.
         Applies before fitting data loading and before input data predicting
@@ -16,8 +15,8 @@ class BaseDataPreprocessor:
 
     def __init__(self, **kwargs) -> None: ...
 
-
-    def preprocess_data_for_loading(self, data: list[dict[str, Any]], loading_id:  str, package_id: str) -> pd.DataFrame:
+    def preprocess_data_for_loading(self, data: list[dict[str, Any]], loading_id:
+                                    str, package_id: str) -> pd.DataFrame:
         """ For preprocess data before loading
         :param data: - list of loading data
         :param loading_id: current id of loading

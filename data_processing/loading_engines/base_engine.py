@@ -34,7 +34,6 @@ class BaseEngine(ABC):
         """
         ...
 
-
     @abstractmethod
     def delete_data(self, loading_id: str, package_id: str) -> bool:
         """
@@ -43,7 +42,3 @@ class BaseEngine(ABC):
         :param package_id: id of data package
         :return True if deleting is successful else False
         """
-        ...
-
-
-

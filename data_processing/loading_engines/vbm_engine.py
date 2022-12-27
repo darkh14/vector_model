@@ -55,7 +55,7 @@ class VbmEngine(BaseEngine):
         return True
 
     def preprocess_data(self, data: list[dict[str, Any]], loading_id:  str = '', package_id: str = '') -> pd.DataFrame:
-        """ Adds additional fields to data array and converts data list to pandas DataFrame.
+        """ Adds additional fields to data array and converts data list to pandas DataFrame
         :param data: rqw data array
         :param loading_id: id of loading object, which uses to load data, will be added as field to data
         :param package_id: id of package object, which uses to load data, will be added as field to data
@@ -65,6 +65,4 @@ class VbmEngine(BaseEngine):
         data_preprocessor = get_data_preprocessing_class()()
 
         return data_preprocessor.preprocess_data_for_loading(data, loading_id, package_id)
-
-
-
+    

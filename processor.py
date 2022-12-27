@@ -130,7 +130,6 @@ class Processor(ABC):
 
             initialize_connector(parameters['db'])
 
-
         method = self._request_methods.get(request_type)
 
         if not method:
@@ -184,7 +183,7 @@ class Processor(ABC):
         return request_parameters
 
     @staticmethod
-    def _parameters_from_json(json_string: str|bytes) -> dict[str, Any]:
+    def _parameters_from_json(json_string: str | bytes) -> dict[str, Any]:
         """
         Gets parameters dict from json string
         :param json_string: input json string
@@ -199,7 +198,6 @@ class Processor(ABC):
             json_string = json_string.encode('utf-8-sig')
 
         return json.loads(json_string)
-
 
     def _get_requests_methods(self) -> dict[str, Callable]:
         """
@@ -327,7 +325,7 @@ class _FileProcessor(Processor):
         """
         Forms environ dict to imitate http request
         :param request_type: string of request type
-        :return: inviron dict
+        :return: environ dict
         """
         file_path = 'parameters_test/' + request_type + '.json'
 

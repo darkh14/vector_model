@@ -105,7 +105,7 @@ class Connector(ABC):
         """
 
     @abstractmethod
-    def set_line(self, collection_name: str, value: dict[str, Any], db_filter: Optional[db_filter_type]) -> bool:
+    def set_line(self, collection_name: str, value: dict[str, Any], db_filter: Optional[db_filter_type] = None) -> bool:
         """
         For setting one line in collection, supports filter or no filter.
             When filter is defined:
@@ -154,7 +154,7 @@ class Connector(ABC):
         """
         Returns number of documents in collection. Supports filter
         :param collection_name: name of required collection
-        :param db_filter: ptional, filter to find required lines to count
+        :param db_filter: optional, filter to find required lines to count
         """
 
     def get_db_path(self) -> str:

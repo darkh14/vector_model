@@ -22,7 +22,7 @@ def get_actions() -> dict[str, Callable]:
     """ forms actions dict available for vm_models
     :return: dict of actions (functions)
     """
-    actions =  {
+    actions = {
         'model_fit': _fit,
         'model_predict': _predict,
         'model_initialize': _initialize,

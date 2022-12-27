@@ -32,6 +32,7 @@ def get_connector(db_path: str = '') -> connectors.base_connector.Connector:
 
     return CURRENT_CONNECTOR
 
+
 def initialize_connector(db_path: str) -> None:
 
     global DB_TYPE, CONNECTORS, CURRENT_CONNECTOR
@@ -46,6 +47,7 @@ def initialize_connector(db_path: str) -> None:
     else:
         CURRENT_CONNECTOR = _get_connector_class()(db_path)
         CONNECTORS.append(CURRENT_CONNECTOR)
+
 
 def drop_connector() -> None:
     """ To drop current connector in the end of request """

@@ -11,6 +11,7 @@ from .background_jobs import BackgroundJob
 
 __all__ = ['get_jobs_info', 'delete_background_job', 'set_background_job_interrupted']
 
+
 def get_jobs_info(parameters: dict[str, Any]) -> dict[str, Any]:
     """ For getting jobs info. return info of jobs according to filter
     :param parameters: dict of request parameters
@@ -39,6 +40,7 @@ def delete_background_job(parameters: dict[str, Any]) -> str:
     background_job.delete()
 
     return 'Background job is deleted'
+
 
 def set_background_job_interrupted(job_id: str) -> str:
     """ set status "interrupted" if background job

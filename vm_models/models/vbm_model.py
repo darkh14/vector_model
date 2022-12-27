@@ -27,6 +27,7 @@ from id_generator import IdGenerator
 
 __all__ = ['VbmModel', 'get_additional_actions']
 
+
 class VbmModel(Model):
     """ Main model class. Compared with base class it provides feature importances calculation,
             sensitivity analysis calculation and factor analysis calculation
@@ -68,7 +69,7 @@ class VbmModel(Model):
 
         return result_description
 
-    def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) ->  pd.DataFrame:
+    def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) -> pd.DataFrame:
         """
         Converts output np array y to output pd. data
         :param y: y output predicted np array
@@ -80,7 +81,6 @@ class VbmModel(Model):
         result[['organisation', 'scenario', 'period']] = x_data[['organisation_struct', 'scenario_struct', 'period']]
 
         return result
-
 
     def _get_model_estimators(self, for_predicting: bool = False,
                               fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
@@ -184,7 +184,6 @@ class VbmModel(Model):
             data_ind_minus[ind_columns] = data_minus[ind_columns]
             x_ind_minus = self._data_to_x(data_ind_minus)
 
-
             y_ind_plus = self._engine.predict(x_ind_plus)
             y_ind_minus = self._engine.predict(x_ind_minus)
 
@@ -227,11 +226,10 @@ class VbmModel(Model):
             sa['ind_' + ind_id] = sa_ind_data
 
         return sa
-    def get_factor_analysis(self, inputs: list[dict[str, Any]],
-                                 outputs: dict[str, Any],
-                                 input_indicators: list[dict[str, Any]],
-                                 output_indicator: dict[str, Any],
-                                 get_graph: bool = False) -> dict[str, Any]:
+
+    def get_factor_analysis(self, inputs: list[dict[str, Any]], outputs: dict[str, Any],
+                            input_indicators: list[dict[str, Any]], output_indicator: dict[str, Any],
+                            get_graph: bool = False) -> dict[str, Any]:
         """
         For calculating and getting factor analysis data
         :param inputs: input data
@@ -274,7 +272,7 @@ class VbmModel(Model):
         for indicator_element in input_indicators:
 
             ind_short_id_s = [el['short_id'] for el in self.parameters.x_indicators
-                                 if el['id'] == indicator_element['id'] and el['type'] == indicator_element['type']]
+                              if el['id'] == indicator_element['id'] and el['type'] == indicator_element['type']]
 
             if not ind_short_id_s:
                 raise ModelException('Indicator "{}", id "{}" type "{}" not in model'.format(indicator_element['name'],
@@ -427,7 +425,8 @@ class VbmModel(Model):
         column_list = column_name.split('_')
 
         if 'an' in column_list:
-            result = [el['analytics'] for el in (self.fitting_parameters.x_analytic_keys + self.fitting_parameters.y_analytic_keys)
+            result = [el['analytics'] for el
+                      in (self.fitting_parameters.x_analytic_keys + self.fitting_parameters.y_analytic_keys)
                       if el['short_id'] == column_list[3]][0]
         else:
             result = []
@@ -449,8 +448,8 @@ class VbmModel(Model):
             raise ModelException('Error of calculating factor analysis data. Model is not initialized')
 
         if not self.fitting_parameters.is_fit:
-            raise ModelException('Error of calculating factor analysis data. Model is not fit. '
-                                     'Train the model before calculating')
+            raise ModelException('Error of calculating factor analysis data. Model is not fit. ' +
+                                 'Train the model before calculating')
 
     def _get_output_value_for_fa(self, input_data: pd.DataFrame,
                                  outputs: dict[str, Any],
@@ -508,7 +507,6 @@ class VbmModel(Model):
 
         return output_value
 
-
     @staticmethod
     def _get_value_for_fa(input_parameters):
         """
@@ -542,14 +540,14 @@ class VbmModel(Model):
         result_data.drop(['indicator'], axis=1, inplace=True)
 
         base_line = {'title': 'Базовый', 'value': outputs['based']['value'], 'order': 1}
-        calculated_line = {'title': 'Расчетный', 'value': outputs['calculated']['value'], 'order': result_data.shape[0]+2}
+        calculated_line = {'title': 'Расчетный', 'value': outputs['calculated']['value'],
+                           'order': result_data.shape[0] + 2}
 
         result_data = pd.concat([result_data, pd.DataFrame([base_line, calculated_line])])
 
         result_data = result_data.sort_values('order')
 
         return result_data
-
 
     def _get_fa_graph_bin(self, values: pd.DataFrame, out_indicator_name: str) -> str:
         """
@@ -608,8 +606,8 @@ class VbmModel(Model):
         ))
 
         fig.update_layout(
-            title=
-            {'text': '<b>Факторный анализ</b><br><span style="color:#666666">{}</span>'.format(out_indicator_name)},
+            title={'text': '<b>Факторный анализ</b><br><span style="color:#666666">{}</span>'.format(
+                out_indicator_name)},
             showlegend=False,
             height=650,
             font={
@@ -713,7 +711,6 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
     if not parameters.get('model'):
         raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
-
     check_fields = ['inputs_0', 'inputs_plus', 'inputs_minus']
 
     for field in check_fields:
@@ -746,11 +743,7 @@ def _get_factor_analysis_data(parameters: dict[str, Any]) -> dict[str, Any]:
 
     model = VbmModel(parameters['model']['id'])
 
-    result = model.get_factor_analysis(parameters['inputs'],
-                                        parameters['outputs'],
-                                        parameters['input_indicators'],
-                                        parameters['output_indicator'],
-                                        parameters.get('get_graph')
-                                        )
+    result = model.get_factor_analysis(parameters['inputs'], parameters['outputs'], parameters['input_indicators'],
+                                       parameters['output_indicator'], parameters.get('get_graph'))
 
     return result

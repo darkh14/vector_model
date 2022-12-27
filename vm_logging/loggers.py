@@ -16,7 +16,7 @@ class JobContextLoggerManager:
     """ Class for logging data in subprocess. Writes data from stdout stream and stderr stream to log files
         Using:
         With JobContextLoggerManager(job_id, context_mode=True) as (out_file, err_file)
-            ... do smth with out_file, err_file
+            ... do something with out_file, err_file
 
     """
     def __init__(self, job_id: str, context_mode: bool = False) -> None:

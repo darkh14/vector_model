@@ -47,7 +47,7 @@ class VbmNeuralNetwork(BaseEngine):
     def fit(self, x: np.ndarray, y: np.ndarray, epochs: int,
             parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
-        For fitting MLengine
+        For fitting ML engine
         :param x:  input data
         :param y: output data (labels)
         :param epochs: nuber of epochs of fitting
@@ -107,7 +107,7 @@ class VbmNeuralNetwork(BaseEngine):
             else:
                 self._inner_engine = self.create_inner_engine()
 
-    def _get_inner_engine_from_binary_data(self, model_data: bytes, use_pickle: bool=False) -> Sequential:
+    def _get_inner_engine_from_binary_data(self, model_data: bytes, use_pickle: bool = False) -> Sequential:
         """
         Gets inner engine object from its binary data
         :param model_data: binary engine data
@@ -253,3 +253,4 @@ class VbmLinearModel(VbmNeuralNetwork):
         """
         engine.compile(optimizer=Adam(learning_rate=0.01), loss='MeanSquaredError',
                       metrics=['RootMeanSquaredError'])
+        

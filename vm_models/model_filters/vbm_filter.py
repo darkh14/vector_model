@@ -14,6 +14,7 @@ from .base_filter import FittingFilter
 
 __all__ = ['VbmFittingFilter']
 
+
 class VbmFittingFilter(FittingFilter):
     """ Class to transform input filter parameters for reading data
         for fitting to filter, which we can use in db (mongo)
@@ -43,7 +44,7 @@ class VbmFittingFilter(FittingFilter):
         """
         return pickle.dumps(self._value, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def get_value_as_json_serializable(self) -> Optional[dict|list|int|float|str|datetime]:
+    def get_value_as_json_serializable(self) -> Optional[dict | list | int | float | str | datetime]:
         """
         Convert value to use it as a json serializable value to send it as model info
         :return: value as a json serializable
@@ -114,8 +115,8 @@ class VbmFittingFilter(FittingFilter):
 
         return result
 
-    def _transform_dates_to_str(self, value: dict|list|int|float|str|datetime) -> \
-            Optional[dict|list|int|float|str|datetime]:
+    def _transform_dates_to_str(self, value: dict | list | int | float | str | datetime) -> \
+            Optional[dict | list | int | float | str | datetime]:
         """
         Transforms date fields in value to str. Uses recursion
         :param value: value to transform

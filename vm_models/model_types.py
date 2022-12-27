@@ -7,6 +7,7 @@ from enum import Enum
 
 __all__ = ['DataTransformersTypes']
 
+
 class DataTransformersTypes(Enum):
     READER = 'reader'
     CHECKER = 'checker'
@@ -15,7 +16,4 @@ class DataTransformersTypes(Enum):
     NAN_PROCESSOR = 'nan_processor'
     SCALER = 'scaler'
     NONE = 'none'
-
-
-
-
+    

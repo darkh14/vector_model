@@ -67,4 +67,3 @@ def get_actions() -> dict[str, Callable]:
     :return: dict of available actions (functions)
     """
     return {'settings_get_var': _get_var, 'settings_set_var': _set_var}
-

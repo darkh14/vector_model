@@ -13,6 +13,7 @@ __all__ = ['base_filter', 'get_fitting_filter_class']
 
 SERVICE_NAME: str = ''
 
+
 def get_fitting_filter_class() -> Type[base_filter.FittingFilter]:
     """ Function for getting model filter class. Choosing from subclasses of BaseFilter class where
         service name = SERVICE_NAME var

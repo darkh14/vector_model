@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 
 from db_processing import connectors, get_connector
 
+
 class BaseEngine(ABC):
     """ Main class of ML model engine. supports fit, predict and drop from db. Real ML classes
         are inherited from this class
@@ -33,7 +34,7 @@ class BaseEngine(ABC):
         """
         self._model_id: str = model_id
 
-        self._db_connector: connectors.base_connector.Connector  = get_connector()
+        self._db_connector: connectors.base_connector.Connector = get_connector()
 
         self._input_number: int = input_number
         self._output_number: int = output_number
@@ -44,7 +45,7 @@ class BaseEngine(ABC):
 
     @abstractmethod
     def fit(self, x: np.ndarray,  y: np.ndarray, epochs: int,
-            parameters: Optional[dict[str, Any]] = None)-> dict[str, Any]:
+            parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting ML engine
         :param x: inputs
@@ -67,3 +68,4 @@ class BaseEngine(ABC):
         For deleting engine from DB
         """
         self._db_connector.delete_lines('engines', {'model_id': self._model_id})
+        

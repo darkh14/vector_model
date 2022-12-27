@@ -168,3 +168,4 @@ class ModelException(VMBaseException):
         """
         default_message = super()._get_full_error_message()
         return 'Error in model! ' + default_message
+    

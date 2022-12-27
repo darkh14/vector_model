@@ -17,6 +17,7 @@ from id_generator import IdGenerator
 
 __all__ = ['VbmModelParameters', 'VbmFittingParameters']
 
+
 @dataclass
 class VbmModelParameters(ModelParameters):
     """ Dataclass for storing, saving and getting model parameters. Inherited by ModelParameters class
@@ -52,7 +53,7 @@ class VbmModelParameters(ModelParameters):
         self._check_new_parameters(parameters)
 
         super_fields = [el.name for el in fields(super()) if el.name not in ['service_name']]
-        self_fields =  [el.name for el in fields(self) if el.name not in super_fields + ['service_name']]
+        self_fields = [el.name for el in fields(self) if el.name not in super_fields + ['service_name']]
         self_parameters = [el[1:] if el.startswith('_') else el for el in self_fields]
 
         for count, par_name in enumerate(self_parameters):
@@ -196,13 +197,13 @@ class VbmFittingParameters(FittingParameters):
         super().set_all(parameters, without_processing=without_processing)
 
         super_fields = [el.name for el in fields(super()) if el.name not in ['service_name']]
-        self_fields =  [el.name for el in fields(self) if el.name not in super_fields + ['service_name']]
+        self_fields = [el.name for el in fields(self) if el.name not in super_fields + ['service_name']]
         self_parameters = [el[1:] if el.startswith('_') else el for el in self_fields]
 
-        fi_parameters  = ['fi_is_calculated', 'fi_calculation_is_started', 'fi_calculation_is_error',
-                          'fi_calculation_date', 'fi_calculation_start_date', 'fi_calculation_error_date',
-                          'fi_calculation_error_text', 'fi_calculation_job_id', 'fi_calculation_job_pid',
-                          'feature_importances']
+        fi_parameters = ['fi_is_calculated', 'fi_calculation_is_started', 'fi_calculation_is_error',
+                         'fi_calculation_date', 'fi_calculation_start_date', 'fi_calculation_error_date',
+                         'fi_calculation_error_text', 'fi_calculation_job_id', 'fi_calculation_job_pid',
+                         'feature_importances']
         self_parameters = [el for el in self_parameters if el not in fi_parameters]
 
         for count, par_name in enumerate(self_parameters):
@@ -221,10 +222,10 @@ class VbmFittingParameters(FittingParameters):
         else:
             self.fi_calculation_date = (datetime.strptime(parameters['fi_calculation_date'], '%d.%m.%Y %H:%M:%S')
                                  if parameters.get('fi_calculation_date') else None)
-            self.fi_calculation_start_date = (datetime.strptime(parameters['fi_calculation_start_date'], '%d.%m.%Y %H:%M:%S')
-                                       if parameters.get('fi_calculation_start_date') else None)
-            self.fi_calculation_error_date = (datetime.strptime(parameters['fi_calculation_error_date'], '%d.%m.%Y %H:%M:%S')
-                                       if parameters.get('fi_calculation_error_date') else None)
+            self.fi_calculation_start_date = (datetime.strptime(parameters['fi_calculation_start_date'],
+                                 '%d.%m.%Y %H:%M:%S') if parameters.get('fi_calculation_start_date') else None)
+            self.fi_calculation_error_date = (datetime.strptime(parameters['fi_calculation_error_date'],
+                                 '%d.%m.%Y %H:%M:%S') if parameters.get('fi_calculation_error_date') else None)
 
         self.fi_calculation_error_text = parameters.get('fi_calculation_error_text') or ''
 
@@ -265,12 +266,15 @@ class VbmFittingParameters(FittingParameters):
         }
 
         if not for_db:
-            fi_parameters['fi_calculation_date'] = (fi_parameters['fi_calculation_date'].strftime('%d.%m.%Y %H:%M:%S')
-                                                    if fi_parameters['fi_calculation_date'] else None)
-            fi_parameters['fi_calculation_start_date'] = (fi_parameters['fi_calculation_start_date'].strftime('%d.%m.%Y %H:%M:%S')
-                                                    if fi_parameters['fi_calculation_start_date'] else None)
-            fi_parameters['fi_calculation_error_date']  = (fi_parameters['fi_calculation_error_date'].strftime('%d.%m.%Y %H:%M:%S')
-                                                    if fi_parameters['fi_calculation_error_date'] else None)
+            fi_parameters['fi_calculation_date'] = (fi_parameters[
+                                                        'fi_calculation_date'].strftime('%d.%m.%Y %H:%M:%S')
+                                                    if fi_parameters.get('fi_calculation_date') else None)
+            fi_parameters['fi_calculation_start_date'] = (fi_parameters[
+                                                        'fi_calculation_start_date'].strftime('%d.%m.%Y %H:%M:%S')
+                                                    if fi_parameters.get('fi_calculation_start_date') else None)
+            fi_parameters['fi_calculation_error_date'] = (fi_parameters[
+                                                        'fi_calculation_error_date'].strftime('%d.%m.%Y %H:%M:%S')
+                                                    if fi_parameters.get('fi_calculation_error_date') else None)
 
         result.update(fi_parameters)
 
@@ -441,7 +445,7 @@ class VbmFittingParameters(FittingParameters):
         return self._x_analytic_keys
 
     @property
-    def y_analytic_keys(self) ->list[dict[str, Any]] :
+    def y_analytic_keys(self) -> list[dict[str, Any]]:
         """
         Property y_analytic_keys getter. Returns self.y_analytic_keys value
         :return: property value

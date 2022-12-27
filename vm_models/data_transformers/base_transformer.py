@@ -30,6 +30,7 @@ __all__ = ['BaseTransformer',
            'CategoricalEncoder',
            'NanProcessor']
 
+
 class BaseTransformer(BaseEstimator, TransformerMixin):
     """ Base transformer class for transform data. Supports sklearn pipeline, methods fit and transform
         Methods:
@@ -57,7 +58,7 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         self._fitting_mode = False
 
     def fit(self, x: Optional[list[dict[str, Any]] | pd.DataFrame] = None,
-            y: Optional[list[dict[str, Any]] | pd.DataFrame] = None)-> BaseTransformerClass:
+            y: Optional[list[dict[str, Any]] | pd.DataFrame] = None) -> BaseTransformerClass:
         """
         For fitting transformer parameters to data
         :param x: input data
@@ -90,12 +91,11 @@ class Reader(BaseTransformer):
     service_name: ClassVar[str] = ''
     transformer_type: ClassVar[DataTransformersTypes] = DataTransformersTypes.READER
 
-    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, **kwargs):
+    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters):
         """
         Defines fitting filter
         :param model_parameters: model parameters object
         :param fitting_parameters: fitting parameters object
-        :param kwargs: additional parameters
         """
         super().__init__(model_parameters, fitting_parameters)
         self._fitting_filter: Optional[base_filter.FittingFilter] = None

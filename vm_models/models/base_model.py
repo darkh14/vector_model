@@ -46,7 +46,7 @@ class Model:
         self._initialized: bool = False
 
         self.parameters: base_parameters.ModelParameters = get_model_parameters_class()()
-        self.fitting_parameters:base_parameters.FittingParameters = get_model_parameters_class(fitting=True)()
+        self.fitting_parameters: base_parameters.FittingParameters = get_model_parameters_class(fitting=True)()
 
         self._engine: Optional[base_engine.BaseEngine] = None
 
@@ -198,7 +198,7 @@ class Model:
         """
         return data[self.fitting_parameters.x_columns].to_numpy()
 
-    def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) ->  pd.DataFrame:
+    def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) -> pd.DataFrame:
         """
         Converts output np array y to output pd. data
         :param y: y output predicted np array

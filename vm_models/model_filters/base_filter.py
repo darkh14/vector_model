@@ -8,12 +8,14 @@ from typing import Any, ClassVar
 
 __all__ = ['FittingFilter']
 
+
 class FittingFilter:
     """ Base class to transform input filter parameters for reading data
         for fitting to filter, which we can use in db
     """
     service_name: ClassVar[str] = ''
-    def __init__(self, filter_value: bytes| dict[str, Any], for_model: bool = False) -> None:
+
+    def __init__(self, filter_value: bytes | dict[str, Any], for_model: bool = False) -> None:
         """
         Defines local filter value and local parameter "for_model"
         :param filter_value: input filter value
@@ -42,3 +44,4 @@ class FittingFilter:
         :return: value as a json serializable
         """
         return self._value
+    

@@ -166,7 +166,7 @@ def drop_fitting(parameters: dict[str, Any]) -> str:
     return result
 
 
-def get_additional_actions() -> dict[str|Callable]:
+def get_additional_actions() -> dict[str | Callable]:
     """
     Forms dict of additional action from model package
     :return: dict of actions (functions)

@@ -47,7 +47,7 @@ class ModelParameters:
 
         self.data_filter = get_fitting_filter_class()(parameters.get('filter'), for_model=True)
 
-    def _check_new_parameters(self, parameters: dict[str, Any], checking_names:Optional[list] = None) -> None:
+    def _check_new_parameters(self, parameters: dict[str, Any], checking_names: Optional[list] = None) -> None:
         """
         For checking parameters. Raises ModelException if checking is failed
         :param parameters: parameters to check
@@ -188,11 +188,11 @@ class FittingParameters:
 
         if not for_db:
             parameters['fitting_date'] = (parameters['fitting_date'].strftime('%d.%m.%Y %H:%M:%S')
-                                    if parameters['fitting_date'] else None)
+                                    if parameters.get('fitting_date') else None)
             parameters['fitting_start_date'] = (parameters['fitting_start_date'].strftime('%d.%m.%Y %H:%M:%S')
-                                    if parameters['fitting_start_date'] else None)
+                                    if parameters.get('fitting_start_date') else None)
             parameters['fitting_error_date'] = (parameters['fitting_error_date'].strftime('%d.%m.%Y %H:%M:%S')
-                                    if parameters['fitting_error_date'] else None)
+                                    if parameters.get('fitting_error_date') else None)
 
         return parameters
 
@@ -284,5 +284,3 @@ class FittingParameters:
         :return: bool result
         """
         return self._first_fitting
-
-

@@ -11,7 +11,6 @@
 from typing import Any, Optional
 from _datetime import datetime
 
-import db_processing.connectors.base_connector
 from vm_logging.exceptions import LoadingProcessException
 from db_processing import get_connector
 from .loading_engines import BaseEngine, get_engine_class
@@ -719,7 +718,7 @@ class Loading:
         return Package(self._id, package_id, package_parameters)
 
 
-def delete_all_data(data_filter: dict[str, Any])-> bool:
+def delete_all_data(data_filter: dict[str, Any]) -> bool:
     """ Deletes all data according to filter
     :param data_filter: filter according to which data is deleted
     :return result of deleting data, True if successful
