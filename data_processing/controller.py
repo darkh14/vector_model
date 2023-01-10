@@ -14,7 +14,8 @@
 
 """
 
-from typing import Any
+from typing import Any, Callable
+
 from vm_logging.exceptions import RequestProcessException
 from db_processing import get_connector
 from .loader import Loading, delete_all_data

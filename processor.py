@@ -112,23 +112,24 @@ class Processor(ABC):
             :param parameters: request parameters
             :return: dict of request result
         """
-        if parameters.get('service_name') != SERVICE_NAME:
-            raise RequestProcessException('Service name "{}" is not allowed. '.format(parameters.get('service_name')) +
-                                          'correct service name is "{}"'.format(SERVICE_NAME))
+        service_name = ''
+        request_type = ''
 
-        request_type = parameters.get('request_type')
+        match parameters:
+            case {'request_type': str(request_type), 'service_name': str(service_name), **kwargs}:
+                if parameters.get('service_name') != SERVICE_NAME:
+                    raise RequestProcessException('Service name "{}" '.format(parameters.get('service_name')) +
+                                                  'is not allowed. correct service name is "{}"'.format(SERVICE_NAME))
+                names_without_db = self._get_action_names_without_db_using()
 
-        if not request_type:
-            raise RequestProcessException('Property "request type" is not in parameters. '
-                                          'property "request type" is required')
+                if request_type not in names_without_db:
+                    if 'db' not in parameters:
+                        raise ParameterNotFoundException('Parameter "db" not found in parameters')
 
-        names_without_db = self._get_action_names_without_db_using()
+                    initialize_connector(parameters['db'])
 
-        if request_type not in names_without_db:
-            if 'db' not in parameters:
-                raise ParameterNotFoundException('Parameter "db" not found in parameters')
-
-            initialize_connector(parameters['db'])
+            case _:
+                raise ParameterNotFoundException('Wrong request parameters format!')
 
         method = self._request_methods.get(request_type)
 
