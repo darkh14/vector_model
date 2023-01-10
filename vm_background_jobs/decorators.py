@@ -5,6 +5,7 @@
 """
 
 from typing import Callable, Any
+from functools import wraps
 
 from .background_jobs import BackgroundJob
 
@@ -17,6 +18,7 @@ def execute_in_background(func: Callable) -> Callable:
     :return: decorated method
     """
 
+    @wraps(func)
     def wrapper(wrapper_parameters: dict[str, Any], **kwargs) -> dict[str, Any]:
 
         if wrapper_parameters.get('background_job'):
