@@ -11,7 +11,7 @@
 from typing import Any, Optional
 from _datetime import datetime
 
-from vm_logging.exceptions import LoadingProcessException
+from vm_logging.exceptions import LoadingProcessException, ParameterNotFoundException
 from db_processing import get_connector
 from .loading_engines import BaseEngine, get_engine_class
 from .loading_types import LoadingTypes, LoadingStatuses
@@ -49,27 +49,30 @@ class Package:
             _check_data - for checking loading data array before loading
             _get_engine - for getting loading engine object
     """
-    def __init__(self, loading_id: str, package_id: str, package_parameters: Optional[dict[str, Any]]):
+    def __init__(self, loading_id: str, package_id: str, number: int = 0, loading_type: str = '',
+                 check_sum: Optional[str | int] = None) -> None:
         """
         Defines all inner variable of package. Then variables are read from db if it is not new package
         :param loading_id: id of loading of current package
         :param package_id: id of current package
-        :param package_parameters: additional parameters of package
+        :param loading_type: type of loading (full or increment) if new package
+        :param number: number of package if new package
+        :param check_sum: checksum of package if new packaage
         """
         self._loading_id: str = loading_id
         self._id: str = package_id
 
         self._status: LoadingStatuses = LoadingStatuses.NEW
-        self._type: LoadingTypes = LoadingTypes.FULL
+        self._type: LoadingTypes = _get_loading_type_from_parameter(loading_type)
 
         self._start_date: Optional[datetime] = None
         self._end_date: Optional[datetime] = None
 
         self._db_connector = get_connector()
 
-        self._number: int = package_parameters['number'] if package_parameters else 0
+        self._number: int = number
 
-        self._check_sum: str | int = package_parameters['check_sum'] if package_parameters else 0
+        self._check_sum: str | int = check_sum or ''
         self._error: str = ''
 
         self._engine: BaseEngine = self._get_engine()
@@ -117,9 +120,6 @@ class Package:
         :param data: array of data to load to db
         :return result of package data loading
         """
-
-        if not data:
-            raise LoadingProcessException('Data parameter is not set')
 
         if self._status != LoadingStatuses.REGISTERED:
             raise LoadingProcessException('Package status must be "registered". '
@@ -251,7 +251,7 @@ class Package:
         package_from_db = self._db_connector.get_line('packages', {'loading_id': self._loading_id, 'id': self._id})
 
         if package_from_db:
-            self._type = LoadingTypes(package_from_db['type'])
+            self._type = _get_loading_type_from_parameter(package_from_db['type'])
             self._status = LoadingStatuses(package_from_db['status'])
 
             self._check_sum = package_from_db['check_sum']
@@ -280,11 +280,36 @@ class Package:
         :param data: data array for checking
         """
 
-        if not isinstance(data, list):
-            raise LoadingProcessException('Data must be list like type')
-
         if len(data) != self._check_sum:
             raise LoadingProcessException('Data checksum is not right. Right checksum is {}'.format(self._check_sum))
+
+        wrong_row_numbers = []
+
+        for num, row in enumerate(data):
+            match row:
+                case {'organisation': {'id': str(), 'name': str()},
+                      'scenario': {'id': str(), 'name': str()},
+                      'period': str(),
+                      'indicator': {'type': str(), 'name': str(), 'id': str()},
+                      'analytics': list(r_analytics),
+                      'value': int() | float()}:
+
+                    for r_analytics_row in r_analytics:
+                        match r_analytics_row:
+                            case {'kind': str(), 'type': str(), 'name': str(), 'id': str()}:
+                                pass
+                            case _:
+                                wrong_row_numbers.append(num + 1)
+                                break
+                case _:
+                    wrong_row_numbers.append(num + 1)
+
+            if wrong_row_numbers:
+                if len(wrong_row_numbers) > 10:
+                    wrong_row_numbers = wrong_row_numbers[:10]
+                wrong_row_numbers = [str(el) for el in wrong_row_numbers]
+                raise ParameterNotFoundException('Wrong package data format'
+                                                 ' in row(s) {}'.format(', '.join(wrong_row_numbers)))
 
     def _get_engine(self) -> BaseEngine:
         """ For getting engine object to load data
@@ -319,21 +344,19 @@ class Loading:
             set_package_status - for setting status of transmitted package
             _check_input_parameters - check fields when __init__
             _check_before_initializing - check fullness of fields before initializing
-            _get_loading_type_from_parameter - gets type of loading from str
             _read_from_db - for reading loading object from db
             _write_to_db - for writing loading object to db
             _get_package - for getting package of loading by package id
     """
 
-    def __init__(self, loading_parameters: dict[str, Any]) -> None:
+    def __init__(self, loading_id: str, loading_type: str = '', packages: Optional[list] = None) -> None:
         """
         Defines all inner variable of loading. Then variables are read from db if it is not new loading
         :param loading_parameters: parameters to define variables of loading
         """
-        self._check_input_parameters(loading_parameters)
 
-        self._id: str = loading_parameters['id']
-        self._type: Optional[LoadingTypes] = self._get_loading_type_from_parameter(loading_parameters.get('type'))
+        self._id: str = loading_id
+        self._type: Optional[LoadingTypes] = _get_loading_type_from_parameter(loading_type)
         self._status: LoadingStatuses = LoadingStatuses.NEW
         self._packages: list[Package] = []
 
@@ -343,16 +366,22 @@ class Loading:
 
         self._db_connector = get_connector()
 
-        if loading_parameters.get('packages'):
-            package_num = 1
-            for package_parameters in loading_parameters['packages']:
-                p_parameters = package_parameters
-                p_parameters['type'] = self._type
-                p_parameters['number'] = package_parameters.get('number') or package_num
+        if packages:
 
-                package = self._get_package(package_parameters['id'], p_parameters)
-                self._packages.append(package)
-                package_num += 1
+            for package_num, p_package in enumerate(packages):
+
+                match p_package:
+                    case {'id': str(package_id), 'number': int(p_number), 'check_sum': int(check_sum) | str(check_sum)}:
+
+                        package = Package(self._id, package_id,
+                                          loading_type=str(self._type.value),
+                                          number=p_number,
+                                          check_sum=check_sum)
+                        self._packages.append(package)
+                    case _:
+                        raise ParameterNotFoundException('Wrong package parameters ' +
+                                                         'format in package number {}! '.format(package_num) +
+                                                         'Check "packages" parameter')
 
         self._number_of_packages: int = len(self._packages)
         self._error = ''
@@ -410,14 +439,14 @@ class Loading:
         :return result of loading package data. true if successful
         """
 
-        if not package_parameters:
-            raise LoadingProcessException('Package parameters is not set')
+        package_id = ''
+        package_data = None
 
-        if not package_parameters.get('id'):
-            raise LoadingProcessException('Package id is not set')
-
-        if not package_parameters.get('data'):
-            raise LoadingProcessException('Package data are not set')
+        match package_parameters:
+            case {'id': str(package_id), 'data': list(package_data)} if package_id and package_data:
+                pass
+            case _:
+                raise ParameterNotFoundException('Wrong package parameters format!')
 
         if self._status not in [LoadingStatuses.REGISTERED, LoadingStatuses.PARTIALLY_LOADED]:
             raise LoadingProcessException('Loading status must be "registered" or "partially loaded". '
@@ -433,16 +462,16 @@ class Loading:
             self._write_to_db()
             self._db_connector.delete_lines('raw_data')
 
-        current_packages = [package for package in self._packages if package.id == package_parameters['id']]
+        current_packages = [package for package in self._packages if package.id == package_id]
 
         if not current_packages:
             raise LoadingProcessException('Package id "{}" do not belong '
-                                          'to loading id "{}"'.format(package_parameters['id'], self._id))
+                                          'to loading id "{}"'.format(package_id, self._id))
 
         current_package = current_packages[0]
 
         try:
-            current_package.load_data(package_parameters['data'])
+            current_package.load_data(package_data)
         except LoadingProcessException as ex:
             self._error = str(ex)
             self._status = LoadingStatuses.ERROR
@@ -506,7 +535,7 @@ class Loading:
                    from_outside: bool = False) -> bool:
         """ For setting loading status
         :param status_parameter: value of setting status
-        :param set_for_packages: set this status for all packages in loading if True
+        :param set_for_packages: set this status for all packages in loading if True.
         :param from_outside: True when status is set directly from http request, else False
         :return result of setting status, True if successful
         """
@@ -557,13 +586,12 @@ class Loading:
         :param package_parameter: parameters of package that needs to set status
         :return result of setting package status, True if successful
         """
-        if not package_parameter:
-            raise LoadingProcessException('Package parameter is not defined')
 
-        package_id = package_parameter.get('id')
-
-        if not package_id:
-            raise LoadingProcessException('Package id is not defined')
+        match package_parameter:
+            case {'id': package_id, 'status': status_parameter} if package_id and status_parameter:
+                pass
+            case  _:
+                raise ParameterNotFoundException('Wrong package parameters format!')
 
         current_packages = [package for package in self._packages if package.id == package_id]
 
@@ -571,11 +599,6 @@ class Loading:
             raise LoadingProcessException('Package id "{}" is not found'.format(package_id))
 
         current_package = current_packages[0]
-
-        status_parameter = package_parameter.get('status')
-
-        if not status_parameter:
-            raise LoadingProcessException('Package status is not defined')
 
         if isinstance(status_parameter, str):
             current_status = LoadingStatuses(status_parameter)
@@ -617,27 +640,6 @@ class Loading:
 
         return True
 
-    @staticmethod
-    def _check_input_parameters(loading_parameters: dict[str, Any]) -> None:
-        """ For checking loading parameters while __init__. Raises LoadingProcessException if check is failed
-        :param loading_parameters: parameters of initialization of loading
-        """
-        check_fields = ['id']
-
-        error_fields = [field for field in check_fields if field not in loading_parameters]
-
-        if error_fields:
-            error_message = '. '.join(['Field "{}" is not found in loading parameters'.format(field)
-                                       for field in error_fields])
-
-            raise LoadingProcessException(error_message)
-
-        if loading_parameters.get('packages'):
-            if not isinstance(loading_parameters['packages'], list):
-                raise LoadingProcessException('Loading packages must be list like object,' 
-                                              'but really packages '
-                                              'type is {}'.format(type(loading_parameters['packages'])))
-
     def _check_before_initializing(self) -> None:
         """ Check fullness of fields before initialization. Raises LoadingProcessException if checking is failed """
         if not self._id:
@@ -652,26 +654,12 @@ class Loading:
         for package in self._packages:
             package.check_before_initializing()
 
-    @staticmethod
-    def _get_loading_type_from_parameter(type_parameter: str) -> Optional[LoadingTypes]:
-        """ Gets loading type from str
-        :param type_parameter: string of loading type
-        :return: loading type (LoadingTypes) object
-        """
-        if not type_parameter:
-            return None
-
-        if type_parameter.upper() not in [el.name for el in LoadingTypes]:
-            raise LoadingProcessException('Loading type "{}" is not supported'.format(type_parameter))
-
-        return LoadingTypes(type_parameter)
-
     def _read_from_db(self) -> None:
         """ for reading loading object from db """
         loading_from_db = self._db_connector.get_line('loadings', {'id': self._id})
 
         if loading_from_db:
-            self._type = self._get_loading_type_from_parameter(loading_from_db['type'])
+            self._type = _get_loading_type_from_parameter(loading_from_db['type'])
             self._status = LoadingStatuses(loading_from_db['status'])
 
             self._create_date = loading_from_db['create_date']
@@ -687,7 +675,7 @@ class Loading:
             self._packages = []
 
             for package_from_db in packages_from_db:
-                package = self._get_package(package_from_db['id'])
+                package = Package(self._id, package_from_db['id'])
                 self._packages.append(package)
 
     def _write_to_db(self, write_packages: bool = True) -> None:
@@ -709,14 +697,6 @@ class Loading:
             for package in self._packages:
                 package.write_to_db()
 
-    def _get_package(self, package_id: str, package_parameters: Optional[dict[str, Any]] = None) -> Package:
-        """ For getting required package object
-        :param package_id: id of required package
-        :param package_parameters: optional parameters, using, when we want to get NEW package
-        :return package object
-        """
-        return Package(self._id, package_id, package_parameters)
-
 
 def delete_all_data(data_filter: dict[str, Any]) -> bool:
     """ Deletes all data according to filter
@@ -726,3 +706,17 @@ def delete_all_data(data_filter: dict[str, Any]) -> bool:
     db_connector = get_connector()
     db_connector.delete_lines('raw_data', data_filter)
     return True
+
+
+def _get_loading_type_from_parameter(type_parameter: str) -> Optional[LoadingTypes]:
+    """ Gets loading type from str
+    :param type_parameter: string of loading type.
+    :return: loading type (LoadingTypes) object
+    """
+    if not type_parameter:
+        return None
+
+    if type_parameter.upper() not in [el.name for el in LoadingTypes]:
+        raise LoadingProcessException('Loading type "{}" is not supported'.format(type_parameter))
+
+    return LoadingTypes(type_parameter)

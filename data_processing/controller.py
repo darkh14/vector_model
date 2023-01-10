@@ -16,7 +16,7 @@
 
 from typing import Any, Callable
 
-from vm_logging.exceptions import RequestProcessException
+from vm_logging.exceptions import RequestProcessException, ParameterNotFoundException
 from db_processing import get_connector
 from .loader import Loading, delete_all_data
 from vm_background_jobs.decorators import execute_in_background
@@ -29,8 +29,19 @@ def initialize_loading(parameters: dict[str, Any]) -> dict[str, Any]:
     :param parameters: dict of request parameters
     :return: new loading info
     """
-    loading = _get_loading(parameters)
-    result = loading.initialize()
+
+    result = None
+
+    match parameters:
+        case {'loading': {'id': str(loading_id),
+                          'type': str(loading_type),
+                          'packages': list(packages)}} if loading_id and loading_type and packages:
+            loading = Loading(loading_id=loading_id, loading_type=loading_type, packages=packages)
+
+            result = loading.initialize()
+        case _:
+            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+
     return result
 
 
@@ -40,8 +51,14 @@ def load_package(parameters: dict[str, Any]) -> str:
     :param parameters: dict of request parameters
     :return: result of package loading
     """
-    loading = _get_loading(parameters)
-    loading.load_package(parameters['loading'].get('package'))
+
+    match parameters:
+        case {'loading': {'id': str(loading_id), 'package': dict(package)}} if loading_id and package:
+            loading = Loading(loading_id)
+            loading.load_package(package)
+        case _:
+            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+
     return 'Package loading is started' if parameters.get('background_job') else 'Package is loaded'
 
 
@@ -50,8 +67,17 @@ def drop_loading(parameters: dict[str, Any]) -> dict[str, Any]:
     :param parameters: dict of request parameters
     :return: result of data dropping
     """
-    loading = _get_loading(parameters)
-    result = loading.drop(need_to_delete_data=parameters['loading'].get('delete_data'))
+
+    result = None
+
+    match parameters:
+        case {'loading': {'id': str(loading_id)}} if loading_id:
+            loading = Loading(loading_id)
+
+            result = loading.drop(need_to_delete_data=parameters['loading'].get('delete_data'))
+        case _:
+            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+
     return result
 
 
@@ -60,8 +86,14 @@ def set_loading_status(parameters: dict[str, Any]) -> str:
     :param parameters: dict of request parameters
     :return: result of setting loading status
     """
-    loading = _get_loading(parameters)
-    loading.set_status(parameters['loading'].get('status'), set_for_packages=True, from_outside=True)
+
+    match parameters:
+        case {'loading': {'id': str(loading_id), 'status': str(status)}} if loading_id and status:
+            loading = Loading(loading_id)
+            loading.set_status(status, set_for_packages=True, from_outside=True)
+        case _:
+            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+
     return 'Loading status is set'
 
 
@@ -70,9 +102,15 @@ def set_package_status(parameters: dict[str, Any]) -> str:
     :param parameters: dict of request parameters
     :return: result of setting package status
     """
-    loading = _get_loading(parameters)
-    loading.set_package_status(parameters['loading'].get('package'))
-    return 'Status is set'
+
+    match parameters:
+        case {'loading': {'id': str(loading_id), 'package': dict(package)}} if loading_id and package:
+            loading = Loading(loading_id)
+            loading.set_package_status(package)
+        case _:
+            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+
+    return 'Package status is set'
 
 
 def get_loading_info(parameters: dict[str, Any]) -> dict[str, Any]:
@@ -80,8 +118,16 @@ def get_loading_info(parameters: dict[str, Any]) -> dict[str, Any]:
     :param parameters: dict of request parameters
     :return: loading information - statuses, dates etc
     """
-    loading = _get_loading(parameters)
-    info = loading.get_loading_info()
+
+    info = None
+
+    match parameters:
+        case {'loading': {'id': str(loading_id)}} if loading_id:
+            loading = Loading(loading_id)
+            info = loading.get_loading_info()
+        case _:
+            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+
     return info
 
 
@@ -96,8 +142,13 @@ def delete_data(parameters: dict[str, Any]) -> str:
         data_filter = parameters.get('filter') or {}
         delete_all_data(data_filter)
     else:
-        loading = _get_loading(parameters)
-        loading.delete_data()
+
+        match parameters:
+            case {'loading': {'id': str(loading_id)}} if loading_id:
+                loading = Loading(loading_id)
+                loading.delete_data()
+            case _:
+                raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
 
     return 'Data are deleted'
 
@@ -110,14 +161,3 @@ def get_data_count(parameters: dict[str, Any]) -> int:
     data_filter = parameters.get('filter') or {}
     db_connector = get_connector()
     return db_connector.get_count('raw_data', data_filter)
-
-
-def _get_loading(parameters: dict[str | Any]) -> Loading:
-    """ Gets loading object. Sets db connector to loading
-    :param parameters: dict of request parameters
-    :return: required object of loading
-    """
-    if 'loading' not in parameters:
-        raise RequestProcessException('Property "loading" is not found in request parameters')
-
-    return Loading(parameters['loading'])

@@ -116,14 +116,15 @@ class Processor(ABC):
         request_type = ''
 
         match parameters:
-            case {'request_type': str(request_type), 'service_name': str(service_name), **kwargs}:
+            case {'request_type': str(request_type), 'service_name': str(service_name)} if (request_type
+                                                                                            and service_name):
                 if parameters.get('service_name') != SERVICE_NAME:
                     raise RequestProcessException('Service name "{}" '.format(parameters.get('service_name')) +
                                                   'is not allowed. correct service name is "{}"'.format(SERVICE_NAME))
                 names_without_db = self._get_action_names_without_db_using()
 
                 if request_type not in names_without_db:
-                    if 'db' not in parameters:
+                    if 'db' not in parameters and parameters['db']:
                         raise ParameterNotFoundException('Parameter "db" not found in parameters')
 
                     initialize_connector(parameters['db'])
