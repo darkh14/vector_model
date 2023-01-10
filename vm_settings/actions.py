@@ -30,7 +30,7 @@ def action(check_fields: Optional[list[str]] = None) -> Callable:
 
             for field in c_check_fields:
                 if field not in parameters:
-                    raise ParameterNotFoundException(field)
+                    raise ParameterNotFoundException('Parameter {} not found in request parameters'.format(field))
 
             result = func(parameters, *args, *kwargs)
 
