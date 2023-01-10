@@ -75,8 +75,6 @@ def check_connection(parameters: dict[str, Any]) -> str:
     :param parameters: dict of request parameters
     :return: str result of checking
     """
-    if not parameters.get('db'):
-        raise ParameterNotFoundException('Parameter "db" is not found in request parameters')
 
     connector = get_connector(parameters['db'])
     line = {'test_field_1': 13, 'test_field_2': 666}
