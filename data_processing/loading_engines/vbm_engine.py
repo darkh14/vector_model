@@ -9,6 +9,7 @@ from typing import ClassVar, Any
 
 import pandas as pd
 
+from vm_logging.exceptions import ParameterNotFoundException
 from .base_engine import BaseEngine
 from ..data_preprocessors import get_data_preprocessing_class
 from ..loading_types import LoadingTypes
@@ -24,13 +25,15 @@ class VbmEngine(BaseEngine):
 
     def load_data(self, data: list[dict[str, Any]], loading_id:  str,
                   package_id: str, loading_type: LoadingTypes) -> bool:
-        """ Loads data
+        """ Loads data.
         :param data: data array
         :param loading_id: id of loading object, which uses to load data
         :param package_id: id of package object, which uses to load data
         :param loading_type: type of loading - full or increment
         :return rue if loading is successful else False
         """
+
+        self._check_data(data)
 
         pd_data = self.preprocess_data(data, loading_id, package_id)
 
@@ -65,4 +68,33 @@ class VbmEngine(BaseEngine):
         data_preprocessor = get_data_preprocessing_class()()
 
         return data_preprocessor.preprocess_data_for_loading(data, loading_id, package_id)
-    
+
+    def _check_data(self, data: list[dict[str, Any]]) -> None:
+
+        wrong_row_numbers = []
+
+        for num, row in enumerate(data):
+            match row:
+                case {'organisation': {'id': str(), 'name': str()},
+                      'scenario': {'id': str(), 'name': str()},
+                      'period': str(),
+                      'indicator': {'type': str(), 'name': str(), 'id': str()},
+                      'analytics': list(r_analytics),
+                      'value': int() | float()}:
+
+                    for r_analytics_row in r_analytics:
+                        match r_analytics_row:
+                            case {'kind': str(), 'type': str(), 'name': str(), 'id': str()}:
+                                pass
+                            case _:
+                                wrong_row_numbers.append(num + 1)
+                                break
+                case _:
+                    wrong_row_numbers.append(num + 1)
+
+            if wrong_row_numbers:
+                if len(wrong_row_numbers) > 10:
+                    wrong_row_numbers = wrong_row_numbers[:10]
+                wrong_row_numbers = [str(el) for el in wrong_row_numbers]
+                raise ParameterNotFoundException('Wrong package data format'
+                                                 ' in row(s) {}'.format(', '.join(wrong_row_numbers)))

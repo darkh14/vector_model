@@ -283,34 +283,6 @@ class Package:
         if len(data) != self._check_sum:
             raise LoadingProcessException('Data checksum is not right. Right checksum is {}'.format(self._check_sum))
 
-        wrong_row_numbers = []
-
-        for num, row in enumerate(data):
-            match row:
-                case {'organisation': {'id': str(), 'name': str()},
-                      'scenario': {'id': str(), 'name': str()},
-                      'period': str(),
-                      'indicator': {'type': str(), 'name': str(), 'id': str()},
-                      'analytics': list(r_analytics),
-                      'value': int() | float()}:
-
-                    for r_analytics_row in r_analytics:
-                        match r_analytics_row:
-                            case {'kind': str(), 'type': str(), 'name': str(), 'id': str()}:
-                                pass
-                            case _:
-                                wrong_row_numbers.append(num + 1)
-                                break
-                case _:
-                    wrong_row_numbers.append(num + 1)
-
-            if wrong_row_numbers:
-                if len(wrong_row_numbers) > 10:
-                    wrong_row_numbers = wrong_row_numbers[:10]
-                wrong_row_numbers = [str(el) for el in wrong_row_numbers]
-                raise ParameterNotFoundException('Wrong package data format'
-                                                 ' in row(s) {}'.format(', '.join(wrong_row_numbers)))
-
     def _get_engine(self) -> BaseEngine:
         """ For getting engine object to load data
         :return loading engine

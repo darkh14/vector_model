@@ -17,9 +17,15 @@ def get_jobs_info(parameters: dict[str, Any]) -> dict[str, Any]:
     :param parameters: dict of request parameters
     :return: dict if job information
     """
-    job_filter = parameters.get('filter')
+    result = None
 
-    return {'jobs': BackgroundJob.get_jobs_info(job_filter)}
+    match parameters:
+        case {'filter': dict(jobs_filter)} if jobs_filter:
+            result = {'jobs': BackgroundJob.get_jobs_info(job_filter)}
+        case _:
+            raise ParameterNotFoundException('Wrong filter parameters format')
+
+    return result
 
 
 def delete_background_job(parameters: dict[str, Any]) -> str:
