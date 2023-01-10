@@ -17,15 +17,10 @@ def get_jobs_info(parameters: dict[str, Any]) -> dict[str, Any]:
     :param parameters: dict of request parameters
     :return: dict if job information
     """
-    result = None
 
-    match parameters:
-        case {'filter': dict(jobs_filter)} if jobs_filter:
-            result = {'jobs': BackgroundJob.get_jobs_info(job_filter)}
-        case _:
-            raise ParameterNotFoundException('Wrong filter parameters format')
+    job_filter = parameters.get('filter')
 
-    return result
+    return {'jobs': BackgroundJob.get_jobs_info(job_filter)}
 
 
 def delete_background_job(parameters: dict[str, Any]) -> str:
@@ -34,16 +29,12 @@ def delete_background_job(parameters: dict[str, Any]) -> str:
     :return: result of job deleting
     """
 
-    job_from_parameters = parameters.get('job')
-    if not job_from_parameters:
-        raise ParameterNotFoundException('Parameter "job" is not found in request parameters')
-
-    job_id = job_from_parameters.get('id')
-    if not job_id:
-        raise ParameterNotFoundException('Parameter "id" is not found in job parameter')
-
-    background_job = BackgroundJob(job_id)
-    background_job.delete()
+    match parameters:
+        case {'job': {'id': str(job_id)}} if job_id:
+            background_job = BackgroundJob(job_id)
+            background_job.delete()
+        case _:
+            raise ParameterNotFoundException('Wrong request parameters format.Check "job" parameter')
 
     return 'Background job is deleted'
 
