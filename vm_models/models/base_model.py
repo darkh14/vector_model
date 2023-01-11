@@ -18,6 +18,7 @@ from ..data_transformers import get_transformer_class, base_transformer
 from ..engines import get_engine_class, base_engine
 from ..model_types import DataTransformersTypes
 from vm_background_jobs.controller import set_background_job_interrupted
+from data_processing.loading_engines import get_engine_class as get_loading_engine_class
 
 __all__ = ['Model']
 
@@ -138,7 +139,7 @@ class Model:
         :param x: input data for predicting
         :return: predicted output data
         """
-        self._check_before_predicting()
+        self._check_before_predicting(x)
 
         result = self._predict_model(x)
 
@@ -221,7 +222,7 @@ class Model:
         if self.fitting_parameters.fitting_is_started:
             raise ModelException('Another fitting is started yet. Wait for end of fitting')
 
-    def _check_before_predicting(self) -> None:
+    def _check_before_predicting(self, inputs: list[dict[str, Any]]) -> None:
         """
         For checking statuses and other parameters before predicting. Raises ModelException if checking is failed
         """
@@ -231,6 +232,10 @@ class Model:
         if not self.fitting_parameters.is_fit:
             raise ModelException(('Model "{}" id "{}" is not fit. ' +
                                  'Fit model before predicting').format(self.parameters.name, self._id))
+
+        loading_engine = get_loading_engine_class()()
+
+        loading_engine.check_data(inputs)
 
     def _get_model_estimators(self, for_predicting: bool = False,
                               fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
@@ -259,7 +264,7 @@ class Model:
     def _get_estimator(self, transformer_type: DataTransformersTypes,
                        fitting_parameters: Optional[dict[str, Any]] = None) -> base_transformer.BaseTransformer:
         """
-        Gets estimator according to type
+        Gets estimator according to type.
         :param transformer_type: type of estimator
         :param fitting_parameters: parameters of fitting
         :return: required estimator

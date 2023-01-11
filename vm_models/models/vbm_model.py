@@ -23,7 +23,7 @@ from ..engines import get_engine_class
 from vm_background_jobs.decorators import execute_in_background
 from vm_background_jobs.controller import set_background_job_interrupted
 from id_generator import IdGenerator
-
+from data_processing.loading_engines import get_engine_class as get_loading_engine_class
 
 __all__ = ['VbmModel', 'get_additional_actions']
 
@@ -152,6 +152,13 @@ class VbmModel(Model):
         :param inputs_minus: minus deviation input data
         :return: calculated sensitivity analysis data
         """
+
+        loading_engine = get_loading_engine_class()()
+
+        loading_engine.check_data(inputs_0, checking_parameter_name='inputs_0')
+        loading_engine.check_data(inputs_plus, checking_parameter_name='inputs_plus')
+        loading_engine.check_data(inputs_minus, checking_parameter_name='inputs_minus')
+
         pipeline = self._get_model_pipeline(for_predicting=True)
         data_0 = pipeline.transform(inputs_0)
 
@@ -239,7 +246,7 @@ class VbmModel(Model):
         :param get_graph: true if we want to return also graph data
         :return: calculated fa data
         """
-        self._check_before_fa_calculation()
+        self._check_before_fa_calculation(inputs, outputs, input_indicators, output_indicator)
 
         # method of chain substitutions
         result_data = []
@@ -397,7 +404,7 @@ class VbmModel(Model):
 
     def _get_indicator_from_column_name(self, column_name: str) -> dict[str, Any]:
         """
-        Gets dict of indicator from column name
+        Gets dict of indicator from column name.
         :param column_name: name of columns
         :return: indicator dict
         """
@@ -407,8 +414,8 @@ class VbmModel(Model):
 
     def _get_indicator_from_short_id(self, short_id: str) -> dict[str, Any]:
         """
-        Gets dict of indicator from its short id
-        :param short_id: short id if indicator
+        Gets dict of indicator from its short id.
+        :param short_id: short id if indicator.
         :return: indicator dict
         """
         indicators = [ind for ind in (self.parameters.x_indicators + self.parameters.y_indicators)
@@ -418,7 +425,7 @@ class VbmModel(Model):
 
     def _get_analytics_from_column_name(self, column_name: str) -> list[dict[str, Any]]:
         """
-        Gets analytic list from column name
+        Gets analytic list from column name.
         :param column_name: name of column
         :return: analytic list
         """
@@ -440,7 +447,8 @@ class VbmModel(Model):
         if self.fitting_parameters.fi_calculation_is_started:
             set_background_job_interrupted(self.fitting_parameters.fi_calculation_job_id)
 
-    def _check_before_fa_calculation(self) -> None:
+    def _check_before_fa_calculation(self, inputs: list[dict[str, Any]], outputs: dict[str, Any],
+                            input_indicators: list[dict[str, Any]], output_indicator: dict[str, Any]) -> None:
         """
         Checks parameters before fa calculation. Raises ModelException if checking is failed
         """
@@ -450,6 +458,36 @@ class VbmModel(Model):
         if not self.fitting_parameters.is_fit:
             raise ModelException('Error of calculating factor analysis data. Model is not fit. ' +
                                  'Train the model before calculating')
+
+        loading_engine = get_loading_engine_class()()
+
+        loading_engine.check_data(inputs, checking_parameter_name='inputs', for_fa=True)
+
+        match outputs:
+            case {'based': {'name': str(), 'id': str(), 'periodicity': str(), 'value': int() | float()},
+                  'calculated': {'name': str(), 'id': str(), 'periodicity': str(), 'value': int() | float()}}:
+                pass
+            case _:
+                raise ParameterNotFoundException('Wrong "outputs" parameter format')
+
+        wrong_rows = []
+        for num, ind_row in enumerate(input_indicators):
+            match ind_row:
+                case {'type': str(), 'name': str(), 'id': str()}:
+                    pass
+                case _:
+                    wrong_rows.append(num + 1)
+
+        if wrong_rows:
+            wrong_rows = list(map(str, wrong_rows))
+            raise ParameterNotFoundException('Wrong "input_indicators" parameter format. '
+                                             'Error(s) in row(s) {}'.format(', '.join(wrong_rows)))
+
+        match output_indicator:
+            case {'type': str(), 'name': str(), 'id': str()}:
+                pass
+            case _:
+                ParameterNotFoundException('Wrong "output_indicator" parameter format')
 
     def _get_output_value_for_fa(self, input_data: pd.DataFrame,
                                  outputs: dict[str, Any],
@@ -648,24 +686,26 @@ def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]
     :param parameters: request parameters
     :return: result (info) of calculating fi
     """
-    if not parameters.get('model'):
-        raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
-    if 'fi_parameters' not in parameters['model']:
-        raise ParameterNotFoundException('Parameter "fi_parameters" not found in model parameters')
+    result = None
 
-    if 'fi_parameters' in parameters['model']:
-        if 'filter' in parameters['model']['fi_parameters']:
-            input_filter = parameters['model']['fi_parameters']['filter']
-            filter_obj = get_fitting_filter_class()(input_filter)
-            parameters['model']['fi_parameters']['filter'] = filter_obj.get_value_as_model_parameter()
+    match parameters:
+        case {'model': {'id': str(model_id), 'fi_parameters': dict(fi_parameters)}} if model_id:
+            c_fi_parameters = fi_parameters.copy()
 
-        if 'job_id' in parameters:
-            parameters['model']['fi_parameters']['job_id'] = parameters['job_id']
+            if 'filter' in c_fi_parameters:
+                input_filter = c_fi_parameters['filter']
+                filter_obj = get_fitting_filter_class()(input_filter)
+                c_fi_parameters['filter'] = filter_obj.get_value_as_model_parameter()
 
-    model = VbmModel(parameters['model']['id'])
+            if 'job_id' in parameters:
+                c_fi_parameters['job_id'] = parameters['job_id']
 
-    result = model.calculate_feature_importances(parameters['model']['fi_parameters'])
+            model = VbmModel(model_id)
+            result = model.calculate_feature_importances(c_fi_parameters)
+
+        case _:
+            raise ParameterNotFoundException('Wrong request parameters format! Check "model" parameter')
 
     return result
 
@@ -676,12 +716,15 @@ def _get_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]:
     :param parameters: request parameters
     :return: fi data
     """
-    if not parameters.get('model'):
-        raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
-    model = VbmModel(parameters['model']['id'])
+    result = None
 
-    result = model.get_feature_importances()
+    match parameters:
+        case {'model': {'id': str(model_id)}} if model_id:
+            model = VbmModel(model_id)
+            result = model.get_feature_importances()
+        case _:
+            raise ParameterNotFoundException('Wrong request parameters format! Check "model" parameter')
 
     return result
 
@@ -692,12 +735,15 @@ def _drop_fi_calculation(parameters: dict[str, Any]) -> str:
     :param parameters: request parameters
     :return: result of dropping
     """
-    if not parameters.get('model'):
-        raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
-    model = VbmModel(parameters['model']['id'])
+    result = None
 
-    result = model.drop_fi_calculation()
+    match parameters:
+        case {'model': {'id': str(model_id)}} if model_id:
+            model = VbmModel(model_id)
+            result = model.drop_fi_calculation()
+        case _:
+            raise ParameterNotFoundException('Wrong request parameters format! Check "model" parameter')
 
     return result
 
@@ -708,20 +754,18 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
     :param parameters: request parameters
     :return: calculated sa data
     """
-    if not parameters.get('model'):
-        raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
+    result = None
 
-    check_fields = ['inputs_0', 'inputs_plus', 'inputs_minus']
-
-    for field in check_fields:
-        if field not in parameters:
-            raise ParameterNotFoundException('Parameter "{}" is not found in request parameters'.format(field))
-
-    model = VbmModel(parameters['model']['id'])
-
-    result = model.get_sensitivity_analysis(parameters['inputs_0'],
-                                            parameters['inputs_plus'],
-                                            parameters['inputs_minus'])
+    match parameters:
+        case {'model': {'id': str(model_id)},
+              'inputs_0': list(inputs_0),
+              'inputs_plus': list(inputs_plus),
+              'inputs_minus': list(inputs_minus)} if model_id:
+            model = VbmModel(model_id)
+            result = model.get_sensitivity_analysis(inputs_0, inputs_plus, inputs_minus)
+        case _:
+            raise ParameterNotFoundException('Wrong request parameters format! Check "model", "inputs_0", '
+                                             '"inputs_plus", "inputs_minus" parameters')
 
     return result
 
@@ -732,18 +776,20 @@ def _get_factor_analysis_data(parameters: dict[str, Any]) -> dict[str, Any]:
     :param parameters: request parameters
     :return: calculated fa data
     """
-    if not parameters.get('model'):
-        raise ParameterNotFoundException('Parameter "model" is not found in request parameters')
 
-    check_fields = ['inputs', 'input_indicators', 'outputs', 'output_indicator']
+    result = None
 
-    for field in check_fields:
-        if field not in parameters:
-            raise ParameterNotFoundException('Parameter "{}" is not found in request parameters'.format(field))
-
-    model = VbmModel(parameters['model']['id'])
-
-    result = model.get_factor_analysis(parameters['inputs'], parameters['outputs'], parameters['input_indicators'],
-                                       parameters['output_indicator'], parameters.get('get_graph'))
+    match parameters:
+        case {'model': {'id': str(model_id)},
+              'inputs': list(inputs),
+              'input_indicators': list(input_indicators),
+              'outputs': dict(outputs),
+              'output_indicator': dict(output_indicator)} if model_id:
+            model = VbmModel(model_id)
+            result = model.get_factor_analysis(inputs, outputs, input_indicators, output_indicator,
+                                               parameters.get('get_graph'))
+        case _:
+            raise ParameterNotFoundException('Wrong request parameters format! Check "model", "inputs", '
+                                             '"input_indicators", "outputs", "output_indicator" parameters')
 
     return result

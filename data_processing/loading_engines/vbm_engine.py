@@ -33,7 +33,7 @@ class VbmEngine(BaseEngine):
         :return rue if loading is successful else False
         """
 
-        self._check_data(data)
+        self.check_data(data)
 
         pd_data = self.preprocess_data(data, loading_id, package_id)
 
@@ -69,8 +69,16 @@ class VbmEngine(BaseEngine):
 
         return data_preprocessor.preprocess_data_for_loading(data, loading_id, package_id)
 
-    def _check_data(self, data: list[dict[str, Any]]) -> None:
-
+    def check_data(self, data: list[dict[str, Any]], checking_parameter_name: str = 'data',
+                   for_fa: bool = False, **kwargs) -> None:
+        """
+        Checks raw data: checks fields content in rows of data.
+        :param data: data list to check
+        :param checking_parameter_name name of checking parameter, which will be displayed in error message
+        :param for_fa: True if checking for factor analysis else False
+        :param kwargs additional parameters (for inheriting)
+        :return None
+        """
         wrong_row_numbers = []
 
         for num, row in enumerate(data):
@@ -80,15 +88,22 @@ class VbmEngine(BaseEngine):
                       'period': str(),
                       'indicator': {'type': str(), 'name': str(), 'id': str()},
                       'analytics': list(r_analytics),
-                      'value': int() | float()}:
+                      'value': int() | float()} if not for_fa:
 
-                    for r_analytics_row in r_analytics:
-                        match r_analytics_row:
-                            case {'kind': str(), 'type': str(), 'name': str(), 'id': str()}:
-                                pass
-                            case _:
-                                wrong_row_numbers.append(num + 1)
-                                break
+                    if not self._check_data_analytics(r_analytics):
+                        wrong_row_numbers.append(num + 1)
+
+                case {'organisation': {'id': str(), 'name': str()},
+                      'is_main_period': bool(),
+                      'period': str(),
+                      'indicator': {'type': str(), 'name': str(), 'id': str()},
+                      'analytics': list(r_analytics),
+                      'value_base': int() | float(),
+                      'value_calculated': int() | float()} if for_fa:
+
+                    if not self._check_data_analytics(r_analytics):
+                        wrong_row_numbers.append(num + 1)
+
                 case _:
                     wrong_row_numbers.append(num + 1)
 
@@ -96,5 +111,23 @@ class VbmEngine(BaseEngine):
                 if len(wrong_row_numbers) > 10:
                     wrong_row_numbers = wrong_row_numbers[:10]
                 wrong_row_numbers = [str(el) for el in wrong_row_numbers]
-                raise ParameterNotFoundException('Wrong package data format'
+                raise ParameterNotFoundException('Wrong "{}" parameter format'.format(checking_parameter_name) +
                                                  ' in row(s) {}'.format(', '.join(wrong_row_numbers)))
+
+    def _check_data_analytics(self, analytics: list[dict[str, Any]]) -> bool:
+        """
+        Method to check format of analytic lis in row of input data
+        :param analytics: analytic list to check
+        :return: result of checking - True is OK (no errors)
+        """
+        result = True
+
+        for r_analytics_row in analytics:
+            match r_analytics_row:
+                case {'kind': str(), 'type': str(), 'name': str(), 'id': str()}:
+                    pass
+                case _:
+                    result = False
+                    break
+
+        return result

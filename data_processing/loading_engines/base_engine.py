@@ -42,3 +42,13 @@ class BaseEngine(ABC):
         :param package_id: id of data package
         :return True if deleting is successful else False
         """
+
+    @abstractmethod
+    def check_data(self, data: list[dict[str, Any]], checking_parameter_name: str = 'data', **kwargs) -> None:
+        """
+        Checks raw data: checks fields content in rows of data.
+        :param data: data list to check
+        :param checking_parameter_name name of checking parameter, which will be displayed in error message
+        :param kwargs additional parameters
+        :return None
+        """
