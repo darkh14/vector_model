@@ -93,7 +93,7 @@ class VbmFittingFilter(FittingFilter):
     def _transform_period_value(self, value, transform_to_date: bool = False) -> Any:
         """
         Transforms str fields in value as dates. Uses recursion
-        :param value: value to transform
+        :param value: value to transform.
         :param transform_to_date: transform current value to date
         :return: transformed value
         """
