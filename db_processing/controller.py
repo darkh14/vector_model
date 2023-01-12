@@ -20,7 +20,7 @@ __all__ = ['get_connector', 'check_connection', 'initialize_connector', 'drop_co
 def get_connector(db_path: str = '') -> connectors.base_connector.Connector:
     """ Gets correct connector. Tries to get connector from cache (find by db_path).
         If it could not find correct connector, it creates connector by DB_TYPE and add to CONNECTORS cache
-        :param db_path: path to required db
+        :param db_path: path to required db.
         :return: db connector object
     """
 
