@@ -352,8 +352,8 @@ class Loading:
                         self._packages.append(package)
                     case _:
                         raise ParametersFormatError('Wrong package parameters ' +
-                                                         'format in package number {}! '.format(package_num) +
-                                                         'Check "packages" parameter')
+                                                    'format in package number {}! '.format(package_num) +
+                                                    'Check "packages" parameter')
 
         self._number_of_packages: int = len(self._packages)
         self._error = ''
