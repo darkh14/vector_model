@@ -481,7 +481,7 @@ class VbmModel(Model):
         if wrong_rows:
             wrong_rows = list(map(str, wrong_rows))
             raise ParametersFormatError('Wrong "input_indicators" parameter format. '
-                                             'Error(s) in row(s) {}'.format(', '.join(wrong_rows)))
+                                        'Error(s) in row(s) {}'.format(', '.join(wrong_rows)))
 
         match output_indicator:
             case {'type': str(), 'name': str(), 'id': str()}:
@@ -765,7 +765,7 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
             result = model.get_sensitivity_analysis(inputs_0, inputs_plus, inputs_minus)
         case _:
             raise ParametersFormatError('Wrong request parameters format! Check "model", "inputs_0", '
-                                             '"inputs_plus", "inputs_minus" parameters')
+                                        '"inputs_plus", "inputs_minus" parameters')
 
     return result
 
@@ -790,6 +790,6 @@ def _get_factor_analysis_data(parameters: dict[str, Any]) -> dict[str, Any]:
                                                parameters.get('get_graph'))
         case _:
             raise ParametersFormatError('Wrong request parameters format! Check "model", "inputs", '
-                                             '"input_indicators", "outputs", "output_indicator" parameters')
+                                        '"input_indicators", "outputs", "output_indicator" parameters')
 
     return result
