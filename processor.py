@@ -285,7 +285,7 @@ class _FileProcessor(Processor):
     def process(self, environ: None, start_response: None) -> list[Any]:
         """ Main method for processing requests (file while testing).
         Parameters are for compatible. In file mode they are not needed
-        :param environ: None
+        :param environ: None.
         :param start_response: None
         :return response of request
         """
@@ -374,4 +374,3 @@ def _get_processor(environ: Optional[dict[str, Any]]) -> Processor:
         return _HttpProcessor()
     else:
         return _FileProcessor()
-
