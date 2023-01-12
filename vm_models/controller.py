@@ -13,7 +13,7 @@ from functools import wraps
 
 from vm_models.models import base_model, get_model_class
 from vm_models.models import get_additional_actions as model_get_actions
-from vm_logging.exceptions import ModelException, ParameterNotFoundException
+from vm_logging.exceptions import ModelException, ParametersFormatError
 from vm_background_jobs.decorators import execute_in_background
 from .model_filters import get_fitting_filter_class
 
@@ -46,7 +46,7 @@ def _transform_model_parameters_for_fitting(func: Callable):
                 parameters['model']['fitting_parameters'] = c_fitting_parameters
 
             case _:
-                raise ParameterNotFoundException('Parameter "fitting_parameters" not found in model parameters')
+                raise ParametersFormatError('Parameter "fitting_parameters" not found in model parameters')
 
         result = func(parameters)
         return result
@@ -69,7 +69,7 @@ def fit(parameters: dict[str, Any]) -> dict[str, Any]:
             model = get_model_class()(model_id)
             result = model.fit(fitting_parameters)
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format. Check "model" parameter')
+            raise ParametersFormatError('Wrong request parameters format. Check "model" parameter')
 
     return result
 
@@ -88,7 +88,7 @@ def predict(parameters: dict[str, Any]) -> dict[str, Any]:
             model = get_model_class()(model_id)
             result = model.predict(inputs)
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format. Check "model" and inputs parameters')
+            raise ParametersFormatError('Wrong request parameters format. Check "model" and inputs parameters')
 
     return result
 
@@ -106,7 +106,7 @@ def initialize(parameters: dict[str, Any]) -> dict[str, Any]:
             model = get_model_class()(model_id)
             result = model.initialize(parameters['model'])
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format. Check "model" parameter')
+            raise ParametersFormatError('Wrong request parameters format. Check "model" parameter')
 
     return result
 
@@ -124,7 +124,7 @@ def drop(parameters: dict[str, Any]) -> str:
             model = get_model_class()(model_id)
             result = model.drop()
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format. Check "model" parameter')
+            raise ParametersFormatError('Wrong request parameters format. Check "model" parameter')
 
     return result
 
@@ -142,7 +142,7 @@ def get_info(parameters: dict[str, Any]) -> dict[str, Any]:
             model = get_model_class()(model_id)
             result = model.get_info()
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format. Check "model" parameter')
+            raise ParametersFormatError('Wrong request parameters format. Check "model" parameter')
 
     return result
 
@@ -160,7 +160,7 @@ def drop_fitting(parameters: dict[str, Any]) -> str:
             model = get_model_class()(model_id)
             result = model.drop_fitting()
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format. Check "model" parameter')
+            raise ParametersFormatError('Wrong request parameters format. Check "model" parameter')
 
     return result
 

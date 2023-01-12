@@ -11,7 +11,7 @@
 from typing import Any, Optional
 from _datetime import datetime
 
-from vm_logging.exceptions import LoadingProcessException, ParameterNotFoundException
+from vm_logging.exceptions import LoadingProcessException, ParametersFormatError
 from db_processing import get_connector
 from .loading_engines import BaseEngine, get_engine_class
 from .loading_types import LoadingTypes, LoadingStatuses
@@ -351,7 +351,7 @@ class Loading:
                                           check_sum=check_sum)
                         self._packages.append(package)
                     case _:
-                        raise ParameterNotFoundException('Wrong package parameters ' +
+                        raise ParametersFormatError('Wrong package parameters ' +
                                                          'format in package number {}! '.format(package_num) +
                                                          'Check "packages" parameter')
 
@@ -418,7 +418,7 @@ class Loading:
             case {'id': str(package_id), 'data': list(package_data)} if package_id and package_data:
                 pass
             case _:
-                raise ParameterNotFoundException('Wrong package parameters format!')
+                raise ParametersFormatError('Wrong package parameters format!')
 
         if self._status not in [LoadingStatuses.REGISTERED, LoadingStatuses.PARTIALLY_LOADED]:
             raise LoadingProcessException('Loading status must be "registered" or "partially loaded". '
@@ -563,7 +563,7 @@ class Loading:
             case {'id': package_id, 'status': status_parameter} if package_id and status_parameter:
                 pass
             case  _:
-                raise ParameterNotFoundException('Wrong package parameters format!')
+                raise ParametersFormatError('Wrong package parameters format!')
 
         current_packages = [package for package in self._packages if package.id == package_id]
 

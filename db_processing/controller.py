@@ -8,7 +8,7 @@
 from . import connectors
 import vm_settings
 from typing import Type, Any, Optional
-from vm_logging.exceptions import DBConnectorException, ParameterNotFoundException
+from vm_logging.exceptions import DBConnectorException
 
 CONNECTORS: list[connectors.base_connector.Connector] = []
 CURRENT_CONNECTOR: Optional[connectors.base_connector.Connector] = None

@@ -17,7 +17,7 @@ import plotly.graph_objects as go
 
 from .base_model import Model
 from ..model_types import DataTransformersTypes
-from vm_logging.exceptions import ModelException, ParameterNotFoundException
+from vm_logging.exceptions import ModelException, ParametersFormatError
 from ..model_filters import get_fitting_filter_class
 from ..engines import get_engine_class
 from vm_background_jobs.decorators import execute_in_background
@@ -468,7 +468,7 @@ class VbmModel(Model):
                   'calculated': {'name': str(), 'id': str(), 'periodicity': str(), 'value': int() | float()}}:
                 pass
             case _:
-                raise ParameterNotFoundException('Wrong "outputs" parameter format')
+                raise ParametersFormatError('Wrong "outputs" parameter format')
 
         wrong_rows = []
         for num, ind_row in enumerate(input_indicators):
@@ -480,14 +480,14 @@ class VbmModel(Model):
 
         if wrong_rows:
             wrong_rows = list(map(str, wrong_rows))
-            raise ParameterNotFoundException('Wrong "input_indicators" parameter format. '
+            raise ParametersFormatError('Wrong "input_indicators" parameter format. '
                                              'Error(s) in row(s) {}'.format(', '.join(wrong_rows)))
 
         match output_indicator:
             case {'type': str(), 'name': str(), 'id': str()}:
                 pass
             case _:
-                ParameterNotFoundException('Wrong "output_indicator" parameter format')
+                ParametersFormatError('Wrong "output_indicator" parameter format')
 
     def _get_output_value_for_fa(self, input_data: pd.DataFrame,
                                  outputs: dict[str, Any],
@@ -705,7 +705,7 @@ def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]
             result = model.calculate_feature_importances(c_fi_parameters)
 
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format! Check "model" parameter')
+            raise ParametersFormatError('Wrong request parameters format! Check "model" parameter')
 
     return result
 
@@ -724,7 +724,7 @@ def _get_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]:
             model = VbmModel(model_id)
             result = model.get_feature_importances()
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format! Check "model" parameter')
+            raise ParametersFormatError('Wrong request parameters format! Check "model" parameter')
 
     return result
 
@@ -743,7 +743,7 @@ def _drop_fi_calculation(parameters: dict[str, Any]) -> str:
             model = VbmModel(model_id)
             result = model.drop_fi_calculation()
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format! Check "model" parameter')
+            raise ParametersFormatError('Wrong request parameters format! Check "model" parameter')
 
     return result
 
@@ -764,7 +764,7 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
             model = VbmModel(model_id)
             result = model.get_sensitivity_analysis(inputs_0, inputs_plus, inputs_minus)
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format! Check "model", "inputs_0", '
+            raise ParametersFormatError('Wrong request parameters format! Check "model", "inputs_0", '
                                              '"inputs_plus", "inputs_minus" parameters')
 
     return result
@@ -789,7 +789,7 @@ def _get_factor_analysis_data(parameters: dict[str, Any]) -> dict[str, Any]:
             result = model.get_factor_analysis(inputs, outputs, input_indicators, output_indicator,
                                                parameters.get('get_graph'))
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format! Check "model", "inputs", '
+            raise ParametersFormatError('Wrong request parameters format! Check "model", "inputs", '
                                              '"input_indicators", "outputs", "output_indicator" parameters')
 
     return result

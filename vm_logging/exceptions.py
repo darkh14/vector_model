@@ -9,6 +9,7 @@ __all__ = ['VMBaseException',
            'RequestProcessException',
            'SettingsControlException',
            'ParameterNotFoundException',
+           'ParametersFormatError',
            'DBConnectorException',
            'LoadingProcessException',
            'BackgroundJobException',
@@ -94,6 +95,17 @@ class ParameterNotFoundException(VMBaseException):
         :return: error message
         """
         return 'Parameter "{}" is not found in request parameters! '.format(self._missing_parameter)
+
+
+class ParametersFormatError(VMBaseException):
+    """ Custom exception for format error (in match - case) """
+    def _get_full_error_message(self) -> str:
+        """
+        Error message for exception
+        :return: error message
+        """
+        default_message = super()._get_full_error_message()
+        return 'Error in model! ' + default_message
 
 
 class RequestProcessException(VMBaseException):

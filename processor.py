@@ -28,7 +28,7 @@ import actions
 
 import general
 
-from vm_logging.exceptions import RequestProcessException, ParameterNotFoundException
+from vm_logging.exceptions import RequestProcessException, ParameterNotFoundException, ParametersFormatError
 from vm_settings import controller as settings_controller
 from db_processing.controller import initialize_connector, drop_connector
 
@@ -125,12 +125,12 @@ class Processor(ABC):
 
                 if request_type not in names_without_db:
                     if 'db' not in parameters and parameters['db']:
-                        raise ParameterNotFoundException('Parameter "db" not found in parameters')
+                        raise ParameterNotFoundException('db')
 
                     initialize_connector(parameters['db'])
 
             case _:
-                raise ParameterNotFoundException('Wrong request parameters format!')
+                raise ParametersFormatError('Wrong request parameters format!')
 
         method = self._request_methods.get(request_type)
 

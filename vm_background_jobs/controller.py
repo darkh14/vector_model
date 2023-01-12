@@ -6,7 +6,7 @@
 """
 
 from typing import Any
-from vm_logging.exceptions import ParameterNotFoundException
+from vm_logging.exceptions import ParametersFormatError
 from .background_jobs import BackgroundJob
 
 __all__ = ['get_jobs_info', 'delete_background_job', 'set_background_job_interrupted']
@@ -34,7 +34,7 @@ def delete_background_job(parameters: dict[str, Any]) -> str:
             background_job = BackgroundJob(job_id)
             background_job.delete()
         case _:
-            raise ParameterNotFoundException('Wrong request parameters format.Check "job" parameter')
+            raise ParametersFormatError('Wrong request parameters format.Check "job" parameter')
 
     return 'Background job is deleted'
 

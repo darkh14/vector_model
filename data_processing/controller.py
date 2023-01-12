@@ -16,7 +16,7 @@
 
 from typing import Any, Callable
 
-from vm_logging.exceptions import RequestProcessException, ParameterNotFoundException
+from vm_logging.exceptions import RequestProcessException, ParametersFormatError
 from db_processing import get_connector
 from .loader import Loading, delete_all_data
 from vm_background_jobs.decorators import execute_in_background
@@ -40,7 +40,7 @@ def initialize_loading(parameters: dict[str, Any]) -> dict[str, Any]:
 
             result = loading.initialize()
         case _:
-            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+            raise ParametersFormatError('Wrong loading parameters format! Check "loading" parameter')
 
     return result
 
@@ -57,7 +57,7 @@ def load_package(parameters: dict[str, Any]) -> str:
             loading = Loading(loading_id)
             loading.load_package(package)
         case _:
-            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+            raise ParametersFormatError('Wrong loading parameters format! Check "loading" parameter')
 
     return 'Package loading is started' if parameters.get('background_job') else 'Package is loaded'
 
@@ -76,7 +76,7 @@ def drop_loading(parameters: dict[str, Any]) -> dict[str, Any]:
 
             result = loading.drop(need_to_delete_data=parameters['loading'].get('delete_data'))
         case _:
-            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+            raise ParametersFormatError('Wrong loading parameters format! Check "loading" parameter')
 
     return result
 
@@ -92,7 +92,7 @@ def set_loading_status(parameters: dict[str, Any]) -> str:
             loading = Loading(loading_id)
             loading.set_status(status, set_for_packages=True, from_outside=True)
         case _:
-            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+            raise ParametersFormatError('Wrong loading parameters format! Check "loading" parameter')
 
     return 'Loading status is set'
 
@@ -108,7 +108,7 @@ def set_package_status(parameters: dict[str, Any]) -> str:
             loading = Loading(loading_id)
             loading.set_package_status(package)
         case _:
-            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+            raise ParametersFormatError('Wrong loading parameters format! Check "loading" parameter')
 
     return 'Package status is set'
 
@@ -126,7 +126,7 @@ def get_loading_info(parameters: dict[str, Any]) -> dict[str, Any]:
             loading = Loading(loading_id)
             info = loading.get_loading_info()
         case _:
-            raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+            raise ParametersFormatError('Wrong loading parameters format! Check "loading" parameter')
 
     return info
 
@@ -148,7 +148,7 @@ def delete_data(parameters: dict[str, Any]) -> str:
                 loading = Loading(loading_id)
                 loading.delete_data()
             case _:
-                raise ParameterNotFoundException('Wrong loading parameters format! Check "loading" parameter')
+                raise ParametersFormatError('Wrong loading parameters format! Check "loading" parameter')
 
     return 'Data are deleted'
 

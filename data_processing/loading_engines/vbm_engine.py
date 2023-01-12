@@ -9,7 +9,7 @@ from typing import ClassVar, Any
 
 import pandas as pd
 
-from vm_logging.exceptions import ParameterNotFoundException
+from vm_logging.exceptions import ParametersFormatError
 from .base_engine import BaseEngine
 from ..data_preprocessors import get_data_preprocessing_class
 from ..loading_types import LoadingTypes
@@ -111,8 +111,8 @@ class VbmEngine(BaseEngine):
                 if len(wrong_row_numbers) > 10:
                     wrong_row_numbers = wrong_row_numbers[:10]
                 wrong_row_numbers = [str(el) for el in wrong_row_numbers]
-                raise ParameterNotFoundException('Wrong "{}" parameter format'.format(checking_parameter_name) +
-                                                 ' in row(s) {}'.format(', '.join(wrong_row_numbers)))
+                raise ParametersFormatError('Wrong "{}" parameter format'.format(checking_parameter_name) +
+                                            ' in row(s) {}'.format(', '.join(wrong_row_numbers)))
 
     def _check_data_analytics(self, analytics: list[dict[str, Any]]) -> bool:
         """
