@@ -32,7 +32,7 @@ class ModelParameters:
         """
         Defines data filter object
         """
-        self.data_filter = get_fitting_filter_class()({}, for_model=True)
+        self.data_filter = get_fitting_filter_class()({})
 
     def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
         """

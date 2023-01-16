@@ -15,19 +15,17 @@ class FittingFilter:
     """
     service_name: ClassVar[str] = ''
 
-    def __init__(self, filter_value: bytes | dict[str, Any], for_model: bool = False) -> None:
+    def __init__(self, filter_value: bytes | dict[str, Any]) -> None:
         """
-        Defines local filter value and local parameter "for_model"
+        Defines local filter value
         :param filter_value: input filter value
-        :param for_model: parameter says that filter will be used in model, not in fitting
         """
         self._value: bytes | dict[str, Any] = filter_value
-        self._for_model: bool = for_model
 
-    def get_value_as_model_parameter(self) -> bytes:
+    def get_value_as_bytes(self) -> bytes:
         """
-        Convert value to write it to db as a model parameter
-        :return: value as a model parameter
+        Convert value to bytes
+        :return: value as bytes
         """
         return self._value
 

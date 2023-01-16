@@ -296,7 +296,7 @@ class Model:
         model_to_db.update(self.parameters.get_all())
         model_to_db.update(self.fitting_parameters.get_all(for_db=True))
 
-        model_to_db['filter'] = model_to_db['filter'].get_value_as_model_parameter()
+        model_to_db['filter'] = model_to_db['filter'].get_value_as_bytes()
 
         self._db_connector.set_line('models', model_to_db, {'id': self._id})
 

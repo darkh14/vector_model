@@ -14,6 +14,8 @@ from .base_filter import FittingFilter
 
 __all__ = ['VbmFittingFilter']
 
+FILTER_TYPE = str | int | float | dict[str, Any] | list[dict[str, Any]]
+
 
 class VbmFittingFilter(FittingFilter):
     """ Class to transform input filter parameters for reading data
@@ -25,19 +27,18 @@ class VbmFittingFilter(FittingFilter):
         """
         Defines local filter value
         :param filter_value: input filter value
-        :param for_model: parameter says that filter will be used in model, not in fitting
         """
-        super().__init__(filter_value, for_model)
+        super().__init__(filter_value)
 
         if isinstance(self._value, bytes):
             self._value = pickle.loads(self._value)
         else:
-            self._value = self._transform_period_value(self._value)
+            self._value = self._transform_filter_to_inner_value(self._value)
 
-    def get_value_as_model_parameter(self) -> bytes:
+    def get_value_as_bytes(self) -> bytes:
         """
-        Converts value to write it to db as a model parameter. Uses pickle
-        :return: value as a model parameter
+        Convert value to bytes
+        :return: value as bytes
         """
         return pickle.dumps(self._value, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -50,67 +51,46 @@ class VbmFittingFilter(FittingFilter):
 
         return self._transform_dates_to_str(result)
 
-    def _get_value_db_for_model(self) -> dict[str, Any]:
+    def _transform_filter_to_inner_value(self, value: FILTER_TYPE) -> dict[str, Any]:
         """
-        Return value to use as db filter for model
-        :return: value as db filter
+        Return value to store it in object
+        :return: inner value
         """
-        data_filter = {}
-
-        for name, value in self._value.items():
-            if name in ['organisation', 'scenario']:
-                new_value = [el['id'] for el in value]
-                data_filter[name + '_id'] = new_value
-            else:
-                data_filter[name] = value
-
-        filter_list = []
-
-        for name, value in data_filter.items():
-            if name == 'date_from':
-                filter_el = {'period_date': {'$gte': datetime.strptime(value, '%d.%m.%Y')}}
-            elif name == 'date_to':
-                filter_el = {'period_date': {'$lte': datetime.strptime(value, '%d.%m.%Y')}}
-            elif isinstance(value, list):
-                filter_el = {name: {'$in': value}}
-            else:
-                filter_el = {name: value}
-
-            filter_list.append(filter_el)
-
-        if not filter_list:
-            result_filter = {}
-        elif len(filter_list) == 1:
-            result_filter = filter_list[0]
-        else:
-            result_filter = {'$and': filter_list}
+        result_filter = self._transform_filter_recursively(value)
 
         return result_filter
 
-    def _transform_period_value(self, value, transform_to_date: bool = False) -> Any:
+    def _transform_filter_recursively(self, filter_value: FILTER_TYPE, transform_date: bool = False) -> FILTER_TYPE:
         """
-        Transforms str fields in value as dates. Uses recursion
-        :param value: value to transform.
-        :param transform_to_date: transform current value to date
-        :return: transformed value
+        Converts dates and special keys to mongo format. Recursively
+        :param filter_value: value to convert
+        :param transform_date: sign that value contains date string
+        :return: converted value
         """
-        if isinstance(value, list):
-            result = []
-            for el in value:
-                result.append(self._transform_period_value(el))
-        elif isinstance(value, dict):
-            result = {}
-            for name, el in value.items():
-                if name == 'period_date':
-                    result[name] = self._transform_period_value(el, True)
-                else:
-                    result[name] = self._transform_period_value(el, transform_to_date)
-        elif transform_to_date:
-            result = datetime.strptime(value, '%d.%m.%Y')
-        else:
-            result = value
+        if isinstance(filter_value, dict):
+            new_value = {}
+            for key, value in filter_value.items():
 
-        return result
+                if key in ['_in', '_gt', '_lt', '_gte', '_lte', '_and', '_or', '_not']:
+                    sub_key = '$' + key[1:]
+                    new_value[sub_key] = self._transform_filter_recursively(value, transform_date=transform_date)
+                elif key in ['period_date', 'loading_date']:
+                    new_value[key] = self._transform_filter_recursively(value, transform_date=True)
+                else:
+                    new_value[key] = self._transform_filter_recursively(value, transform_date=transform_date)
+
+        elif isinstance(filter_value, list):
+            new_value = []
+            for el in filter_value:
+                sub_value = self._transform_filter_recursively(el, transform_date=transform_date)
+                new_value.append(sub_value)
+        else:
+            if transform_date:
+                new_value = datetime.strptime(filter_value, '%d.%m.%Y')
+            else:
+                new_value = filter_value
+
+        return new_value
 
     def _transform_dates_to_str(self, value: dict | list | int | float | str | datetime) -> \
             Optional[dict | list | int | float | str | datetime]:

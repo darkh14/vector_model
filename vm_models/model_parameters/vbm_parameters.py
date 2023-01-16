@@ -48,7 +48,7 @@ class VbmModelParameters(ModelParameters):
         :param parameters: input parameters to set
         :param without_processing: no need to convert parameters if True
         """
-        super().set_all(parameters)
+        super().set_all(parameters, without_processing)
 
         self._check_new_parameters(parameters)
 
