@@ -35,11 +35,6 @@ def _transform_model_parameters_for_fitting(func: Callable):
 
                 c_fitting_parameters = fitting_parameters.copy()
 
-                if 'filter' in c_fitting_parameters:
-                    input_filter = c_fitting_parameters['filter']
-                    filter_obj = get_fitting_filter_class()(input_filter)
-                    c_fitting_parameters['filter'] = filter_obj.get_value_as_model_parameter()
-
                 if 'job_id' in parameters:
                     c_fitting_parameters['job_id'] = parameters['job_id']
 

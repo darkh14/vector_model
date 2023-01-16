@@ -693,11 +693,6 @@ def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]
         case {'model': {'id': str(model_id), 'fi_parameters': dict(fi_parameters)}} if model_id:
             c_fi_parameters = fi_parameters.copy()
 
-            if 'filter' in c_fi_parameters:
-                input_filter = c_fi_parameters['filter']
-                filter_obj = get_fitting_filter_class()(input_filter)
-                c_fi_parameters['filter'] = filter_obj.get_value_as_model_parameter()
-
             if 'job_id' in parameters:
                 c_fi_parameters['job_id'] = parameters['job_id']
 
