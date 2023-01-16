@@ -45,7 +45,7 @@ class ModelParameters:
         self.name = parameters['name']
         self.type = parameters['type']
 
-        self.data_filter = get_fitting_filter_class()(parameters.get('filter'), for_model=True)
+        self.data_filter = get_fitting_filter_class()(parameters.get('filter'))
 
     def _check_new_parameters(self, parameters: dict[str, Any], checking_names: Optional[list] = None) -> None:
         """

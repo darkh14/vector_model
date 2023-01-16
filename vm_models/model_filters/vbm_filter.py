@@ -21,7 +21,7 @@ class VbmFittingFilter(FittingFilter):
     """
     service_name: ClassVar[str] = 'vbm'
 
-    def __init__(self, filter_value: bytes | dict[str, Any], for_model: bool = False) -> None:
+    def __init__(self, filter_value: bytes | dict[str, Any]) -> None:
         """
         Defines local filter value
         :param filter_value: input filter value
@@ -32,10 +32,7 @@ class VbmFittingFilter(FittingFilter):
         if isinstance(self._value, bytes):
             self._value = pickle.loads(self._value)
         else:
-            if self._for_model:
-                self._value = self._get_value_db_for_model()
-            else:
-                self._value = self._transform_period_value(self._value)
+            self._value = self._transform_period_value(self._value)
 
     def get_value_as_model_parameter(self) -> bytes:
         """
