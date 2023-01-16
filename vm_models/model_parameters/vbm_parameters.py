@@ -107,7 +107,7 @@ class VbmModelParameters(ModelParameters):
     @x_indicators.setter
     def x_indicators(self, value) -> None:
         """
-        Property x_indicators setter. Sets self._x_indicators value
+        Property x_indicators setter. Sets self._x_indicators value.
         :param value: value to set
         """
         x_indicators = deepcopy(value)
@@ -121,7 +121,7 @@ class VbmModelParameters(ModelParameters):
     @y_indicators.setter
     def y_indicators(self, value):
         """
-        Property y_indicators setter. Sets self._y_indicators value
+        Property y_indicators setter. Sets self._y_indicators value.
         :param value: value to set
         """
         y_indicators = deepcopy(value)
@@ -337,7 +337,7 @@ class VbmFittingParameters(FittingParameters):
         self.fi_calculation_job_pid = os.getpid()
 
         if fi_parameters.get('job_id'):
-            self.fitting_job_id = fi_parameters['job_id']
+            self.fi_calculation_job_id = fi_parameters['job_id']
 
     def set_end_fi_calculation(self) -> None:
         """
@@ -411,7 +411,7 @@ class VbmFittingParameters(FittingParameters):
     @x_analytics.setter
     def x_analytics(self, value: list[dict[str, Any]]) -> None:
         """
-        Property x_analytics setter. Sets self._x_analytics value
+        Property x_analytics setter. Sets self._x_analytics value.
         :param value: value to set
         """
         x_analytics = deepcopy(value)
@@ -425,7 +425,7 @@ class VbmFittingParameters(FittingParameters):
     @y_analytics.setter
     def y_analytics(self, value: list[dict[str, Any]]) -> None:
         """
-        Property y_analytics setter. Sets self._y_analytics value
+        Property y_analytics setter. Sets self._y_analytics value.
         :param value: value to set
         """
         y_analytics = deepcopy(value)
@@ -455,7 +455,7 @@ class VbmFittingParameters(FittingParameters):
     @x_analytic_keys.setter
     def x_analytic_keys(self, value: list[dict[str, Any]]) -> None:
         """
-        Property x_analytic_keys setter. Sets self.x_analytic_keys value
+        Property x_analytic_keys setter. Sets self.x_analytic_keys value.
         :param value: value to set
         """
         x_analytic_keys = deepcopy(value)
@@ -469,7 +469,7 @@ class VbmFittingParameters(FittingParameters):
     @y_analytic_keys.setter
     def y_analytic_keys(self, value: list[dict[str, Any]]) -> None:
         """
-        Property y_analytic_keys setter. Sets self.y_analytic_keys value
+        Property y_analytic_keys setter. Sets self.y_analytic_keys value.
         :param value: value to set
         """
         y_analytic_keys = deepcopy(value)
