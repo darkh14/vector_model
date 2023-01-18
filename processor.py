@@ -171,11 +171,14 @@ class Processor(ABC):
             par_string = ''
 
             if content_length:
-                print('c_l - {}'.format(content_length))
-                par_bytes = environ['wsgi.input'].read(content_length)
 
-                with zipfile.ZipFile(io.BytesIO(par_bytes)) as zip_obj:
-                    par_string = zip_obj.read(zip_obj.filelist[0])
+                par_string = environ['wsgi.input'].read(content_length)
+
+                print('c_t - {}'.format(environ.keys()))
+
+                # with zipfile.ZipFile(io.BytesIO(par_bytes)) as zip_obj:
+                #     par_string = zip_obj.read(zip_obj.filelist[0])
+
             else:
                 par_list = environ.get('wsgi.input')
                 if par_list:
