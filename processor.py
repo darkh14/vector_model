@@ -174,10 +174,9 @@ class Processor(ABC):
 
                 par_string = environ['wsgi.input'].read(content_length)
 
-                print(environ['CONTENT_TYPE'])
-                # with zipfile.ZipFile(io.BytesIO(par_bytes)) as zip_obj:
-                #     par_string = zip_obj.read(zip_obj.filelist[0])
-
+                if environ['CONTENT_TYPE'] != 'application/json':
+                    with zipfile.ZipFile(io.BytesIO(par_string)) as zip_obj:
+                        par_string = zip_obj.read(zip_obj.filelist[0])
             else:
                 par_list = environ.get('wsgi.input')
                 if par_list:
