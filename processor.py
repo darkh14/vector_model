@@ -174,9 +174,7 @@ class Processor(ABC):
 
                 par_string = environ['wsgi.input'].read(content_length)
 
-                for key in environ.keys():
-                    print(key)
-
+                print(environ['CONTENT_TYPE'])
                 # with zipfile.ZipFile(io.BytesIO(par_bytes)) as zip_obj:
                 #     par_string = zip_obj.read(zip_obj.filelist[0])
 
