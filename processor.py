@@ -170,11 +170,14 @@ class Processor(ABC):
 
             if content_length:
                 par_string = environ['wsgi.input'].read(content_length)
+                print('c_l - {}'.format(par_string))
             else:
                 par_list = environ.get('wsgi.input')
                 if par_list:
                     for par_element in par_list:
                         par_string = par_element
+
+                print('p_l - {}'.format(par_string))
 
             if par_string:
                 request_parameters = self._parameters_from_json(par_string)
