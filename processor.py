@@ -17,6 +17,8 @@ import os.path
 from typing import Any, Callable, Optional
 from abc import ABC, abstractmethod
 import inspect
+import zipfile
+import io
 
 import vm_logging
 import vm_models
@@ -169,8 +171,13 @@ class Processor(ABC):
             par_string = ''
 
             if content_length:
-                par_string = environ['wsgi.input'].read(content_length)
-                print('c_l type - {}'.format(type(par_string)))
+                par_bytes = environ['wsgi.input'].read(content_length)
+                print('c_l type - {}'.format(type(par_bytes)))
+
+                with zipfile.ZipFile(io.BytesIO(par_bytes)) as zip_obj:
+                    par_string = zip_obj.read(zip_obj.filelist[0])
+
+                print(par_string)
             else:
                 par_list = environ.get('wsgi.input')
                 if par_list:
