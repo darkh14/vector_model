@@ -94,7 +94,7 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
     @staticmethod
     def _add_short_id_to_analytics(analytics_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """ Adds short id to analytics. Used in pandas data series apply() method
-                :param analytics_list: list - array of analytics
+                :param analytics_list: list - array of analytics.
                 :return: analytics with short ids added
         """
         for an_el in analytics_list:
