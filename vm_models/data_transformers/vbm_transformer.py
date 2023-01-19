@@ -115,14 +115,16 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
             for analytic_id in analytic_ids:
 
-                column_name = self._get_column_name(ind_parameters['short_id'], analytic_id, ind_parameters)
+                for value in ind_parameters['values']:
 
-                self._check_append_column_names(column_name, x_columns, y_columns, ind_parameters)
+                    column_name = self._get_column_name(ind_parameters['short_id'], analytic_id, value, ind_parameters)
 
-                an_data = self._get_raw_data_by_analytics(ind_data, analytic_id)
+                    self._check_append_column_names(column_name, x_columns, y_columns, ind_parameters)
 
-                data_result = data_result.merge(an_data, on=['organisation', 'scenario', 'period'], how='left')
-                data_result = data_result.rename({'value': column_name}, axis=1)
+                    an_data = self._get_raw_data_by_analytics(ind_data, analytic_id, value)
+
+                    data_result = data_result.merge(an_data, on=['organisation', 'scenario', 'period'], how='left')
+                    data_result = data_result.rename({'value': column_name}, axis=1)
 
         if self._fitting_mode and self._fitting_parameters.is_first_fitting():
             self._fitting_parameters.x_columns = x_columns
@@ -201,7 +203,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return ind_data
 
-    def _get_raw_data_by_analytics(self, data: pd.DataFrame, analytic_id: str) -> pd.DataFrame:
+    def _get_raw_data_by_analytics(self, data: pd.DataFrame, analytic_id: str, value_name: str) -> pd.DataFrame:
         """
         Gets raw indicator data by analytic key
         :param data: data with one indicator
@@ -298,18 +300,21 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return indicator_parameters['short_id'] in y_ids
 
-    def _get_column_name(self, indicator_id, analytic_id, indicator_parameters) -> str:
+    def _get_column_name(self, indicator_id: str, analytic_id: str, value_name: str,
+                         indicator_parameters: dict[str, Any]) -> str:
         """
         Form column name from indicator id, analytic key id and period parameters
         :param indicator_id: id of current indicator
         :param analytic_id: id of current analytic key
+        :param value_name: name of value ex. "value" or "value_quantity"
         :param indicator_parameters: parameters of current indicator
         :return: column name
         """
+
         if indicator_parameters['use_analytics']:
-            result = 'ind_{}_an_{}'.format(indicator_id, analytic_id)
+            result = 'ind_{}_val_{}_an_{}'.format(indicator_id, value_name, analytic_id)
         else:
-            result = 'ind_{}'.format(indicator_id)
+            result = 'ind_{}_val_{}'.format(indicator_id, value_name)
 
         if indicator_parameters.get('period_shift'):
             if indicator_parameters['period_shift'] < 0:

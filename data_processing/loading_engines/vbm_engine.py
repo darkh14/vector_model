@@ -88,8 +88,8 @@ class VbmEngine(BaseEngine):
                       'period': str(),
                       'indicator': {'type': str(), 'name': str(), 'id': str()},
                       'analytics': list(r_analytics),
-                      'value': int() | float(),
-                      'value_quantity': int() | float(),} if not for_fa:
+                      'sum': int() | float(),
+                      'qty': int() | float(),} if not for_fa:
 
                     if not self._check_data_analytics(r_analytics):
                         wrong_row_numbers.append(num + 1)
