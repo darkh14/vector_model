@@ -10,7 +10,7 @@ from datetime import datetime
 import os
 
 from ..model_filters import base_filter, get_fitting_filter_class
-from vm_logging.exceptions import ModelException
+from vm_logging.exceptions import ModelException, ParametersFormatError
 
 
 @dataclass
@@ -47,19 +47,17 @@ class ModelParameters:
 
         self.data_filter = get_fitting_filter_class()(parameters.get('filter'))
 
-    def _check_new_parameters(self, parameters: dict[str, Any], checking_names: Optional[list] = None) -> None:
+    def _check_new_parameters(self, parameters: dict[str, Any]) -> None:
         """
         For checking parameters. Raises ModelException if checking is failed
         :param parameters: parameters to check
-        :param checking_names: optional names of checking parameters
         """
-        if not checking_names:
-            checking_names = ['name', 'type']
 
-        error_names = [el for el in checking_names if el not in parameters]
-
-        if not parameters.get('name'):
-            ModelException('Parameter(s) {} not found in model parameters'.format(', '.join("{}".format(error_names))))
+        match parameters:
+            case {'id': str(model_id), 'name': str(name), 'type': str(model_type)}:
+                pass
+            case _:
+                raise ParametersFormatError('Wrong request parameters format. Check "model" parameter')
 
     def get_data_filter_for_db(self) -> dict[str, Any]:
         """

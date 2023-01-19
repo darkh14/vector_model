@@ -48,7 +48,7 @@ class VbmChecker(Checker):
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
         """
         Checking indicator columns, checking data emptiness. Raises ModelException if failed
-        :param x: input data
+        :param x: input data.
         :return: input data without transforming
         """
         if x.empty:
@@ -88,7 +88,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
         """
         Main method for row-column data transformation
-        :param x: input data
+        :param x: input data.
         :return: data after transforming
         """
         raw_data = self._get_raw_data_from_x(x)
@@ -350,7 +350,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
     def _process_data_periods(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
         """
-        Forms period columns in data
+        Forms period columns in data.
         :param data: data with one indicator
         :param indicator_parameters: parameters of current indicator
         :return: data with required period column
@@ -467,7 +467,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
     def _shift_data_period(self, data: pd.DataFrame) -> datetime:
         """
-        Shifts period column in data
+        Shifts period column in data.
         :param data: data before shifting
         :return: data after shifting
         """
@@ -537,7 +537,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
     def _get_period_numbers_in_year(self, periodicity: str) -> list[int]:
         """
-        Gets all number of periods in year according to periodicity
+        Gets all number of periods in year according to periodicity.
         :param periodicity: periodicity of period
         :return: list of numbers in year
         """
@@ -610,7 +610,7 @@ class VbmCategoricalEncoder(CategoricalEncoder):
 
     def _check_model_field(self, field) -> bool:
         """
-        Check is categorical field in fields
+        Check is categorical field in fields.
         :param field: field to check
         :return: result of checking
         """

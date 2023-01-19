@@ -78,15 +78,49 @@ class VbmModelParameters(ModelParameters):
 
         return result
 
-    def _check_new_parameters(self, parameters: dict[str, Any], checking_names: Optional[list] = None) -> None:
+    def _check_new_parameters(self, parameters: dict[str, Any]) -> None:
         """
         For checking parameters. Raises ModelException if checking is failed
         :param parameters: parameters to check
-        :param checking_names: optional names of checking parameters
         """
-        super()._check_new_parameters(parameters, checking_names)
-        if not checking_names:
-            super()._check_new_parameters(parameters, ['x_indicators', 'y_indicators'])
+
+        super()._check_new_parameters(parameters)
+
+        match parameters:
+            case {'x_indicators': list(x_indicators), 'y_indicators': list(y_indicators)}:
+                for _ind in x_indicators:
+                    match _ind:
+                        case {'id': str(),
+                              'name': str(),
+                              'use_analytics': bool(),
+                              'period_shift': int(),
+                              'period_number': int(),
+                              'period_accumulation': bool(),
+                              'values': list(values)}:
+                            for _el in values:
+                                if not isinstance(_el, str):
+                                    raise ParametersFormatError('Wrong request parameters format. '
+                                                                'Check "x_indicators" parameter')
+                        case _:
+                            raise ParametersFormatError('Wrong request parameters format. '
+                                                        'Check "x_indicators" parameter')
+
+                for _ind in y_indicators:
+                    match _ind:
+                        case {'id': str(),
+                              'name': str(),
+                              'use_analytics': bool(),
+                              'values': list(values)}:
+                            for _el in values:
+                                if not isinstance(_el, str):
+                                    raise ParametersFormatError('Wrong request parameters format. '
+                                                                'Check "y_indicators" parameter')
+                        case _:
+                            raise ParametersFormatError('Wrong request parameters format. '
+                                                        'Check "y_indicators" parameter')
+
+            case _:
+                raise ParametersFormatError('Wrong request parameters format. Check "model" parameter')
 
     @property
     def x_indicators(self) -> list[dict[str, Any]]:
