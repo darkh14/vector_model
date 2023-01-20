@@ -104,24 +104,25 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         for ind_parameters in all_indicators:
 
-            ind_data = self._get_raw_data_by_indicator(raw_data, ind_parameters)
+            for value_name in ind_parameters['values']:
 
-            ind_data = self._process_data_periods(ind_data, ind_parameters)
+                ind_data = self._get_raw_data_by_indicator(raw_data, ind_parameters, value_name)
 
-            analytic_keys, analytic_ids = self._get_analytic_parameters_from_data(ind_data, ind_parameters)
+                ind_data = self._process_data_periods(ind_data, ind_parameters)
 
-            if not analytic_ids:
-                analytic_ids.append('')
+                analytic_keys, analytic_ids = self._get_analytic_parameters_from_data(ind_data, ind_parameters)
 
-            for analytic_id in analytic_ids:
+                if not analytic_ids:
+                    analytic_ids.append('')
 
-                for value in ind_parameters['values']:
+                for analytic_id in analytic_ids:
 
-                    column_name = self._get_column_name(ind_parameters['short_id'], analytic_id, value, ind_parameters)
+                    column_name = self._get_column_name(ind_parameters['short_id'], analytic_id, value_name,
+                                                        ind_parameters)
 
                     self._check_append_column_names(column_name, x_columns, y_columns, ind_parameters)
 
-                    an_data = self._get_raw_data_by_analytics(ind_data, analytic_id, value)
+                    an_data = self._get_raw_data_by_analytics(ind_data, analytic_id)
 
                     data_result = data_result.merge(an_data, on=['organisation', 'scenario', 'period'], how='left')
                     data_result = data_result.rename({'value': column_name}, axis=1)
@@ -191,19 +192,22 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         return raw_data[['organisation', 'scenario',
                         'period', 'index']].groupby(by=['organisation', 'scenario', 'period'], as_index=False).min()
 
-    def _get_raw_data_by_indicator(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
+    def _get_raw_data_by_indicator(self, data: pd.DataFrame, indicator_parameters: dict[str, Any],
+                                   value_name: str) -> pd.DataFrame:
         """
         Gets raw_data where indicator == required indicator
         :param data: all data
         :param indicator_parameters: parameters of required indicator
         :return: data with one indicator
         """
-        fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytics_key_id', 'analytics', 'value']
+        fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytics_key_id', 'analytics', value_name]
         ind_data = data[fields].loc[data['indicator'] == indicator_parameters['short_id']]
+
+        ind_data = ind_data.rename({value_name: 'value'}, axis=1)
 
         return ind_data
 
-    def _get_raw_data_by_analytics(self, data: pd.DataFrame, analytic_id: str, value_name: str) -> pd.DataFrame:
+    def _get_raw_data_by_analytics(self, data: pd.DataFrame, analytic_id: str) -> pd.DataFrame:
         """
         Gets raw indicator data by analytic key
         :param data: data with one indicator
