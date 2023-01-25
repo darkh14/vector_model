@@ -65,7 +65,7 @@ class VbmModel(Model):
                 if analytic_keys:
                     analytics = analytic_keys[0]['analytics']
 
-            result_description[col_name] = {'indicator': indicator, 'analytics': analytics}
+            result_description[col_name] = {'indicator': indicator, 'analytics': analytics, 'value': col_list[3]}
 
         return result_description
 
