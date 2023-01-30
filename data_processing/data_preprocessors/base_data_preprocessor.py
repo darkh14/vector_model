@@ -27,7 +27,7 @@ class BaseDataPreprocessor:
 
     def preprocess_data_for_predicting(self, data: list[dict[str, Any]]) -> pd.DataFrame:
         """ For preprocess data before predicting
-        :param data: - list oof input data
+        :param data: - list oof input data.
         :return: data after preprocessing
         """
         return pd.DataFrame(data)

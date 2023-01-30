@@ -257,17 +257,19 @@ class VbmModel(Model):
         used_indicator_ids = []
 
         output_indicator_short_id_s = [el['short_id'] for el in self.parameters.y_indicators
-                                       if el['id'] == output_indicator['id'] and el['type'] == output_indicator['type']]
+                                       if el['id'] == output_indicator['id']
+                                       and el['type'] == output_indicator['type']
+                                       and output_indicator['value'] in el['values']]
 
         if not output_indicator_short_id_s:
             raise ModelException('Indicator "{}", id "{}" type "{}" not in model'.format(output_indicator['name'],
                                                                                          output_indicator['id'],
                                                                                          output_indicator['type']))
-
         output_indicator_short_id = output_indicator_short_id_s[0]
 
         output_columns = [col for col in self.fitting_parameters.y_columns
-                          if col.split('_')[1] == output_indicator_short_id]
+                          if col.split('_')[1] == output_indicator_short_id
+                          and col.split('_')[3] == output_indicator['value']]
 
         input_data = pd.DataFrame(inputs)
         input_data['indicator_short_id'] = input_data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
@@ -278,7 +280,7 @@ class VbmModel(Model):
         main_periods = list(main_periods)
 
         output_base = self._get_output_value_for_fa(input_data, outputs, used_indicator_ids,
-                                                    main_periods, output_columns)
+                                                    main_periods, output_columns, output_indicator['value'])
 
         for indicator_element in input_indicators:
 
@@ -292,7 +294,7 @@ class VbmModel(Model):
             ind_short_id = ind_short_id_s[0]
 
             output_value = self._get_output_value_for_fa(input_data, outputs, used_indicator_ids, main_periods,
-                                                         output_columns, ind_short_id)
+                                                         output_columns, output_indicator['value'], ind_short_id)
 
             result_element = {'indicator': indicator_element, 'value': output_value - output_base}
 
@@ -304,7 +306,7 @@ class VbmModel(Model):
         graph_string = ''
 
         if get_graph:
-            graph_data = self._get_data_for_fa_graph(result_data, outputs)
+            graph_data = self._get_data_for_fa_graph(result_data, outputs, output_indicator['value'])
             graph_string = self._get_fa_graph_bin(graph_data, output_indicator['name'])
 
         return {'fa': result_data, 'graph_data': graph_string}
@@ -479,8 +481,16 @@ class VbmModel(Model):
         loading_engine.check_data(inputs, checking_parameter_name='inputs', for_fa=True)
 
         match outputs:
-            case {'based': {'name': str(), 'id': str(), 'periodicity': str(), 'value': int() | float()},
-                  'calculated': {'name': str(), 'id': str(), 'periodicity': str(), 'value': int() | float()}}:
+            case {'based': {'name': str(),
+                            'id': str(),
+                            'periodicity': str(),
+                            'sum': int() | float(),
+                            'qty': int() | float()},
+                  'calculated': {'name': str(),
+                                 'id': str(),
+                                 'periodicity': str(),
+                                 'sum': int() | float(),
+                                 'qty': int() | float()}}:
                 pass
             case _:
                 raise ParametersFormatError('Wrong "outputs" parameter format')
@@ -499,7 +509,7 @@ class VbmModel(Model):
                                         'Error(s) in row(s) {}'.format(', '.join(wrong_rows)))
 
         match output_indicator:
-            case {'type': str(), 'name': str(), 'id': str()}:
+            case {'type': str(), 'name': str(), 'id': str(), 'value': str()}:
                 pass
             case _:
                 ParametersFormatError('Wrong "output_indicator" parameter format')
@@ -509,6 +519,7 @@ class VbmModel(Model):
                                  used_indicator_ids: list[str],
                                  main_periods: list[str],
                                  output_columns: list[str],
+                                 value_name: str,
                                  current_ind_short_id: str = ''):
         """
         Forms output data according to one indicator while fa calculating
@@ -529,13 +540,13 @@ class VbmModel(Model):
         c_input_data['used_indicator_ids'] = None
         c_input_data['used_indicator_ids'] = c_input_data['used_indicator_ids'].apply(lambda ind: used_indicator_ids)
 
-        c_input_data['value'] = c_input_data[['value_base',
-                                              'value_calculated',
-                                              'used_indicator_ids',
-                                              'indicator_short_id',
-                                              'current_indicator_short_id']].apply(self._get_value_for_fa, axis=1)
+        c_input_data[value_name] = c_input_data[[value_name + '_base',
+                                                 value_name + '_calculated',
+                                                 'used_indicator_ids',
+                                                 'indicator_short_id',
+                                                 'current_indicator_short_id']].apply(self._get_value_for_fa, axis=1)
 
-        c_input_data = c_input_data.drop(['value_base', 'value_calculated', 'used_indicator_ids',
+        c_input_data = c_input_data.drop([value_name + '_base', value_name + '_calculated', 'used_indicator_ids',
                                           'current_indicator_short_id'], axis=1)
 
         pipeline = self._get_model_pipeline(for_predicting=True)
@@ -579,7 +590,8 @@ class VbmModel(Model):
 
         return value
 
-    def _get_data_for_fa_graph(self, result_data: list[dict[str, Any]], outputs: dict[str, Any]) -> pd.DataFrame:
+    def _get_data_for_fa_graph(self, result_data: list[dict[str, Any]], outputs: dict[str, Any],
+                               value_name: str) -> pd.DataFrame:
         """
         Forms dataframe using to create fa graph html
         :param result_data: fa data to form fa graph data
@@ -592,8 +604,8 @@ class VbmModel(Model):
 
         result_data.drop(['indicator'], axis=1, inplace=True)
 
-        base_line = {'title': 'Базовый', 'value': outputs['based']['value'], 'order': 1}
-        calculated_line = {'title': 'Расчетный', 'value': outputs['calculated']['value'],
+        base_line = {'title': 'Базовый', 'value': outputs['based'][value_name], 'order': 1}
+        calculated_line = {'title': 'Расчетный', 'value': outputs['calculated'][value_name],
                            'order': result_data.shape[0] + 2}
 
         result_data = pd.concat([result_data, pd.DataFrame([base_line, calculated_line])])
