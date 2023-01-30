@@ -144,12 +144,14 @@ class VbmModel(Model):
 
     def get_sensitivity_analysis(self, inputs_0: list[dict[str, Any]],
                                  inputs_plus: list[dict[str, Any]],
-                                 inputs_minus: list[dict[str, Any]]) -> dict[str, Any]:
+                                 inputs_minus: list[dict[str, Any]],
+                                 output_indicator: dict[str]) -> dict[str, Any]:
         """
         For calculating and getting sensitivity analysis data
         :param inputs_0: main input data
         :param inputs_plus: plus deviation input data
         :param inputs_minus: minus deviation input data
+        :param output_indicator: output indicator parameters
         :return: calculated sensitivity analysis data
         """
 
@@ -172,9 +174,11 @@ class VbmModel(Model):
         self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number)
         y_0 = self._engine.predict(x_0)
 
+        y_columns = self._get_sa_output_columns(self.fitting_parameters.y_columns, output_indicator)
+
         data_0[self.fitting_parameters.y_columns] = y_0
 
-        data_0['y_all'] = data_0[self.fitting_parameters.y_columns].apply(sum, axis=1)
+        data_0['y_all'] = data_0[y_columns].apply(sum, axis=1)
 
         ind_ids = list(set([ind['short_id'] for ind in self.parameters.x_indicators]))
 
@@ -197,8 +201,8 @@ class VbmModel(Model):
             data_ind_plus[self.fitting_parameters.y_columns] = y_ind_plus
             data_ind_minus[self.fitting_parameters.y_columns] = y_ind_minus
 
-            data_ind_plus['y_all'] = data_ind_plus[self.fitting_parameters.y_columns].apply(sum, axis=1)
-            data_ind_minus['y_all'] = data_ind_minus[self.fitting_parameters.y_columns].apply(sum, axis=1)
+            data_ind_plus['y_all'] = data_ind_plus[y_columns].apply(sum, axis=1)
+            data_ind_minus['y_all'] = data_ind_minus[y_columns].apply(sum, axis=1)
 
             data_ind_plus['y_0'] = data_0['y_all']
             data_ind_minus['y_0'] = data_0['y_all']
@@ -304,6 +308,17 @@ class VbmModel(Model):
             graph_string = self._get_fa_graph_bin(graph_data, output_indicator['name'])
 
         return {'fa': result_data, 'graph_data': graph_string}
+
+    def _get_sa_output_columns(self, y_columns: list[str], output_indicator: dict[str]) -> list[str]:
+
+        result = []
+        ind_short_id = IdGenerator.get_short_id_from_dict_id_type(output_indicator)
+        for el in y_columns:
+            y_col_list = el.split('_')
+            if y_col_list[1] == ind_short_id and y_col_list[3] == output_indicator['value']:
+                result.append(el)
+
+        return result
 
     def _check_before_fi_calculating(self, fi_parameters:  dict[str, Any]) -> None:
         """
@@ -755,9 +770,17 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
         case {'model': {'id': str(model_id)},
               'inputs_0': list(inputs_0),
               'inputs_plus': list(inputs_plus),
-              'inputs_minus': list(inputs_minus)} if model_id:
+              'inputs_minus': list(inputs_minus),
+              'output_indicator': output_indicator} if model_id:
             model = VbmModel(model_id)
-            result = model.get_sensitivity_analysis(inputs_0, inputs_plus, inputs_minus)
+
+            match output_indicator:
+                case {'id': str(), 'name': str(), 'type': str()}:
+                    pass
+                case _:
+                    ParametersFormatError('Wrong request parameters format! Check "output_indicator" parameter')
+
+            result = model.get_sensitivity_analysis(inputs_0, inputs_plus, inputs_minus, output_indicator)
         case _:
             raise ParametersFormatError('Wrong request parameters format! Check "model", "inputs_0", '
                                         '"inputs_plus", "inputs_minus" parameters')
