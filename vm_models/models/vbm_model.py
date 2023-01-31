@@ -390,6 +390,9 @@ class VbmModel(Model):
 
         fi = pd.DataFrame(perm.feature_importances_, columns=['error_delta'])
         fi['feature'] = self.fitting_parameters.x_columns
+
+        fi['value'] = fi['feature'].apply(lambda el: el.split('_')[3])
+
         fi = fi.sort_values(by='error_delta', ascending=False)
 
         fi['indicator'] = fi['feature'].apply(self._get_indicator_from_column_name)
@@ -408,7 +411,8 @@ class VbmModel(Model):
 
         fi_ind = fi_ind[['indicator_short_id',
                          'error_delta',
-                         'influence_factor']].groupby(['indicator_short_id'], as_index=False).sum()
+                         'influence_factor',
+                         'value']].groupby(['indicator_short_id', 'value'], as_index=False).sum()
 
         fi_ind['indicator'] = fi_ind['indicator_short_id'].apply(self._get_indicator_from_short_id)
 
@@ -451,7 +455,7 @@ class VbmModel(Model):
         if 'an' in column_list:
             result = [el['analytics'] for el
                       in (self.fitting_parameters.x_analytic_keys + self.fitting_parameters.y_analytic_keys)
-                      if el['short_id'] == column_list[3]][0]
+                      if el['short_id'] == column_list[5]][0]
         else:
             result = []
 
