@@ -336,7 +336,7 @@ class VbmFittingParameters(FittingParameters):
         self._x_analytic_keys = []
         self._y_analytic_keys = []
 
-        if self.fi_is_calculated or self.fi_calculation_is_started:
+        if self.fi_is_calculated or self.fi_calculation_is_started or self.fi_calculation_is_error:
             self.set_drop_fi_calculation()
 
     def set_error_fitting(self, error_text: str = '') -> None:
