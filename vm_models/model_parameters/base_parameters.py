@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import os
 
+import db_processing
 from ..model_filters import base_filter, get_fitting_filter_class
 from vm_logging.exceptions import ModelException, ParametersFormatError
 
@@ -211,6 +212,8 @@ class FittingParameters:
 
         self.fitting_job_pid = os.getpid()
 
+        self.metrics = {}
+
         if fitting_parameters.get('job_id'):
             self.fitting_job_id = fitting_parameters['job_id']
 
@@ -232,7 +235,7 @@ class FittingParameters:
 
         self._first_fitting = False
 
-    def set_drop_fitting(self) -> None:
+    def set_drop_fitting(self, model_id='') -> None:
         """
         For setting statuses and other parameters when dropping fitting
         """
@@ -253,6 +256,8 @@ class FittingParameters:
         self.y_columns = []
 
         self.categorical_columns = []
+
+        self.metrics = {}
 
         self._first_fitting = True
 

@@ -53,6 +53,11 @@ class Model:
 
         self._db_connector: base_connector.Connector = get_db_connector()
 
+        # noinspection PyTypeChecker
+        self._scaler: base_transformer.Scaler = get_transformer_class(DataTransformersTypes.SCALER,
+                                                                      self.parameters.type)(self.parameters,
+                                                                                           self.fitting_parameters,
+                                                                                           model_id=self._id)
         self._read_from_db()
 
     def initialize(self, model_parameters: dict[str, Any]) -> dict[str, Any]:
@@ -83,12 +88,10 @@ class Model:
         self._db_connector.delete_lines('models', {'id': self._id})
         self._initialized = False
 
-        scaler = get_transformer_class(DataTransformersTypes.SCALER, self.parameters.type)(self.parameters,
-                                            self.fitting_parameters, model_id=self._id)
-        scaler.drop()
-
         if self._engine:
             self._engine.drop()
+
+        self._scaler.drop()
 
         return 'model id {} is dropped'.format(self._id)
 
@@ -126,10 +129,8 @@ class Model:
 
         if not self.fitting_parameters.fitting_is_error:
 
-            self.fitting_parameters.metrics = self._engine.metrics
-
             self.fitting_parameters.set_end_fitting()
-            self._write_to_db()
+            self._write_to_db(write_scaler=True)
 
         return result
 
@@ -151,6 +152,11 @@ class Model:
         :return: resul of dropping
         """
         self._interrupt_fitting_job()
+
+        if self._engine:
+            self._engine.drop()
+
+        self._scaler.drop()
 
         self.fitting_parameters.set_drop_fitting()
         self._write_to_db()
@@ -180,6 +186,21 @@ class Model:
         self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number,
                                                               self.fitting_parameters.is_first_fitting())
         result = self._engine.fit(x, y, epochs, fitting_parameters)
+
+        self._scaler = pipeline.named_steps['scaler']
+
+        y_pred = self._engine.predict(x)
+
+        data_predicted = data.copy()
+        data_predicted[self.fitting_parameters.y_columns] = y_pred
+
+        data = self._scaler.inverse_transform(data)
+        data_predicted = self._scaler.inverse_transform(data_predicted)
+
+        y = data[self.fitting_parameters.y_columns].to_numpy()
+        y_pred = data_predicted[self.fitting_parameters.y_columns].to_numpy()
+
+        self.fitting_parameters.metrics = self._get_metrics(y, y_pred)
 
         return result
 
@@ -288,9 +309,10 @@ class Model:
 
         return Pipeline(estimators)
 
-    def _write_to_db(self) -> None:
+    def _write_to_db(self, write_scaler: bool = False) -> None:
         """
         Writes model to db
+        :param write_scaler: also writes scaler to DB if True
         """
         model_to_db = {'id': self._id}
         model_to_db.update(self.parameters.get_all())
@@ -300,15 +322,22 @@ class Model:
 
         self._db_connector.set_line('models', model_to_db, {'id': self._id})
 
-    def _read_from_db(self):
+        if write_scaler:
+            self._scaler.write_to_db()
+
+    def _read_from_db(self, read_scaler: bool = False):
         """
         Reads model from db
+        :param write_scaler: also reads scaler from DB if True
         """
         model_from_db = self._db_connector.get_line('models', {'id': self._id})
 
         if model_from_db:
             self.parameters.set_all(model_from_db, without_processing=True)
             self.fitting_parameters.set_all(model_from_db, without_processing=True)
+
+            if read_scaler:
+                self._scaler.read_from_db()
 
             self._initialized = True
         else:
@@ -345,6 +374,9 @@ class Model:
         :return: description
         """
         return self.fitting_parameters.y_columns
+
+    def _get_metrics(self, y: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
+        return {}
 
     @property
     def id(self) -> str:

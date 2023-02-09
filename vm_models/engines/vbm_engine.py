@@ -13,8 +13,6 @@ import zipfile
 import pickle
 import shutil
 
-from sklearn.metrics import mean_squared_error
-
 from keras.models import Sequential, load_model
 from keras.layers import Dense
 from keras.optimizers import Adam
@@ -56,17 +54,9 @@ class VbmNeuralNetwork(BaseEngine):
         """
         history = self._inner_engine.fit(x, y, epochs=epochs, verbose=2, validation_split=self._validation_split)
 
-        y_pred = self._inner_engine.predict(x)
-
-        metrics = dict()
-        metrics['rsme'] = self._calculate_rsme(y, y_pred)
-        metrics['mspe'] = self._calculate_mspe(y, y_pred)
-
-        self.metrics = metrics
-
         self._write_to_db()
 
-        return {'description': 'Fit OK', 'metrics': self.metrics, 'history': history.history}
+        return {'description': 'Fit OK', 'history': history.history}
 
     def predict(self, x: np.ndarray) -> np.ndarray:
         """
@@ -190,33 +180,8 @@ class VbmNeuralNetwork(BaseEngine):
         Method to compile engine
         :param engine: ML engine object
         """
-        engine.compile(optimizer=Adam(learning_rate=0.001), loss='MeanSquaredError',
+        engine.compile(optimizer=Adam(learning_rate=0.00001), loss='MeanSquaredError',
                       metrics=['RootMeanSquaredError'])
-
-    @staticmethod
-    def _calculate_mspe(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-        """
-        Calculates mean squared percentage error metric
-        :param y_true: real output data
-        :param y_pred: predicted output data
-        :return: value of calculated metric
-        """
-        eps = np.zeros(y_true.shape)
-        eps[:] = 0.0001
-        y_p = np.c_[abs(y_true), abs(y_pred), eps]
-        y_p = np.max(y_p, axis=1).reshape(-1, 1)
-
-        return np.sqrt(np.nanmean(np.square(((y_true - y_pred) / y_p))))
-
-    @staticmethod
-    def _calculate_rsme(y_true, y_pred):
-        """
-        Calculates root mean squared error metric
-        :param y_true: real output data
-        :param y_pred: predicted output data
-        :return: value of calculated metric
-        """
-        return np.sqrt(mean_squared_error(y_true, y_pred))
 
     @property
     def inner_engine(self) -> Sequential:

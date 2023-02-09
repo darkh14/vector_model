@@ -11,7 +11,9 @@
 
 from typing import TypeVar, Any, Optional, ClassVar
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.preprocessing import StandardScaler
 import pandas as pd
+import pickle
 
 
 from ..model_parameters.base_parameters import ModelParameters, FittingParameters
@@ -21,6 +23,7 @@ from ..model_types import DataTransformersTypes
 from ..model_filters import get_fitting_filter_class, base_filter
 
 BaseTransformerClass = TypeVar('BaseTransformerClass', bound='BaseTransformer')
+BaseScalerClass = TypeVar('BaseScalerClass', bound='Scaler')
 
 __all__ = ['BaseTransformer',
            'Reader',
@@ -43,7 +46,8 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
     model_type: ClassVar[str] = ''
     transformer_type: ClassVar[DataTransformersTypes] = DataTransformersTypes.NONE
 
-    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, **kwargs) -> None:
+    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters,
+                 **kwargs: object) -> None:
         """
         Defines model and fitting parameters, create db connector
         :param model_parameters: model parameters object
@@ -139,7 +143,7 @@ class Reader(BaseTransformer):
     def _read_while_predicting(self, data: list[dict[str, Any]]) -> pd.DataFrame:
         """
         For reading while predicting. Really data is not read, but transform to pd.DataFrame
-        :param data: input data
+        :param data: input data.
         :return: data after transforming
         """
         return pd.DataFrame(data)
@@ -191,3 +195,79 @@ class Scaler(BaseTransformer):
     """
     service_name: ClassVar[str] = ''
     transformer_type: ClassVar[DataTransformersTypes] = DataTransformersTypes.SCALER
+
+    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters,
+                 **kwargs: Optional[Any]):
+        """
+        Defines model id, scaler engine. Reads from db if it is not new
+        :param model_parameters: model parameters object
+        :param fitting_parameters: fitting parameters object
+        :param kwargs: additional parameters
+        """
+
+        super().__init__(model_parameters, fitting_parameters, **kwargs)
+
+        if 'model_id' not in kwargs:
+            raise ModelException('Parameter "model_id" not found in additional parameter for VbmScaler object')
+
+        self._model_id: str = kwargs['model_id']
+
+        self._scaler_engine: object = self._get_scaler_engine()
+
+        self.read_from_db()
+
+    def fit(self, x: Optional[list[dict[str, Any]] | pd.DataFrame] = None,
+            y: Optional[list[dict[str, Any]] | pd.DataFrame] = None) -> BaseScalerClass:
+        """
+        Saves engine parameters to scale data
+        :param x: data to scale
+        :param y: None
+        :return: self scaling object
+        """
+
+        self._scaler_engine.fit(x)
+
+        self.write_to_db()
+
+        return self
+
+    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
+        """
+        Transforms data after saving scaler parameters
+        :param x: data before scaling
+        :return: data after scaling
+        """
+
+        result = self._scaler_engine.transform(x)
+
+        return result
+
+    def inverse_transform(self, x: pd.DataFrame) -> pd.DataFrame:
+        """
+        Inverse transforms data after predicting to get real (unscaled) result
+        :param x: data before unscaling
+        :return: data after unscaling
+        """
+        result = self._scaler_engine.inverse_transform(x)
+
+        return result
+
+    def write_to_db(self) -> None:
+        """ For writing current scaler to db """
+        line_to_db = {'model_id': self._model_id, 'engine': pickle.dumps(self._scaler_engine)}
+
+        self._db_connector.set_line('scalers', line_to_db, {'model_id': self._model_id})
+
+    def read_from_db(self) -> None:
+        """ For reading current scaler from db """
+        line_from_db = self._db_connector.get_line('scalers', {'model_id': self._model_id})
+
+        if line_from_db:
+            self._scaler_engine = pickle.loads(line_from_db['engine'])
+
+    def drop(self) -> None:
+        """ For deleting current scaler from db """
+        self._db_connector.delete_lines('scalers', {'model_id': self._model_id})
+
+    def _get_scaler_engine(self) -> object:
+        return StandardScaler()

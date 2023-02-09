@@ -14,6 +14,7 @@ from keras.wrappers.scikit_learn import KerasRegressor
 from keras.models import Sequential, clone_model
 from eli5.sklearn import PermutationImportance
 import plotly.graph_objects as go
+from sklearn.metrics import mean_squared_error
 
 from .base_model import Model
 from ..model_types import DataTransformersTypes
@@ -93,7 +94,7 @@ class VbmModel(Model):
         """
         estimators = super()._get_model_estimators(for_predicting, fitting_parameters)
 
-        estimators = [es for es in estimators if es[0] != DataTransformersTypes.SCALER.value]
+        # estimators = [es for es in estimators if es[0] != DataTransformersTypes.SCALER.value]
         return estimators
 
     def calculate_feature_importances(self, fi_parameters: dict[str, Any]) -> dict[str, Any]:
@@ -695,6 +696,39 @@ class VbmModel(Model):
         graph_str = fig.to_html()
 
         return graph_str
+
+    def _get_metrics(self, y: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
+
+        metrics = dict()
+        metrics['rsme'] = self._calculate_rsme(y, y_pred)
+        metrics['mspe'] = self._calculate_mspe(y, y_pred)
+
+        return metrics
+
+    @staticmethod
+    def _calculate_mspe(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+        """
+        Calculates mean squared percentage error metric
+        :param y_true: real output data
+        :param y_pred: predicted output data
+        :return: value of calculated metric
+        """
+        eps = np.zeros(y_true.shape)
+        eps[:] = 0.0001
+        y_p = np.c_[abs(y_true), abs(y_pred), eps]
+        y_p = np.max(y_p, axis=1).reshape(-1, 1)
+
+        return np.sqrt(np.nanmean(np.square(((y_true - y_pred) / y_p))))
+
+    @staticmethod
+    def _calculate_rsme(y_true, y_pred) -> float:
+        """
+        Calculates root mean squared error metric
+        :param y_true: real output data
+        :param y_pred: predicted output data
+        :return: value of calculated metric
+        """
+        return np.sqrt(mean_squared_error(y_true, y_pred))
 
 
 def get_additional_actions() -> dict[str, Callable]:

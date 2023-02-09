@@ -586,7 +586,7 @@ class VbmCategoricalEncoder(CategoricalEncoder):
         :param kwargs: additional parameters
         """
         super().__init__(model_parameters, fitting_parameters, **kwargs)
-        self._fields = []
+        self._fields: list = []
 
         if kwargs.get('fields'):
             self._fields = kwargs['fields']
@@ -599,6 +599,7 @@ class VbmCategoricalEncoder(CategoricalEncoder):
         """
         added_fields = []
 
+        # noinspection PyTypeChecker
         for field in self._fields:
 
             values = list(x[field].unique())
@@ -721,7 +722,7 @@ class VbmScaler(Scaler):
 
         self._model_id = ''
 
-        self._read_from_db()
+        self.read_from_db()
 
     def fit(self, x: Optional[list[dict[str, Any]] | pd.DataFrame] = None,
             y: Optional[list[dict[str, Any]] | pd.DataFrame] = None) -> VbmScalerClass:
@@ -731,12 +732,12 @@ class VbmScaler(Scaler):
         :param y: None
         :return: self scaling object
         """
-        non_categorical_columns = [el for el in self._fitting_parameters.x_columns
+        non_categorical_columns = [el for el in self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
                                    if el not in self._fitting_parameters.categorical_columns]
 
         self._scaler_engine.fit(x[non_categorical_columns])
 
-        self._write_to_db()
+        self.write_to_db()
 
         return self
 
@@ -746,7 +747,7 @@ class VbmScaler(Scaler):
         :param x: data before scaling
         :return: data after scaling
         """
-        non_categorical_columns = [el for el in self._fitting_parameters.x_columns
+        non_categorical_columns = [el for el in self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
                                    if el not in self._fitting_parameters.categorical_columns]
 
         result = x.copy()
@@ -754,19 +755,17 @@ class VbmScaler(Scaler):
 
         return result
 
-    def drop(self) -> None:
-        """ For deleting current scaler from db """
-        self._db_connector.delete_lines('scalers', {'model_id': self._model_id})
+    def inverse_transform(self, x: pd.DataFrame) -> pd.DataFrame:
+        """
+        Inverse transforms data after predicting to get real (unscaled) result
+        :param x: data before unscaling
+        :return: data after unscaling
+        """
 
-    def _write_to_db(self) -> None:
-        """ For writing current scaler to db """
-        line_to_db = {'model_id': self._model_id, 'engine': pickle.dumps(self._scaler_engine)}
+        non_categorical_columns = [el for el in self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
+                                   if el not in self._fitting_parameters.categorical_columns]
 
-        self._db_connector.set_line('scalers', line_to_db, {'model_id': self._model_id})
+        result = x.copy()
+        result[non_categorical_columns] = self._scaler_engine.inverse_transform(x[non_categorical_columns])
 
-    def _read_from_db(self) -> None:
-        """ For reading current scaler from db """
-        line_from_db = self._db_connector.get_line('scalers', {'model_id': self._model_id})
-
-        if line_from_db:
-            self._scaler_engine = pickle.loads(line_from_db['engine'])
+        return result
