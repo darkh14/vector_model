@@ -77,7 +77,14 @@ class VbmModel(Model):
         :param x_data: input x data
         :return: predicted output pd data
         """
-        result = pd.DataFrame(y, columns=self.fitting_parameters.y_columns)
+
+        x_data[self.fitting_parameters.y_columns] = y
+
+        numeric_columns = self.fitting_parameters.x_columns + self.fitting_parameters.y_columns
+
+        x_data[numeric_columns] = self._scaler.inverse_transform(x_data[numeric_columns])
+
+        result = x_data[self.fitting_parameters.y_columns].copy()
 
         result[['organisation', 'scenario', 'period']] = x_data[['organisation_struct', 'scenario_struct', 'period']]
 

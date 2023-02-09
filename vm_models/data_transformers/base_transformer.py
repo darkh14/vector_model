@@ -31,7 +31,8 @@ __all__ = ['BaseTransformer',
            'RowColumnTransformer',
            'Scaler',
            'CategoricalEncoder',
-           'NanProcessor']
+           'NanProcessor',
+           'Shuffler']
 
 
 class BaseTransformer(BaseEstimator, TransformerMixin):
@@ -271,3 +272,11 @@ class Scaler(BaseTransformer):
 
     def _get_scaler_engine(self) -> object:
         return StandardScaler()
+
+
+class Shuffler(BaseTransformer):
+    service_name: ClassVar[str] = ''
+    transformer_type: ClassVar[DataTransformersTypes] = DataTransformersTypes.SHUFFLER
+
+    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
+        return x.sample(frac=1).reset_index(drop=True).copy()

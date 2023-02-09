@@ -21,7 +21,7 @@ import pickle
 
 from vm_logging.exceptions import ModelException
 from ..model_parameters.base_parameters import ModelParameters, FittingParameters
-from .base_transformer import Reader, RowColumnTransformer, Checker, CategoricalEncoder, NanProcessor, Scaler
+from .base_transformer import Reader, RowColumnTransformer, Checker, CategoricalEncoder, NanProcessor, Scaler, Shuffler
 from data_processing.data_preprocessors import get_data_preprocessing_class
 
 VbmScalerClass = TypeVar('VbmScalerClass', bound='VbmScaler')
@@ -732,6 +732,9 @@ class VbmScaler(Scaler):
         :param y: None
         :return: self scaling object
         """
+
+        self._fitting_mode = True
+
         non_categorical_columns = [el for el in self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
                                    if el not in self._fitting_parameters.categorical_columns]
 
@@ -747,11 +750,19 @@ class VbmScaler(Scaler):
         :param x: data before scaling
         :return: data after scaling
         """
+
+        result = x.copy()
+
+        if not self._fitting_mode:
+            result[self._fitting_parameters.y_columns] = 0
+
         non_categorical_columns = [el for el in self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
                                    if el not in self._fitting_parameters.categorical_columns]
 
-        result = x.copy()
-        result[non_categorical_columns] = self._scaler_engine.transform(x[non_categorical_columns])
+        result[non_categorical_columns] = self._scaler_engine.transform(result[non_categorical_columns])
+
+        if not self._fitting_mode:
+            result = result.drop(self._fitting_parameters.y_columns, axis=1)
 
         return result
 
@@ -769,3 +780,7 @@ class VbmScaler(Scaler):
         result[non_categorical_columns] = self._scaler_engine.inverse_transform(x[non_categorical_columns])
 
         return result
+
+
+class VbmShuffler(Shuffler):
+    service_name: ClassVar[str] = 'vbm'

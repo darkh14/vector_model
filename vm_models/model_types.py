@@ -15,5 +15,6 @@ class DataTransformersTypes(Enum):
     CATEGORICAL_ENCODER = 'categorical_encoder'
     NAN_PROCESSOR = 'nan_processor'
     SCALER = 'scaler'
+    SHUFFLER = 'shuffler'
     NONE = 'none'
     

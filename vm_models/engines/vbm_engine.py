@@ -38,7 +38,7 @@ class VbmNeuralNetwork(BaseEngine):
         super().__init__(model_id, input_number, output_number, new_engine, **kwargs)
 
         self._inner_engine: Optional[Sequential] = None
-        self._validation_split: float = 0.2
+        self._validation_split: float = 0.0
 
         self._read_from_db()
 
@@ -180,7 +180,7 @@ class VbmNeuralNetwork(BaseEngine):
         Method to compile engine
         :param engine: ML engine object
         """
-        engine.compile(optimizer=Adam(learning_rate=0.00001), loss='MeanSquaredError',
+        engine.compile(optimizer=Adam(learning_rate=0.001), loss='MeanSquaredError',
                       metrics=['RootMeanSquaredError'])
 
     @property

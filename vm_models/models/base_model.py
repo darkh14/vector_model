@@ -227,7 +227,14 @@ class Model:
         :param x_data: input x data
         :return: predicted output pd data
         """
-        return pd.DataFrame(y, columns=self.fitting_parameters.y_columns)
+
+        x_data[self.fitting_parameters.y_columns] = y
+
+        numeric_columns = self.fitting_parameters.x_columns + self.fitting_parameters.y_columns
+
+        x_data[numeric_columns] = self._scaler.inverse_transform(x_data[numeric_columns])
+
+        return x_data[self.fitting_parameters.y_columns]
 
     def _check_before_fitting(self, fitting_parameters: dict[str, Any]) -> None:
         """
@@ -274,6 +281,9 @@ class Model:
                                 DataTransformersTypes.NAN_PROCESSOR,
                                 DataTransformersTypes.SCALER
         ]
+
+        if not for_predicting:
+            estimator_types_list.append(DataTransformersTypes.SHUFFLER)
 
         estimators = []
         for estimator_type in estimator_types_list:
@@ -364,6 +374,8 @@ class Model:
             self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number)
 
         y_pred = self._engine.predict(x)
+
+        self._scaler.read_from_db()
 
         result_data = self._y_to_data(y_pred, data)
         return {'output': result_data.to_dict('records'), 'description': self._form_output_columns_description()}
