@@ -70,25 +70,25 @@ class VbmModel(Model):
 
         return result_description
 
-    def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) -> pd.DataFrame:
-        """
-        Converts output np array y to output pd. data
-        :param y: y output predicted np array
-        :param x_data: input x data
-        :return: predicted output pd data
-        """
-
-        x_data[self.fitting_parameters.y_columns] = y
-
-        numeric_columns = self.fitting_parameters.x_columns + self.fitting_parameters.y_columns
-
-        x_data[numeric_columns] = self._scaler.inverse_transform(x_data[numeric_columns])
-
-        result = x_data[self.fitting_parameters.y_columns].copy()
-
-        result[['organisation', 'scenario', 'period']] = x_data[['organisation_struct', 'scenario_struct', 'period']]
-
-        return result
+    # def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) -> pd.DataFrame:
+    #     """
+    #     Converts output np array y to output pd. data
+    #     :param y: y output predicted np array
+    #     :param x_data: input x data
+    #     :return: predicted output pd data
+    #     """
+    #
+    #     x_data[self.fitting_parameters.y_columns] = y
+    #
+    #     numeric_columns = self.fitting_parameters.x_columns + self.fitting_parameters.y_columns
+    #
+    #     x_data[numeric_columns] = self._scaler.inverse_transform(x_data[numeric_columns])
+    #
+    #     result = x_data[self.fitting_parameters.y_columns].copy()
+    #
+    #     result[['organisation', 'scenario', 'period']] = x_data[['organisation_struct', 'scenario_struct', 'period']]
+    #
+    #     return result
 
     def _get_model_estimators(self, for_predicting: bool = False,
                               fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
@@ -169,18 +169,21 @@ class VbmModel(Model):
         loading_engine.check_data(inputs_plus, checking_parameter_name='inputs_plus')
         loading_engine.check_data(inputs_minus, checking_parameter_name='inputs_minus')
 
-        pipeline = self._get_model_pipeline(for_predicting=True)
-        data_0 = pipeline.transform(inputs_0)
+        # pipeline = self._get_model_pipeline(for_predicting=True)
+        # data_0 = pipeline.transform(inputs_0)
 
-        data_plus = pipeline.transform(inputs_plus)
-        data_minus = pipeline.transform(inputs_minus)
+        # data_plus = pipeline.transform(inputs_plus)
+        # data_minus = pipeline.transform(inputs_minus)
 
-        x_0 = self._data_to_x(data_0)
+        # x_0 = self._data_to_x(data_0)
 
-        input_number = len(self.fitting_parameters.x_columns)
-        output_number = len(self.fitting_parameters.y_columns)
-        self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number)
-        y_0 = self._engine.predict(x_0)
+        # input_number = len(self.fitting_parameters.x_columns)
+        # output_number = len(self.fitting_parameters.y_columns)
+        # self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number)
+
+        # y_0 = self._engine.predict(x_0)
+
+        y_0 = self._predict_model(inputs_0)
 
         y_columns = self._get_sa_output_columns(self.fitting_parameters.y_columns, output_indicator)
 

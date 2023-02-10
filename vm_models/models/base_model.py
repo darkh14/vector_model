@@ -140,9 +140,10 @@ class Model:
         """
         self._check_before_predicting(x)
 
-        result = self._predict_model(x)
+        result_data = self._predict_model(x)
+        result_data = result_data.drop(self.fitting_parameters.x_columns, axis=1)
 
-        return result
+        return {'output': result_data.to_dict('records'), 'description': self._form_output_columns_description()}
 
     def drop_fitting(self) -> str:
         """
@@ -233,13 +234,15 @@ class Model:
         :return: predicted output pd data
         """
 
-        x_data[self.fitting_parameters.y_columns] = y
+        result = x_data.copy()
+
+        result[self.fitting_parameters.y_columns] = y
 
         numeric_columns = self.fitting_parameters.x_columns + self.fitting_parameters.y_columns
 
-        x_data[numeric_columns] = self._scaler.inverse_transform(x_data[numeric_columns])
+        result[numeric_columns] = self._scaler.inverse_transform(result[numeric_columns])
 
-        return x_data[self.fitting_parameters.y_columns]
+        return result
 
     def _check_before_fitting(self, fitting_parameters: dict[str, Any]) -> None:
         """
@@ -361,7 +364,7 @@ class Model:
             self._engine = None
             self._scaler = None
 
-    def _predict_model(self, x_input: list[dict[str, Any]]) -> dict[str, Any]:
+    def _predict_model(self, x_input: list[dict[str, Any]]) -> pd.DataFrame:
         """
         For predicting data after check and prepare parameters
         :param x_input: list of input data
@@ -385,7 +388,8 @@ class Model:
         y_pred = self._engine.predict(x)
 
         result_data = self._y_to_data(y_pred, data)
-        return {'output': result_data.to_dict('records'), 'description': self._form_output_columns_description()}
+
+        return result_data
 
     def _form_output_columns_description(self):
         """
