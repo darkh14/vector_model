@@ -85,20 +85,6 @@ class VbmModel(Model):
 
         return result
 
-    def _get_model_estimators(self, for_predicting: bool = False,
-                              fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
-        """
-        Gets list of estimators for data transforming before fitting or predicting.
-        Excludes scaler compared to base class method
-        :param for_predicting: True is need to form estimators for predicting
-        :param fitting_parameters: parameters for fitting
-        :return: list of estimators
-        """
-        estimators = super()._get_model_estimators(for_predicting, fitting_parameters)
-
-        # estimators = [es for es in estimators if es[0] != DataTransformersTypes.SCALER.value]
-        return estimators
-
     def calculate_feature_importances(self, fi_parameters: dict[str, Any]) -> dict[str, Any]:
         """
         For calculating feature importances and saving them to db
@@ -178,11 +164,11 @@ class VbmModel(Model):
 
         # y_0 = self._engine.predict(x_0)
 
-        y_0 = self._predict_model(inputs_0)
+        data_0 = self._predict_model(inputs_0)
+        x_0 = data_0[self.fitting_parameters.x_columns].to_numpy()
+        y_0 = data_0[self.fitting_parameters.y_columns].to_numpy()
 
         y_columns = self._get_sa_output_columns(self.fitting_parameters.y_columns, output_indicator)
-
-        data_0[self.fitting_parameters.y_columns] = y_0
 
         data_0['y_all'] = data_0[y_columns].apply(sum, axis=1)
 
@@ -191,21 +177,12 @@ class VbmModel(Model):
         sa = {}
 
         for ind_id in ind_ids:
-            ind_columns = [col for col in self.fitting_parameters.x_columns if col.split('_')[1] == ind_id]
 
-            data_ind_plus = data_0.copy()
-            data_ind_plus[ind_columns] = data_plus[ind_columns]
-            x_ind_plus = self._data_to_x(data_ind_plus)
+            x_ind_plus = self._replace_input_data_by_indicator(inputs_0, inputs_plus, ind_id)
+            x_ind_minus = self._replace_input_data_by_indicator(inputs_0, inputs_plus, ind_id)
 
-            data_ind_minus = data_0.copy()
-            data_ind_minus[ind_columns] = data_minus[ind_columns]
-            x_ind_minus = self._data_to_x(data_ind_minus)
-
-            y_ind_plus = self._engine.predict(x_ind_plus)
-            y_ind_minus = self._engine.predict(x_ind_minus)
-
-            data_ind_plus[self.fitting_parameters.y_columns] = y_ind_plus
-            data_ind_minus[self.fitting_parameters.y_columns] = y_ind_minus
+            data_ind_plus = self._predict_model(x_ind_plus)
+            data_ind_minus = self._predict_model(x_ind_minus)
 
             data_ind_plus['y_all'] = data_ind_plus[y_columns].apply(sum, axis=1)
             data_ind_minus['y_all'] = data_ind_minus[y_columns].apply(sum, axis=1)
@@ -220,14 +197,10 @@ class VbmModel(Model):
                                                                                    if ss['y_0'] else 0, axis=1)
             data_ind_minus['delta_percent'] = data_ind_minus[['delta', 'y_0']].apply(lambda ss: ss['delta']/ss['y_0']
                                                                                    if ss['y_0'] else 0, axis=1)
-            data_ind_plus = data_ind_plus.drop(['organisation', 'scenario'], axis=1)
-            data_ind_minus = data_ind_minus.drop(['organisation', 'scenario'], axis=1)
 
-            data_ind_plus = data_ind_plus.rename({'organisation_struct': 'organisation', 'scenario_struct':
-                'scenario', 'y_all': 'y'}, axis=1)
+            data_ind_plus = data_ind_plus.rename({'y_all': 'y'}, axis=1)
 
-            data_ind_minus = data_ind_minus.rename({'organisation_struct': 'organisation', 'scenario_struct':
-                'scenario', 'y_all': 'y'}, axis=1)
+            data_ind_minus = data_ind_minus.rename({'y_all': 'y'}, axis=1)
 
             sa_ind_data = dict()
             sa_ind_data['indicator'] = [ind for ind in self.parameters.x_indicators if ind['short_id'] == ind_id][0]
@@ -316,6 +289,23 @@ class VbmModel(Model):
             graph_string = self._get_fa_graph_bin(graph_data, output_indicator['name'])
 
         return {'fa': result_data, 'graph_data': graph_string}
+
+    def _replace_input_data_by_indicator(self, input_data: list[dict[str, Any]], replacing_data: list[dict[str, Any]],
+                                        indicator_id: str) -> list[dict[str, Any]]:
+
+        data = pd.DataFrame(input_data)
+        r_data = pd.DataFrame(replacing_data)
+
+        data['ind_short_id'] = data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
+        r_data['ind_short_id'] = r_data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
+
+        data = data.loc[data['ind_short_id'] != indicator_id]
+        r_data = r_data.loc[r_data['ind_short_id'] == indicator_id]
+
+        result = pd.concat([data, r_data], ignore_index=True)
+        result = result.drop('ind_short_id', axis=1)
+
+        return result.to_dict('records')
 
     def _get_sa_output_columns(self, y_columns: list[str], output_indicator: dict[str]) -> list[str]:
 
