@@ -70,25 +70,20 @@ class VbmModel(Model):
 
         return result_description
 
-    # def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) -> pd.DataFrame:
-    #     """
-    #     Converts output np array y to output pd. data
-    #     :param y: y output predicted np array
-    #     :param x_data: input x data
-    #     :return: predicted output pd data
-    #     """
-    #
-    #     x_data[self.fitting_parameters.y_columns] = y
-    #
-    #     numeric_columns = self.fitting_parameters.x_columns + self.fitting_parameters.y_columns
-    #
-    #     x_data[numeric_columns] = self._scaler.inverse_transform(x_data[numeric_columns])
-    #
-    #     result = x_data[self.fitting_parameters.y_columns].copy()
-    #
-    #     result[['organisation', 'scenario', 'period']] = x_data[['organisation_struct', 'scenario_struct', 'period']]
-    #
-    #     return result
+    def _y_to_data(self, y: np.ndarray, x_data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Converts output np array y to output pd. data
+        :param y: y output predicted np array
+        :param x_data: input x data
+        :return: predicted output pd data
+        """
+
+        result = super()._y_to_data(y, x_data)
+        result = result.drop(['organisation', 'scenario', 'index'], axis=1)
+        result[['organisation', 'scenario']] = result[['organisation_struct', 'scenario_struct']]
+        result = result.drop(['organisation_struct', 'scenario_struct'], axis=1)
+
+        return result
 
     def _get_model_estimators(self, for_predicting: bool = False,
                               fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
