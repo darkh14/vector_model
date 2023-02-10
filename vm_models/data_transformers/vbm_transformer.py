@@ -704,26 +704,6 @@ class VbmScaler(Scaler):
     """ Transformer for data scaling (min-max scaling) """
     service_name: ClassVar[str] = 'vbm'
 
-    def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, **kwargs):
-        """
-        Defines model id, scaler engine. Reads from db if it is not new
-        :param model_parameters: model parameters object
-        :param fitting_parameters: fitting parameters object
-        :param kwargs: additional parameters
-        """
-        super().__init__(model_parameters, fitting_parameters, **kwargs)
-
-        if 'model_id' not in kwargs:
-            raise ModelException('Parameter "model_id" not found in additional parameter for VbmScaler object')
-
-        self._model_id = kwargs['model_id']
-
-        self._scaler_engine = MinMaxScaler()
-
-        self._model_id = ''
-
-        self.read_from_db()
-
     def fit(self, x: Optional[list[dict[str, Any]] | pd.DataFrame] = None,
             y: Optional[list[dict[str, Any]] | pd.DataFrame] = None) -> VbmScalerClass:
         """
@@ -735,12 +715,17 @@ class VbmScaler(Scaler):
 
         self._fitting_mode = True
 
-        non_categorical_columns = [el for el in self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
-                                   if el not in self._fitting_parameters.categorical_columns]
+        if self._new_scaler:
 
-        self._scaler_engine.fit(x[non_categorical_columns])
+            non_categorical_columns = [el for el in self._fitting_parameters.x_columns +
+                                       self._fitting_parameters.y_columns
+                                       if el not in self._fitting_parameters.categorical_columns]
 
-        self.write_to_db()
+            data = x[non_categorical_columns]
+
+            self._scaler_engine.fit(data)
+
+            self._write_to_db()
 
         return self
 
@@ -773,13 +758,21 @@ class VbmScaler(Scaler):
         :return: data after unscaling
         """
 
+        result = x.copy()
+
         non_categorical_columns = [el for el in self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
                                    if el not in self._fitting_parameters.categorical_columns]
 
-        result = x.copy()
-        result[non_categorical_columns] = self._scaler_engine.inverse_transform(x[non_categorical_columns])
+        result[non_categorical_columns] = self._scaler_engine.inverse_transform(result[non_categorical_columns])
 
         return result
+
+    def _get_scaler_engine(self) -> object:
+        """
+        For getting scaler object of right type
+        :return: inner scaler object
+        """
+        return MinMaxScaler()
 
 
 class VbmShuffler(Shuffler):

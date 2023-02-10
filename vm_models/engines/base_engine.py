@@ -41,8 +41,6 @@ class BaseEngine(ABC):
 
         self._new_engine: bool = new_engine
 
-        self.metrics: dict[str, Any] = {}
-
     @abstractmethod
     def fit(self, x: np.ndarray,  y: np.ndarray, epochs: int,
             parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:

@@ -53,11 +53,8 @@ class Model:
 
         self._db_connector: base_connector.Connector = get_db_connector()
 
-        # noinspection PyTypeChecker
-        self._scaler: base_transformer.Scaler = get_transformer_class(DataTransformersTypes.SCALER,
-                                                                      self.parameters.type)(self.parameters,
-                                                                                           self.fitting_parameters,
-                                                                                           model_id=self._id)
+        self._scaler: Optional[base_transformer.Scaler] = None
+
         self._read_from_db()
 
     def initialize(self, model_parameters: dict[str, Any]) -> dict[str, Any]:
@@ -91,7 +88,8 @@ class Model:
         if self._engine:
             self._engine.drop()
 
-        self._scaler.drop()
+        if self._scaler:
+            self._scaler.drop()
 
         return 'model id {} is dropped'.format(self._id)
 
@@ -156,7 +154,8 @@ class Model:
         if self._engine:
             self._engine.drop()
 
-        self._scaler.drop()
+        if self._scaler:
+            self._scaler.drop()
 
         self.fitting_parameters.set_drop_fitting()
         self._write_to_db()
@@ -177,6 +176,12 @@ class Model:
         :param fitting_parameters: additional fitting parameters
         :return: fitting history
         """
+
+        # noinspection PyTypeChecker
+        self._scaler = get_transformer_class(DataTransformersTypes.SCALER, self.parameters.type)(self.parameters,
+                                                    self.fitting_parameters, model_id=self._id,
+                                                    new_scaler=self.fitting_parameters.is_first_fitting())
+
         pipeline = self._get_model_pipeline(for_predicting=False, fitting_parameters=fitting_parameters)
         data = pipeline.fit_transform(None)
 
@@ -287,7 +292,10 @@ class Model:
 
         estimators = []
         for estimator_type in estimator_types_list:
-            estimator = self._get_estimator(estimator_type, fitting_parameters)
+            if estimator_type == DataTransformersTypes.SCALER:
+                estimator = self._scaler
+            else:
+                estimator = self._get_estimator(estimator_type, fitting_parameters)
             estimators.append((estimator_type.value, estimator))
 
         return estimators
@@ -332,10 +340,7 @@ class Model:
 
         self._db_connector.set_line('models', model_to_db, {'id': self._id})
 
-        if write_scaler:
-            self._scaler.write_to_db()
-
-    def _read_from_db(self, read_scaler: bool = False):
+    def _read_from_db(self):
         """
         Reads model from db
         :param write_scaler: also reads scaler from DB if True
@@ -346,9 +351,6 @@ class Model:
             self.parameters.set_all(model_from_db, without_processing=True)
             self.fitting_parameters.set_all(model_from_db, without_processing=True)
 
-            if read_scaler:
-                self._scaler.read_from_db()
-
             self._initialized = True
         else:
             self._initialized = False
@@ -357,6 +359,7 @@ class Model:
             self.fitting_parameters = get_model_parameters_class(fitting=True)()
 
             self._engine = None
+            self._scaler = None
 
     def _predict_model(self, x_input: list[dict[str, Any]]) -> dict[str, Any]:
         """
@@ -364,6 +367,12 @@ class Model:
         :param x_input: list of input data
         :return: dict of result of predicting
         """
+
+        if not self._scaler:
+            self._scaler = get_transformer_class(DataTransformersTypes.SCALER, self.parameters.type)(self.parameters,
+                                                                                self.fitting_parameters,
+                                                                                model_id=self._id,)
+
         pipeline = self._get_model_pipeline(for_predicting=True)
         data = pipeline.transform(x_input)
 
@@ -374,8 +383,6 @@ class Model:
             self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number)
 
         y_pred = self._engine.predict(x)
-
-        self._scaler.read_from_db()
 
         result_data = self._y_to_data(y_pred, data)
         return {'output': result_data.to_dict('records'), 'description': self._form_output_columns_description()}

@@ -213,9 +213,11 @@ class Scaler(BaseTransformer):
 
         self._model_id: str = kwargs['model_id']
 
-        self._scaler_engine: object = self._get_scaler_engine()
+        self._new_scaler: bool = kwargs.get('new_scaler') or False
 
-        self.read_from_db()
+        self._scaler_engine: Optional[object] = None
+
+        self._read_from_db()
 
     def fit(self, x: Optional[list[dict[str, Any]] | pd.DataFrame] = None,
             y: Optional[list[dict[str, Any]] | pd.DataFrame] = None) -> BaseScalerClass:
@@ -226,9 +228,9 @@ class Scaler(BaseTransformer):
         :return: self scaling object
         """
 
-        self._scaler_engine.fit(x)
-
-        self.write_to_db()
+        if self._new_scaler:
+            self._scaler_engine.fit(x)
+            self._write_to_db()
 
         return self
 
@@ -253,24 +255,36 @@ class Scaler(BaseTransformer):
 
         return result
 
-    def write_to_db(self) -> None:
+    def _write_to_db(self) -> None:
         """ For writing current scaler to db """
         line_to_db = {'model_id': self._model_id, 'engine': pickle.dumps(self._scaler_engine)}
 
         self._db_connector.set_line('scalers', line_to_db, {'model_id': self._model_id})
 
-    def read_from_db(self) -> None:
-        """ For reading current scaler from db """
-        line_from_db = self._db_connector.get_line('scalers', {'model_id': self._model_id})
+        self._new_scaler = False
 
-        if line_from_db:
-            self._scaler_engine = pickle.loads(line_from_db['engine'])
+    def _read_from_db(self) -> None:
+        """ For reading current scaler from db """
+
+        if self._new_scaler:
+            self._scaler_engine = self._get_scaler_engine()
+        else:
+            line_from_db = self._db_connector.get_line('scalers', {'model_id': self._model_id})
+
+            if line_from_db:
+                self._scaler_engine = pickle.loads(line_from_db['engine'])
+            else:
+                self._scaler_engine = self._get_scaler_engine()
 
     def drop(self) -> None:
         """ For deleting current scaler from db """
         self._db_connector.delete_lines('scalers', {'model_id': self._model_id})
 
     def _get_scaler_engine(self) -> object:
+        """
+        For getting scaler object of right type
+        :return: inner scaler object
+        """
         return StandardScaler()
 
 
