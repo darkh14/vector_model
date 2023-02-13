@@ -20,14 +20,21 @@ import inspect
 import zipfile
 import io
 
+# noinspection PyUnresolvedReferences
 import vm_logging
+# noinspection PyUnresolvedReferences
 import vm_models
+# noinspection PyUnresolvedReferences
 import vm_settings
+# noinspection PyUnresolvedReferences
 import data_processing
+# noinspection PyUnresolvedReferences
 import db_processing
+# noinspection PyUnresolvedReferences
 import vm_background_jobs
+# noinspection PyUnresolvedReferences
 import actions
-
+# noinspection PyUnresolvedReferences
 import general
 
 from vm_logging.exceptions import RequestProcessException, ParameterNotFoundException, ParametersFormatError
@@ -84,12 +91,13 @@ class Processor(ABC):
         if TEST_MODE:
             output_dict = self._process_with_parameters(request_parameters)
         else:
+            # noinspection PyBroadException
             try:
                 output_dict = self._process_with_parameters(request_parameters)
             except RequestProcessException as request_ex:
                 error_text = str(request_ex)
                 output_dict = {'status': 'error', 'error_text': error_text}
-            except Exception as base_ex:
+            except Exception:
                 error_text = 'Error!\n' + traceback.format_exc()
                 output_dict = {'status': 'error', 'error_text': error_text}
 
@@ -114,8 +122,6 @@ class Processor(ABC):
             :param parameters: request parameters
             :return: dict of request result
         """
-        service_name = ''
-        request_type = ''
 
         match parameters:
             case {'request_type': str(request_type), 'service_name': str(service_name)} if (request_type

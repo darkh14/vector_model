@@ -16,7 +16,7 @@ __all__ = ['get_actions', 'get_action_names_without_db_using']
 
 
 def get_actions() -> dict[str, Callable]:
-    """ forms general actions dict
+    """ forms general actions` dict.
     :return: dict of function object (general actions)
     """
     return dict({'test': _test, 'get_version': _get_version, 'ping': _ping})
