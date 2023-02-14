@@ -11,7 +11,7 @@ from copy import deepcopy
 from datetime import datetime
 import os
 
-from vm_logging.exceptions import ModelException
+from vm_logging.exceptions import ModelException, ParametersFormatError
 from .base_parameters import ModelParameters, FittingParameters
 from id_generator import IdGenerator
 

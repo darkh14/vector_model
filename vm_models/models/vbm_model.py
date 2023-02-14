@@ -179,7 +179,7 @@ class VbmModel(Model):
         for ind_id in ind_ids:
 
             x_ind_plus = self._replace_input_data_by_indicator(inputs_0, inputs_plus, ind_id)
-            x_ind_minus = self._replace_input_data_by_indicator(inputs_0, inputs_plus, ind_id)
+            x_ind_minus = self._replace_input_data_by_indicator(inputs_0, inputs_minus, ind_id)
 
             data_ind_plus = self._predict_model(x_ind_plus)
             data_ind_minus = self._predict_model(x_ind_minus)
