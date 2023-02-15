@@ -17,7 +17,6 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 from sklearn.preprocessing import MinMaxScaler
-import pickle
 
 from vm_logging.exceptions import ModelException
 from ..model_parameters.base_parameters import ModelParameters, FittingParameters
@@ -145,6 +144,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return data_result
 
+    # noinspection PyMethodMayBeStatic
     def _add_data_while_predicting(self, data_result: pd.DataFrame, raw_data: pd.DataFrame) -> pd.DataFrame:
         """
         Adds special fields to data after transforming while predicting
@@ -192,6 +192,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         return raw_data[['organisation', 'scenario',
                         'period', 'index']].groupby(by=['organisation', 'scenario', 'period'], as_index=False).min()
 
+    # noinspection PyMethodMayBeStatic
     def _get_raw_data_by_indicator(self, data: pd.DataFrame, indicator_parameters: dict[str, Any],
                                    value_name: str) -> pd.DataFrame:
         """
@@ -207,6 +208,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return ind_data
 
+    # noinspection PyMethodMayBeStatic
     def _get_raw_data_by_analytics(self, data: pd.DataFrame, analytic_id: str) -> pd.DataFrame:
         """
         Gets raw indicator data by analytic key
@@ -226,7 +228,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         return an_data
 
     def _get_analytic_parameters_from_data(self, data: pd.DataFrame,
-                                    indicator_parameters: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
+                                        indicator_parameters: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
         """
         Gets all analytic keys and ids in data (for predicting and secondary fitting)
         :param data: data with one indicator
@@ -304,6 +306,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return indicator_parameters['short_id'] in y_ids
 
+    # noinspection PyMethodMayBeStatic
     def _get_column_name(self, indicator_id: str, analytic_id: str, value_name: str,
                          indicator_parameters: dict[str, Any]) -> str:
         """

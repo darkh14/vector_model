@@ -5,10 +5,11 @@
             sensitivity analysis calculation and factor analysis calculation
 """
 
-from typing import Any, Optional, Callable, ClassVar
+from typing import Any, Callable, ClassVar
 import numpy as np
 import pandas as pd
 import math
+from functools import reduce
 
 from keras.wrappers.scikit_learn import KerasRegressor
 from keras.models import Sequential, clone_model
@@ -17,9 +18,7 @@ import plotly.graph_objects as go
 from sklearn.metrics import mean_squared_error
 
 from .base_model import Model
-from ..model_types import DataTransformersTypes
 from vm_logging.exceptions import ModelException, ParametersFormatError
-from ..model_filters import get_fitting_filter_class
 from ..engines import get_engine_class
 from vm_background_jobs.decorators import execute_in_background
 from vm_background_jobs.controller import set_background_job_interrupted
@@ -165,8 +164,6 @@ class VbmModel(Model):
         # y_0 = self._engine.predict(x_0)
 
         data_0 = self._predict_model(inputs_0)
-        x_0 = data_0[self.fitting_parameters.x_columns].to_numpy()
-        y_0 = data_0[self.fitting_parameters.y_columns].to_numpy()
 
         y_columns = self._get_sa_output_columns(self.fitting_parameters.y_columns, output_indicator)
 
@@ -273,7 +270,7 @@ class VbmModel(Model):
             ind_short_id = ind_short_id_s[0]
 
             output_value = self._get_output_value_for_fa(input_data, outputs, used_indicator_ids, main_periods,
-                                                         output_columns, output_indicator['value'], ind_short_id)
+                                                         output_columns, ind_short_id)
 
             result_element = {'indicator': indicator_element, 'value': output_value - output_base}
 
@@ -290,6 +287,7 @@ class VbmModel(Model):
 
         return {'fa': result_data, 'graph_data': graph_string}
 
+    # noinspection PyMethodMayBeStatic
     def _replace_input_data_by_indicator(self, input_data: list[dict[str, Any]], replacing_data: list[dict[str, Any]],
                                         indicator_id: str) -> list[dict[str, Any]]:
 
@@ -305,8 +303,10 @@ class VbmModel(Model):
         result = pd.concat([data, r_data], ignore_index=True)
         result = result.drop('ind_short_id', axis=1)
 
+        # noinspection PyTypeChecker
         return result.to_dict('records')
 
+    # noinspection PyMethodMayBeStatic
     def _get_sa_output_columns(self, y_columns: list[str], output_indicator: dict[str]) -> list[str]:
 
         result = []
@@ -365,6 +365,7 @@ class VbmModel(Model):
 
         return result
 
+    # noinspection PyUnresolvedReferences
     def _get_engine_for_fi(self) -> Sequential:
         """
         Returns inner engine for calculating fi
@@ -519,8 +520,7 @@ class VbmModel(Model):
                                  used_indicator_ids: list[str],
                                  main_periods: list[str],
                                  output_columns: list[str],
-                                 value_name: str,
-                                 current_ind_short_id: str = ''):
+                                 current_ind_short_id: str = '') -> float:
         """
         Forms output data according to one indicator while fa calculating
         :param input_data: main input data
@@ -540,29 +540,23 @@ class VbmModel(Model):
         c_input_data['used_indicator_ids'] = None
         c_input_data['used_indicator_ids'] = c_input_data['used_indicator_ids'].apply(lambda ind: used_indicator_ids)
 
-        c_input_data[value_name] = c_input_data[[value_name + '_base',
-                                                 value_name + '_calculated',
-                                                 'used_indicator_ids',
-                                                 'indicator_short_id',
-                                                 'current_indicator_short_id']].apply(self._get_value_for_fa, axis=1)
+        value_names = [el['values'] for el in (self.parameters.x_indicators + self.parameters.y_indicators)]
+        value_names = list(set(reduce(lambda first, last: [*first, *last] if first else last, value_names)))
 
-        c_input_data = c_input_data.drop([value_name + '_base', value_name + '_calculated', 'used_indicator_ids',
-                                          'current_indicator_short_id'], axis=1)
+        for value_name in value_names:
 
-        pipeline = self._get_model_pipeline(for_predicting=True)
-        data = pipeline.transform(c_input_data)
+            c_input_data[value_name] = c_input_data[[value_name + '_base', value_name + '_calculated',
+                                                  'used_indicator_ids',
+                                                  'indicator_short_id',
+                                                  'current_indicator_short_id']].apply(self._get_value_for_fa, axis=1)
 
-        x = self._data_to_x(data)
+            c_input_data = c_input_data.drop([value_name + '_base', value_name + '_calculated'], axis=1)
 
-        input_number = len(self.fitting_parameters.x_columns)
-        output_number = len(self.fitting_parameters.y_columns)
-        if not self._engine:
-            self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number)
-        y = self._engine.predict(x)
+        c_input_data = c_input_data.drop(['used_indicator_ids', 'current_indicator_short_id'], axis=1)
 
-        data[self.fitting_parameters.y_columns] = y
+        output_data = self._predict_model(c_input_data.to_dict('records'))
 
-        output_data = data.loc[data['period'].isin(main_periods)].copy()
+        output_data = output_data.loc[output_data['period'].isin(main_periods)].copy()
 
         output_data = output_data[output_columns]
         output_data['value'] = output_data.apply(sum, axis=1)
@@ -590,6 +584,7 @@ class VbmModel(Model):
 
         return value
 
+    # noinspection PyMethodMayBeStatic
     def _get_data_for_fa_graph(self, result_data: list[dict[str, Any]], outputs: dict[str, Any],
                                value_name: str) -> pd.DataFrame:
         """
@@ -614,6 +609,7 @@ class VbmModel(Model):
 
         return result_data
 
+    # noinspection PyMethodMayBeStatic
     def _get_fa_graph_bin(self, values: pd.DataFrame, out_indicator_name: str) -> str:
         """
         Forms fa graph html str
@@ -747,8 +743,6 @@ def _calculate_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]
     :return: result (info) of calculating fi
     """
 
-    result = None
-
     match parameters:
         case {'model': {'id': str(model_id), 'fi_parameters': dict(fi_parameters)}} if model_id:
             c_fi_parameters = fi_parameters.copy()
@@ -772,8 +766,6 @@ def _get_feature_importances(parameters: dict[str, Any]) -> dict[str, Any]:
     :return: fi data
     """
 
-    result = None
-
     match parameters:
         case {'model': {'id': str(model_id)}} if model_id:
             model = VbmModel(model_id)
@@ -791,8 +783,6 @@ def _drop_fi_calculation(parameters: dict[str, Any]) -> str:
     :return: result of dropping
     """
 
-    result = None
-
     match parameters:
         case {'model': {'id': str(model_id)}} if model_id:
             model = VbmModel(model_id)
@@ -809,7 +799,6 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
     :param parameters: request parameters
     :return: calculated sa data
     """
-    result = None
 
     match parameters:
         case {'model': {'id': str(model_id)},
@@ -839,8 +828,6 @@ def _get_factor_analysis_data(parameters: dict[str, Any]) -> dict[str, Any]:
     :param parameters: request parameters
     :return: calculated fa data
     """
-
-    result = None
 
     match parameters:
         case {'model': {'id': str(model_id)},
