@@ -128,7 +128,7 @@ class Model:
         if not self.fitting_parameters.fitting_is_error:
 
             self.fitting_parameters.set_end_fitting()
-            self._write_to_db(write_scaler=True)
+            self._write_to_db()
 
         return result
 
@@ -170,7 +170,7 @@ class Model:
         if self.fitting_parameters.fitting_is_started:
             set_background_job_interrupted(self.fitting_parameters.fitting_job_id)
 
-    def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None) -> Any:
+    def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting model after checking, and preparing parameters
         :param epochs: number of epochs for fitting
@@ -189,8 +189,9 @@ class Model:
         x, y = self._data_to_x_y(data)
         input_number = len(self.fitting_parameters.x_columns)
         output_number = len(self.fitting_parameters.y_columns)
+
         self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number,
-                                                              self.fitting_parameters.is_first_fitting())
+                                                            self.fitting_parameters.is_first_fitting())
         result = self._engine.fit(x, y, epochs, fitting_parameters)
 
         self._scaler = pipeline.named_steps['scaler']
@@ -330,10 +331,9 @@ class Model:
 
         return Pipeline(estimators)
 
-    def _write_to_db(self, write_scaler: bool = False) -> None:
+    def _write_to_db(self) -> None:
         """
         Writes model to db
-        :param write_scaler: also writes scaler to DB if True
         """
         model_to_db = {'id': self._id}
         model_to_db.update(self.parameters.get_all())
@@ -346,7 +346,6 @@ class Model:
     def _read_from_db(self):
         """
         Reads model from db
-        :param write_scaler: also reads scaler from DB if True
         """
         model_from_db = self._db_connector.get_line('models', {'id': self._id})
 
