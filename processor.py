@@ -207,8 +207,8 @@ class Processor(ABC):
             request_parameters['REQUEST_METHOD'] = 'GET'
 
             if environ.get('QUERY_STRING'):
-                params = parse_qsl(environ.get('QUERY_STRING'))
-                print(params)
+                params = {name: value for name, value in parse_qsl(environ.get('QUERY_STRING'))}
+                request_parameters.update(params)
 
             request_parameters['QUERY_STRING'] = environ.get('QUERY_STRING') or ''
 
