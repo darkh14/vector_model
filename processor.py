@@ -19,6 +19,7 @@ from abc import ABC, abstractmethod
 import inspect
 import zipfile
 import io
+from cgi import parse_qsl
 
 # noinspection PyUnresolvedReferences
 import vm_logging
@@ -204,9 +205,10 @@ class Processor(ABC):
 
         else:
             request_parameters['REQUEST_METHOD'] = 'GET'
-            for par_element in environ['wsgi.input']:
-                par_string = par_element
-                print(par_string)
+
+            params = parse_qsl(environ.get('QUERY_STRING'))
+            print(params)
+
             request_parameters['QUERY_STRING'] = environ.get('QUERY_STRING') or ''
 
         return request_parameters
