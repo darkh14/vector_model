@@ -40,6 +40,7 @@ import general
 from vm_logging.exceptions import RequestProcessException, ParameterNotFoundException, ParametersFormatError
 from vm_settings import controller as settings_controller
 from db_processing.controller import initialize_connector, drop_connector
+from vm_versions import get_version
 
 PROCESSOR = None
 """ Current class for processing request (for caching) """
@@ -88,21 +89,27 @@ class Processor(ABC):
 
         request_parameters = self._get_request_parameters_from_environ(environ)
 
-        if TEST_MODE:
-            output_dict = self._process_with_parameters(request_parameters)
+        if request_parameters['REQUEST_METHOD'] == 'GET':
+            output_list = [bytes('<h2>VBM module v. {}</h2> <br> '.format(get_version()) +
+                                 '<h3>Connection established</h3>')]
+            output_len = len(output_list[0])
         else:
-            # noinspection PyBroadException
-            try:
-                output_dict = self._process_with_parameters(request_parameters)
-            except RequestProcessException as request_ex:
-                error_text = str(request_ex)
-                output_dict = {'status': 'error', 'error_text': error_text}
-            except Exception:
-                error_text = 'Error!\n' + traceback.format_exc()
-                output_dict = {'status': 'error', 'error_text': error_text}
 
-        output_list = self._transform_output_parameters_to_str(output_dict)
-        output_len = len(output_list[0])
+            if TEST_MODE:
+                output_dict = self._process_with_parameters(request_parameters)
+            else:
+                # noinspection PyBroadException
+                try:
+                    output_dict = self._process_with_parameters(request_parameters)
+                except RequestProcessException as request_ex:
+                    error_text = str(request_ex)
+                    output_dict = {'status': 'error', 'error_text': error_text}
+                except Exception:
+                    error_text = 'Error!\n' + traceback.format_exc()
+                    output_dict = {'status': 'error', 'error_text': error_text}
+
+            output_list = self._transform_output_parameters_to_str(output_dict)
+            output_len = len(output_list[0])
 
         start_response('200 OK', [('Content-type', 'text/html'), ('Content-Length', str(output_len))])
         return output_list
@@ -172,6 +179,8 @@ class Processor(ABC):
         request_parameters = dict()
         if environ.get('REQUEST_METHOD') == 'POST':
 
+            request_parameters['REQUEST_METHOD'] = 'POST'
+
             content_length = int(environ.get('CONTENT_LENGTH')) if 'CONTENT_LENGTH' in environ else 0
 
             par_string = ''
@@ -190,11 +199,10 @@ class Processor(ABC):
                         par_string = par_element
 
             if par_string:
-                request_parameters = self._parameters_from_json(par_string)
+                request_parameters.update(self._parameters_from_json(par_string))
 
         else:
-            print(environ)
-            raise RequestProcessException('Request method must be "post"')
+            request_parameters['REQUEST_METHOD'] = 'GET'
 
         return request_parameters
 
