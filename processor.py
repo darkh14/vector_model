@@ -113,7 +113,7 @@ class Processor(ABC):
             output_list = self._transform_output_parameters_to_str(output_dict)
             output_len = len(output_list[0])
 
-        start_response('200 OK', [('Content-type', 'application/json'), ('Content-Length', str(output_len))])
+        start_response('200 OK', [('Content-type', 'text/html'), ('Content-Length', str(output_len))])
         return output_list
 
     @staticmethod
