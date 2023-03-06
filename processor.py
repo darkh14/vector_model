@@ -193,6 +193,7 @@ class Processor(ABC):
                 request_parameters = self._parameters_from_json(par_string)
 
         else:
+            print(environ)
             raise RequestProcessException('Request method must be "post"')
 
         return request_parameters

@@ -344,24 +344,7 @@ class VbmModel(Model):
         :param fi_parameters: parameters to calculate fi
         :return: info of calculating
         """
-        # pipeline = self._get_model_pipeline(for_predicting=False, fitting_parameters=fi_parameters)
-        # data = pipeline.fit_transform(None)
 
-        # x, y = self._data_to_x_y(data)
-        # input_number = len(self.fitting_parameters.x_columns)
-        # output_number = len(self.fitting_parameters.y_columns)
-        #
-        # self._engine = get_engine_class(self.parameters.type)('', input_number, output_number, True)
-        #
-        #
-        #
-        # fi_engine = KerasRegressor(build_fn=self._get_engine_for_fi,
-        #                           epochs=epochs,
-        #                           verbose=2,
-        #                           validation_split=validation_split)
-
-        # fi_engine.fit(x, y)
-        #
         result = self._fit_model(fi_parameters['epochs'], fi_parameters, for_fi=True)
 
         self._calculate_fi_from_model(result['engine'], result['x'], result['y'])
