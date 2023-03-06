@@ -204,7 +204,9 @@ class Processor(ABC):
 
         else:
             request_parameters['REQUEST_METHOD'] = 'GET'
-            print(environ['wsgi.input'])
+            for par_element in environ['wsgi.input']:
+                par_string = par_element
+                print(par_string)
             request_parameters['QUERY_STRING'] = environ.get('QUERY_STRING') or ''
 
         return request_parameters
