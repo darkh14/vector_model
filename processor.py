@@ -90,8 +90,8 @@ class Processor(ABC):
         request_parameters = self._get_request_parameters_from_environ(environ)
 
         if request_parameters['REQUEST_METHOD'] == 'GET':
-            output_list = [bytes('<h2>VBM module v. {}</h2> <br> '.format(get_version()) +
-                                 '<h3>Connection established</h3>')]
+            output_list = [bytes(('<h2>VBM module v. {}</h2> <br> '.format(get_version()) +
+                                 '<h3>Connection established</h3>'), 'UTF-8')]
             output_len = len(output_list[0])
         else:
 
