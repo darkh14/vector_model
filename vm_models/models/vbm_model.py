@@ -62,7 +62,7 @@ class VbmModel(Model):
             analytics = None
             if 'an' in col_list:
                 analytic_keys = [key for key in self.fitting_parameters.y_analytic_keys
-                                 if key['short_id'] == col_list[3]]
+                                 if key['short_id'] == col_list[5]]
 
                 if analytic_keys:
                     analytics = analytic_keys[0]['analytics']

@@ -55,8 +55,8 @@ class IdGenerator:
     @classmethod
     def _get_hash(cls, value: str) -> str:
         """
-        For getting hash string from value
-        :param value: value string to generate hash
+        For getting hash string from value.
+        :param value: value string to generate hash.
         :return: hash string
         """
         if not value.replace(' ', ''):
