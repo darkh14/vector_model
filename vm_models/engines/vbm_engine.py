@@ -3,7 +3,8 @@
     Module for ML engine classes.
     Classes:
         VbmNeuralNetwork -  3 layer direct distribution NN
-        VbmLinearModel - linear regression based on 1 layer NN inherited by VbmNeuralNetwork
+        VbmLinearModel - linear regression based on sklearn.linear_model
+        PolynomialModel - 2 degree model based on sklearn.linear_model with polynomial transformation
 """
 
 import numpy as np
@@ -12,6 +13,8 @@ import os
 import zipfile
 import pickle
 import shutil
+
+from sklearn.linear_model import LinearRegression
 
 from keras.models import Sequential, load_model
 from keras.layers import Dense
@@ -97,6 +100,7 @@ class VbmNeuralNetwork(BaseEngine):
             else:
                 self._inner_engine = self.create_inner_engine()
 
+    # noinspection PyMethodMayBeStatic
     def _get_inner_engine_from_binary_data(self, model_data: bytes, use_pickle: bool = False) -> Sequential:
         """
         Gets inner engine object from its binary data
@@ -192,30 +196,110 @@ class VbmNeuralNetwork(BaseEngine):
         return self._inner_engine
 
 
-class VbmLinearModel(VbmNeuralNetwork):
+class VbmLinearModel(BaseEngine):
     """ Linear regression based on 1 layer NN inherited by VbmNeuralNetwork """
+    service_name: ClassVar[str] = 'vbm'
     model_type: ClassVar[str] = 'linear_regression'
 
-    def _create_inner_engine(self) -> Sequential:
+    def __init__(self, model_id: str, input_number: int, output_number: int, new_engine: bool = False,
+                 **kwargs) -> None:
         """
-         For creating new inner engine object and compile it
-        :return: new inner engine object (1 layer keras Sequential with linear activation)
+        Defines inner engine = None, _validation_split and reads from db if necessary
+        :param model_id: id of model object
+        :param input_number: number of inputs
+        :param output_number: umber of outputs (labels)
+        :param new_engine: if is True  - not need to read from db
+        :param kwargs: additional parameters
         """
-        model = Sequential()
+        super().__init__(model_id, input_number, output_number, new_engine, **kwargs)
 
-        model.add(Dense(self._input_number, activation="relu", input_shape=(self._input_number,), name='dense_1'))
-        model.add(Dense(self._output_number, activation="linear", name='dense_last'))
+        self._inner_engine: Optional[LinearRegression] = None
 
-        self.compile_engine(model)
+        self._read_from_db()
+
+    def fit(self, x: np.ndarray, y: np.ndarray, epochs: int,
+            parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        """
+        For fitting ML engine
+        :param x:  input data
+        :param y: output data (labels)
+        :param epochs: nuber of epochs of fitting
+        :param parameters: additional parameters
+        :return: history of fitting
+        """
+        self._inner_engine.fit(x, y)
+
+        self._write_to_db()
+
+        return {'description': 'Fit OK', 'history': []}
+
+    def predict(self, x: np.ndarray) -> np.ndarray:
+        """
+        For predicting using inner engine
+        :param x: input data for predicting
+        :return: predicted output data
+        """
+        return self._inner_engine.predict(x)
+
+    # noinspection PyMethodMayBeStatic
+    def create_inner_engine(self) -> LinearRegression:
+        """
+        For creating new inner engine object and compile it
+        :return: new inner engine object (LinearRegression)
+        """
+        model = LinearRegression()
 
         return model
 
-    @staticmethod
-    def compile_engine(engine):
+    def _read_from_db(self) -> None:
         """
-        Method to compile engine
-        :param engine: ML engine object
+        For read inner engine from db and save it to self._inner_engine
         """
-        engine.compile(optimizer=Adam(learning_rate=0.01), loss='MeanSquaredError',
-                      metrics=['RootMeanSquaredError'])
+        if self._new_engine or not self._model_id:
+            self._inner_engine = self.create_inner_engine()
+        else:
+            line_from_db = self._db_connector.get_line('engines', {'model_id': self._model_id})
+
+            if line_from_db:
+                self._inner_engine = self._get_inner_engine_from_binary_data(line_from_db['inner_engine'])
+            else:
+                self._inner_engine = self.create_inner_engine()
+
+    # noinspection PyMethodMayBeStatic
+    def _get_inner_engine_from_binary_data(self, model_data: bytes) -> LinearRegression:
+        """
+        Gets inner engine object from its binary data
+        :param model_data: binary engine data
+        :return: inner engine object
+        """
+
+        inner_model = pickle.loads(model_data)
+
+        return inner_model
+
+    def _write_to_db(self) -> None:
+        """
+        For writing inner engine object to db
+        """
+        if self._model_id:
+            line_to_db = {'model_id': self._model_id, 'inner_engine': self._get_binary_data_from_inner_engine()}
+            self._db_connector.set_line('engines', line_to_db, {'model_id': self._model_id})
+
+    def _get_binary_data_from_inner_engine(self) -> bytes:
+        """
+        Gets binary data of inner engine object from inner object itself
+        :return: binary data of inner engine object
+        """
+
+        engine_packed = pickle.dumps(self._inner_engine, protocol=pickle.HIGHEST_PROTOCOL)
+
+        return engine_packed
+
+    @property
+    def inner_engine(self) -> LinearRegression:
+        """
+        Property for self._inner_engine
+        :return: value of self._inner_engine
+        """
+        return self._inner_engine
         
