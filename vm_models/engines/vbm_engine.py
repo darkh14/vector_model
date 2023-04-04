@@ -15,6 +15,7 @@ import pickle
 import shutil
 
 from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
 
 from keras.models import Sequential, load_model
 from keras.layers import Dense
@@ -302,4 +303,30 @@ class VbmLinearModel(BaseEngine):
         :return: value of self._inner_engine
         """
         return self._inner_engine
-        
+
+
+class VbmPolynomialModel(VbmLinearModel):
+
+    model_type: ClassVar[str] = 'polynomial_regression'
+
+    def fit(self, x: np.ndarray, y: np.ndarray, epochs: int,
+            parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+
+        pf = PolynomialFeatures(degree=2, interaction_only=True)
+
+        x_pf = pf.fit_transform(x)
+
+        return super().fit(x_pf, y, epochs, parameters)
+
+    def predict(self, x: np.ndarray) -> np.ndarray:
+        """
+        For predicting using inner engine
+        :param x: input data for predicting
+        :return: predicted output data
+        """
+
+        pf = PolynomialFeatures(degree=2, interaction_only=True)
+
+        x_pf = pf.fit_transform(x)
+
+        return self._inner_engine.predict(x_pf)
