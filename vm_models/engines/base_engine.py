@@ -41,6 +41,8 @@ class BaseEngine(ABC):
 
         self._new_engine: bool = new_engine
 
+        self._inner_engine = Optional[object]
+
     @abstractmethod
     def fit(self, x: np.ndarray,  y: np.ndarray, epochs: int,
             parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
@@ -66,4 +68,7 @@ class BaseEngine(ABC):
         For deleting engine from DB
         """
         self._db_connector.delete_lines('engines', {'model_id': self._model_id})
+
+    def get_engine_for_fi(self) -> object:
+        return self._inner_engine
         

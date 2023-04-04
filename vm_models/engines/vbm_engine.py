@@ -16,6 +16,7 @@ import shutil
 
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import Pipeline
 
 from keras.models import Sequential, load_model
 from keras.layers import Dense
@@ -311,6 +312,14 @@ class VbmPolynomialModel(VbmLinearModel):
 
     def fit(self, x: np.ndarray, y: np.ndarray, epochs: int,
             parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        """
+        For fitting ML engine
+        :param x:  input data
+        :param y: output data (labels)
+        :param epochs: nuber of epochs of fitting
+        :param parameters: additional parameters
+        :return: history of fitting
+        """
 
         pf = PolynomialFeatures(degree=2, interaction_only=True)
 
@@ -329,4 +338,13 @@ class VbmPolynomialModel(VbmLinearModel):
 
         x_pf = pf.fit_transform(x)
 
-        return self._inner_engine.predict(x_pf)
+        return super().predict(x_pf)
+
+    def get_engine_for_fi(self) -> object:
+
+        pf = PolynomialFeatures(degree=2, interaction_only=True)
+
+        estimators = [pf, self._inner_engine]
+
+        # noinspection PyTypeChecker
+        return Pipeline(estimators)

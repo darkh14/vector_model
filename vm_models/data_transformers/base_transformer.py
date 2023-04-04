@@ -19,6 +19,7 @@ import pickle
 from ..model_parameters.base_parameters import ModelParameters, FittingParameters
 from db_processing import get_connector
 from db_processing.connectors import base_connector
+from vm_logging.exceptions import ModelException
 from ..model_types import DataTransformersTypes
 from ..model_filters import get_fitting_filter_class, base_filter
 
@@ -96,6 +97,7 @@ class Reader(BaseTransformer):
     service_name: ClassVar[str] = ''
     transformer_type: ClassVar[DataTransformersTypes] = DataTransformersTypes.READER
 
+    # noinspection PyUnusedLocal
     def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters, **kwargs):
         """
         Defines fitting filter
@@ -294,3 +296,4 @@ class Shuffler(BaseTransformer):
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
         return x.sample(frac=1).reset_index(drop=True).copy()
+

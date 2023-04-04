@@ -11,11 +11,13 @@ import pandas as pd
 import math
 from functools import reduce
 
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+
 from keras.wrappers.scikit_learn import KerasRegressor
 from keras.models import Sequential, clone_model
 from eli5.sklearn import PermutationImportance
 import plotly.graph_objects as go
-from sklearn.metrics import mean_squared_error
 
 from .base_model import Model
 from vm_logging.exceptions import ModelException, ParametersFormatError
@@ -337,6 +339,7 @@ class VbmModel(Model):
         if self.fitting_parameters.fi_calculation_is_started:
             raise ModelException('Another fi calculation is started yet. Wait for end of fi calculation')
 
+    # noinspection PyUnusedLocal
     def _fi_calculate_model(self, epochs, fi_parameters):
         """
         For fi calculation after prepare and check parameters. Method - permutation importances
@@ -353,7 +356,8 @@ class VbmModel(Model):
 
         return result
 
-    def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None, for_fi: bool = False) -> dict[str, Any]:
+    def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None, for_fi: bool = False) \
+            -> dict[str, Any]:
         """
         For fitting model after checking, and preparing parameters
         :param epochs: number of epochs for fitting
@@ -376,24 +380,24 @@ class VbmModel(Model):
         self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number,
                                                               self.fitting_parameters.is_first_fitting() or for_fi)
 
-        fi_engine = None
+        self._scaler = pipeline.named_steps['scaler']
 
         if for_fi:
-            validation_split = fitting_parameters.get('validation_split') or  0.2 if fitting_parameters else 0.2
-            fi_engine = KerasRegressor(build_fn=self._get_engine_for_fi,
-                                       epochs=epochs,
-                                       verbose=2,
-                                       validation_split=validation_split)
+            validation_split = fitting_parameters.get('validation_split') or 0.2 if fitting_parameters else 0.2
+            fi_engine = self._get_engine_for_fi(epochs, validation_split)
 
             history = fi_engine.fit(x, y)
+
+            if hasattr(history, 'history'):
+                result_history = history.history
+            else:
+                result_history = []
+
+            result = {'history': result_history, 'x': x, 'y': y, 'engine': fi_engine}
 
         else:
 
             result = self._engine.fit(x, y, epochs, fitting_parameters)
-
-        self._scaler = pipeline.named_steps['scaler']
-
-        if not for_fi:
 
             y_pred = self._engine.predict(x)
 
@@ -408,22 +412,34 @@ class VbmModel(Model):
 
             self.fitting_parameters.metrics = self._get_metrics(y, y_pred)
 
-        else:
-
-            result = {'history': history.history, 'x': x, 'y': y, 'engine': fi_engine}
-
         return result
 
     # noinspection PyUnresolvedReferences
-    def _get_engine_for_fi(self) -> Sequential:
+    def _get_engine_fn_for_fi(self) -> Sequential:
         """
         Returns inner engine for calculating fi
         :return: keras sequential engine
         """
-        inner_engine = clone_model(self._engine.inner_engine)
+
+        engine_for_fi = self._engine.get_engine_for_fi()
+
+        inner_engine = clone_model(engine_for_fi)
         self._engine.compile_engine(inner_engine)
 
         return inner_engine
+
+    def _get_engine_for_fi(self, epochs: int, validation_split: float) -> [KerasRegressor | LinearRegression]:
+
+        if self._engine.model_type == 'neural_network':
+            engine = KerasRegressor(build_fn=self._get_engine_fn_for_fi,
+                           epochs=epochs,
+                           verbose=2,
+                           validation_split=validation_split)
+        else:
+            # noinspection PyUnresolvedReferences
+            engine = self._get_engine_fn_for_fi()
+
+        return engine
 
     def _calculate_fi_from_model(self, fi_model: KerasRegressor, x: np.ndarray, y: np.ndarray) -> None:
         """
@@ -439,7 +455,7 @@ class VbmModel(Model):
 
         fi['value'] = fi['feature'].apply(lambda el: el.split('_')[3])
 
-        fi = fi.sort_values(by='error_delta', ascending=False)
+        fi   = fi.sort_values(by='error_delta', ascending=False)
 
         fi['indicator'] = fi['feature'].apply(self._get_indicator_from_column_name)
 

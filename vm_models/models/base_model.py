@@ -282,17 +282,7 @@ class Model:
         :param fitting_parameters: parameters for fitting
         :return: list of estimators
         """
-        estimator_types_list = [
-                                DataTransformersTypes.READER,
-                                DataTransformersTypes.CHECKER,
-                                DataTransformersTypes.ROW_COLUMN_TRANSFORMER,
-                                DataTransformersTypes.CATEGORICAL_ENCODER,
-                                DataTransformersTypes.NAN_PROCESSOR,
-                                DataTransformersTypes.SCALER
-        ]
-
-        if not for_predicting:
-            estimator_types_list.append(DataTransformersTypes.SHUFFLER)
+        estimator_types_list = self._get_estimator_types(for_predicting, fitting_parameters)
 
         estimators = []
         for estimator_type in estimator_types_list:
@@ -303,6 +293,22 @@ class Model:
             estimators.append((estimator_type.value, estimator))
 
         return estimators
+
+    # noinspection PyUnusedLocal,PyMethodMayBeStatic
+    def _get_estimator_types(self, for_predicting: bool = False,
+                             fitting_parameters: Optional[dict[str, Any]] = None) -> list:
+
+        estimator_types = [DataTransformersTypes.READER,
+                           DataTransformersTypes.CHECKER,
+                           DataTransformersTypes.ROW_COLUMN_TRANSFORMER,
+                           DataTransformersTypes.CATEGORICAL_ENCODER,
+                           DataTransformersTypes.NAN_PROCESSOR,
+                           DataTransformersTypes.SCALER]
+
+        if not for_predicting:
+            estimator_types.append(DataTransformersTypes.SHUFFLER)
+
+        return estimator_types
 
     def _get_estimator(self, transformer_type: DataTransformersTypes,
                        fitting_parameters: Optional[dict[str, Any]] = None) -> base_transformer.BaseTransformer:
