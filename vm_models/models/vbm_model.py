@@ -15,7 +15,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 
 from keras.wrappers.scikit_learn import KerasRegressor
-from keras.models import Sequential, clone_model
+from keras.models import Sequential
 from eli5.sklearn import PermutationImportance
 import plotly.graph_objects as go
 
@@ -423,10 +423,7 @@ class VbmModel(Model):
 
         engine_for_fi = self._engine.get_engine_for_fi()
 
-        inner_engine = clone_model(engine_for_fi)
-        self._engine.compile_engine(inner_engine)
-
-        return inner_engine
+        return engine_for_fi
 
     def _get_engine_for_fi(self, epochs: int, validation_split: float) -> [KerasRegressor | LinearRegression]:
 
@@ -455,7 +452,7 @@ class VbmModel(Model):
 
         fi['value'] = fi['feature'].apply(lambda el: el.split('_')[3])
 
-        fi   = fi.sort_values(by='error_delta', ascending=False)
+        fi = fi.sort_values(by='error_delta', ascending=False)
 
         fi['indicator'] = fi['feature'].apply(self._get_indicator_from_column_name)
 

@@ -16,9 +16,8 @@ import shutil
 
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
-from sklearn.pipeline import Pipeline
 
-from keras.models import Sequential, load_model
+from keras.models import Sequential, load_model, clone_model
 from keras.layers import Dense
 from keras.optimizers import Adam
 
@@ -197,6 +196,13 @@ class VbmNeuralNetwork(BaseEngine):
         """
         return self._inner_engine
 
+    def get_engine_for_fi(self) -> object:
+
+        inner_engine_for_fi = clone_model(self._inner_engine)
+        self.compile_engine(inner_engine_for_fi)
+
+        return inner_engine_for_fi
+
 
 class VbmLinearModel(BaseEngine):
     """ Linear regression based on 1 layer NN inherited by VbmNeuralNetwork """
@@ -342,9 +348,27 @@ class VbmPolynomialModel(VbmLinearModel):
 
     def get_engine_for_fi(self) -> object:
 
-        pf = PolynomialFeatures(degree=2, interaction_only=True)
+        return PolynomialRegressionForFI(self._inner_engine)
 
-        estimators = [pf, self._inner_engine]
 
-        # noinspection PyTypeChecker
-        return Pipeline(estimators)
+class PolynomialRegressionForFI(LinearRegression):
+
+    def __init__(self, inner_ingine: LinearRegression):
+
+        super().__init__()
+        self._inner_engine = inner_ingine
+
+        self._pf = PolynomialFeatures(degree=2, interaction_only=True)
+
+    def fit(self, x: np.ndarray, y: np.ndarray, **kwargs) -> object:
+
+        x_pf = self._pf.fit_transform(x)
+
+        return self._inner_engine.fit(x_pf, y, **kwargs)
+
+    def predict(self, x: np.ndarray):
+
+        x_pf = self._pf.fit_transform(x)
+
+        return self._inner_engine.predict(x_pf)
+
