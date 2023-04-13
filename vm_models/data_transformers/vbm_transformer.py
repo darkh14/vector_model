@@ -285,7 +285,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         :param indicator_parameters: parameters of current indicator
         :return: all analytic keys and ids found in data
         """
-        ids = [] # list(data['analytics_key_id'].unique())
+        ids = []
 
         data['number'] = data.index
         fields_to_group = ['analytics_key_id']
