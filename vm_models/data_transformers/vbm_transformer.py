@@ -97,9 +97,12 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         x_columns = []
         y_columns = []
 
-        all_indicators = self._model_parameters.x_indicators
+        analytic_bound_ids = self._get_analytic_bound_ids()
+
+        all_indicators = self._add_field_to_indicators(self._model_parameters.x_indicators, 'is_y', False)
         if self._fitting_mode:
-            all_indicators = all_indicators + self._model_parameters.y_indicators
+            all_indicators = all_indicators + self._add_field_to_indicators(self._model_parameters.y_indicators,
+                                                                            'is_y', True)
 
         for ind_parameters in all_indicators:
 
@@ -109,9 +112,10 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
                 ind_data = self._process_data_periods(ind_data, ind_parameters)
 
-                analytic_keys, analytic_ids = self._get_analytic_parameters_from_data(ind_data, ind_parameters)
+                analytic_keys, analytic_ids = self._get_analytic_parameters_from_data(ind_data,
+                                                                                    ind_parameters, analytic_bound_ids)
 
-                if not analytic_ids:
+                if not analytic_ids and not ind_parameters['use_analytics']:
                     analytic_ids.append('')
 
                 for analytic_id in analytic_ids:
@@ -144,6 +148,16 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return data_result
 
+    def _get_analytic_bound_ids(self) -> dict[str, list[str]]:
+        
+        bound = {}
+
+        for ind in self._model_parameters.x_indicators + self._model_parameters.y_indicators:
+            if ind.get('analytics_bound'):
+                bound[ind['short_id']] = [el['short_id'] for el in ind['analytics_bound']]
+
+        return bound
+
     # noinspection PyMethodMayBeStatic
     def _add_data_while_predicting(self, data_result: pd.DataFrame, raw_data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -162,6 +176,15 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         data_result['period'] = data_result['period'].apply(lambda x: x.strftime('%d.%m.%Y'))
 
         return data_result
+
+    @staticmethod
+    def _add_field_to_indicators(indicators: list[dict[str, Any]], field_name: str,
+                                 field_value: Any) -> list[dict[str, Any]]:
+
+        for ind in indicators:
+            ind[field_name] = field_value
+
+        return indicators
 
     @staticmethod
     def _get_raw_data_from_x(x: pd.DataFrame) -> pd.DataFrame:
@@ -228,7 +251,8 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         return an_data
 
     def _get_analytic_parameters_from_data(self, data: pd.DataFrame,
-                                        indicator_parameters: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
+                                    indicator_parameters: dict[str, Any],
+                                    analytic_bound_ids: dict[str, list[str]]) -> tuple[list[dict[str, Any]], list[str]]:
         """
         Gets all analytic keys and ids in data (for predicting and secondary fitting)
         :param data: data with one indicator
@@ -239,7 +263,8 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
             if self._fitting_mode and self._fitting_parameters.is_first_fitting():
 
-                keys, ids = self._get_analytic_parameters_for_new_fitting(data, indicator_parameters)
+                keys, ids = self._get_analytic_parameters_for_new_fitting(data, indicator_parameters,
+                                                                          analytic_bound_ids)
 
             else:
                 keys = indicator_parameters.get('analytic_keys') or []
@@ -252,14 +277,15 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         return keys, ids
 
     def _get_analytic_parameters_for_new_fitting(self, data: pd.DataFrame,
-                                    indicator_parameters: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
+                                    indicator_parameters: dict[str, Any],
+                                    analytic_bound_ids: dict[str, list[str]]) -> tuple[list[dict[str, Any]], list[str]]:
         """
         Gets analytic keys and id for new fitting
         :param data: data with one indicator
         :param indicator_parameters: parameters of current indicator
         :return: all analytic keys and ids found in data
         """
-        ids = list(data['analytics_key_id'].unique())
+        ids = [] # list(data['analytics_key_id'].unique())
 
         data['number'] = data.index
         fields_to_group = ['analytics_key_id']
@@ -270,8 +296,24 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         analytics_data = ind_data[['analytics_key_id', 'analytics']].to_dict('records')
 
+        use_bound = indicator_parameters.get('analytics_bound')
+        ind_bound_ids = [el['short_id'] for el in indicator_parameters['analytics_bound']] if use_bound else []
+
+        use_inv_bound = analytic_bound_ids.get(indicator_parameters['short_id'])
+        inv_ind_bound_ids = analytic_bound_ids.get(indicator_parameters['short_id']) if use_inv_bound else []
+
         keys = []
         for analytic_el in analytics_data:
+
+            if use_bound:
+                if analytic_el['analytics_key_id'] not in ind_bound_ids:
+                    continue
+            elif use_inv_bound:
+                if analytic_el['analytics_key_id'] in inv_ind_bound_ids:
+                    continue
+
+            ids.append(analytic_el['analytics_key_id'])
+
             key = {'short_id': analytic_el['analytics_key_id'], 'analytics': analytic_el['analytics']}
             keys.append(key)
 
@@ -296,15 +338,15 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return keys, ids
 
-    def _is_y_indicator(self, indicator_parameters: dict[str, Any]) -> bool:
+    @staticmethod
+    def _is_y_indicator(indicator_parameters: dict[str, Any]) -> bool:
         """
         Returns True if current indicator is in y indicators, else False
         :param indicator_parameters: parameters of current indicators
         :return: True if current indicator is in y indicators, else False
         """
-        y_ids = [el['short_id'] for el in self._model_parameters.y_indicators]
 
-        return indicator_parameters['short_id'] in y_ids
+        return indicator_parameters['is_y']
 
     # noinspection PyMethodMayBeStatic
     def _get_column_name(self, indicator_id: str, analytic_id: str, value_name: str,

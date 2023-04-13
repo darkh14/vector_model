@@ -69,6 +69,6 @@ class BaseEngine(ABC):
         """
         self._db_connector.delete_lines('engines', {'model_id': self._model_id})
 
-    def get_engine_for_fi(self) -> object:
+    def get_engine_for_fi(self) -> Any:
         return self._inner_engine
         

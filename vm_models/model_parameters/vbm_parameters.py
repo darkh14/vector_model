@@ -13,6 +13,8 @@ import os
 
 from vm_logging.exceptions import ModelException, ParametersFormatError
 from .base_parameters import ModelParameters, FittingParameters
+from data_processing.data_preprocessors import get_data_preprocessing_class
+
 from id_generator import IdGenerator
 
 __all__ = ['VbmModelParameters', 'VbmFittingParameters']
@@ -122,6 +124,26 @@ class VbmModelParameters(ModelParameters):
             case _:
                 raise ParametersFormatError('Wrong request parameters format. Check "model" parameter')
 
+    @staticmethod
+    def _add_short_ids_to_analytic_bounds(analytic_bounds: list[list[dict[str, Any]]]) \
+            -> list[dict[str, list[str, Any]]]:
+
+        data_processor = get_data_preprocessing_class()()
+
+        bounds = []
+
+        for initial_bound in analytic_bounds:
+            bound_el = {}
+            # noinspection PyUnresolvedReferences
+            analytics = data_processor.add_short_id_to_analytics(initial_bound)
+            # noinspection PyUnresolvedReferences
+            bound_el['short_id'] = data_processor.get_short_id_for_analytics(analytics)
+            bound_el['analytics'] = analytics
+
+            bounds.append(bound_el)
+
+        return bounds
+
     @property
     def x_indicators(self) -> list[dict[str, Any]]:
         """
@@ -150,6 +172,9 @@ class VbmModelParameters(ModelParameters):
             if 'short_id' not in el:
                 el['short_id'] = IdGenerator.get_short_id_from_dict_id_type(el)
 
+            if 'analytic_bounds' in el:
+                el['analytic_bounds'] = self._add_short_ids_to_analytic_bounds(el['analytic_bounds'])
+
         self._x_indicators = x_indicators
 
     @y_indicators.setter
@@ -163,6 +188,9 @@ class VbmModelParameters(ModelParameters):
         for el in y_indicators:
             if 'short_id' not in el:
                 el['short_id'] = IdGenerator.get_short_id_from_dict_id_type(el)
+
+            if 'analytics_bound' in el:
+                el['analytics_bound'] = self._add_short_ids_to_analytic_bounds(el['analytics_bound'])
 
         self._y_indicators = y_indicators
 
@@ -324,7 +352,7 @@ class VbmFittingParameters(FittingParameters):
         if self.fi_is_calculated or self.fi_calculation_is_started:
             self.set_drop_fi_calculation()
 
-    def set_drop_fitting(self) -> None:
+    def set_drop_fitting(self, model_id='') -> None:
         """
         For setting statuses and other parameters when dropping fitting
         """

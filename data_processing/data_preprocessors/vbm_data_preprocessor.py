@@ -45,7 +45,7 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
         """
         pd_data = pd.DataFrame(data)
 
-        pd_data = self._add_short_ids_to_data(pd_data)
+        pd_data = self.add_short_ids_to_data(pd_data)
         pd_data['loading_id'] = loading_id
         pd_data['package_id'] = package_id
 
@@ -63,26 +63,26 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
         pd_data['indicator_name'] = pd_data['indicator'].apply(lambda x: x['name'])
 
         pd_data['indicator'] = pd_data[['indicator', 'indicator_short_id']].apply(
-            self._add_short_id_to_indicator, axis=1)
+            self.add_short_id_to_indicator, axis=1)
 
-        pd_data['analytics'] = pd_data['analytics'].apply(self._add_short_id_to_analytics)
+        pd_data['analytics'] = pd_data['analytics'].apply(self.add_short_id_to_analytics)
 
         return pd_data
 
-    def _add_short_ids_to_data(self, pd_data: pd.DataFrame) -> pd.DataFrame:
+    def add_short_ids_to_data(self, pd_data: pd.DataFrame) -> pd.DataFrame:
         """ Adds short ids to indicators, analytics and analytic keys
                 :param pd_data: pd.DataFrame - data array
                 :return: pd.DataFrame - data array with short ids added
         """
         pd_data['indicator_short_id'] = pd_data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
-        pd_data['analytics'] = pd_data['analytics'].apply(self._add_short_id_to_analytics)
+        pd_data['analytics'] = pd_data['analytics'].apply(self.add_short_id_to_analytics)
 
-        pd_data['analytics_key_id'] = pd_data['analytics'].apply(IdGenerator.get_short_id_from_list_of_dict_short_id)
+        pd_data['analytics_key_id'] = pd_data['analytics'].apply(self.get_short_id_for_analytics)
 
         return pd_data
 
     @staticmethod
-    def _add_short_id_to_indicator(ind_value: pd.Series) -> dict[str, Any]:
+    def add_short_id_to_indicator(ind_value: pd.Series) -> dict[str, Any]:
         """ Adds short id to indicator. Used in pandas data series apply() method
                 :param ind_value: pd.Series - value of indicator
                 :return: value with short id added
@@ -92,11 +92,21 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
         return result
 
     @staticmethod
-    def _add_short_id_to_analytics(analytics_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def add_short_id_to_analytics(analytics_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """ Adds short id to analytics. Used in pandas data series apply() method
                 :param analytics_list: list - array of analytics.
                 :return: analytics with short ids added
         """
         for an_el in analytics_list:
             an_el['short_id'] = IdGenerator.get_short_id_from_dict_id_type(an_el)
+
         return analytics_list
+
+    @staticmethod
+    def get_short_id_for_analytics(analytics_list: list[dict[str, Any]]) -> str:
+        """ Adds short id to analytics. Used in pandas data series apply() method
+                :param analytics_list: list - array of analytics.
+                :return: analytic key id
+        """
+        return IdGenerator.get_short_id_from_list_of_dict_short_id(analytics_list)
+
