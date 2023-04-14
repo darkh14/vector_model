@@ -29,6 +29,11 @@ from data_processing.loading_engines import get_engine_class as get_loading_engi
 from ..data_transformers import get_transformer_class
 from ..model_types import DataTransformersTypes
 
+import locale
+
+
+locale.setlocale(locale.LC_ALL, 'ru_RU')
+
 __all__ = ['VbmModel', 'get_additional_actions']
 
 
@@ -662,6 +667,7 @@ class VbmModel(Model):
         result_data.drop(['indicator'], axis=1, inplace=True)
 
         base_line = {'title': 'Базовый', 'value': outputs['based'][value_name], 'order': 1}
+
         calculated_line = {'title': 'Расчетный', 'value': outputs['calculated'][value_name],
                            'order': result_data.shape[0] + 2}
 
@@ -679,15 +685,36 @@ class VbmModel(Model):
         :param out_indicator_name: name of output indicator, used in titles
         :return: formed html str
         """
+
+        locale.setlocale(locale.LC_ALL, 'ru_RU')
+
         x_list = list(values['title'])
         y_list = list(values['value'])
 
         text_list = []
+        hover_text_list = []
+
+        initial_value = 0
         for index, item in enumerate(y_list):
             if item > 0 and index != 0 and index != len(y_list) - 1:
-                text_list.append('+{0:.2f}'.format(y_list[index]))
+                text_list.append('+{0:,.0f}'.format(y_list[index]).replace(',', ' '))
             else:
-                text_list.append('{0:.2f}'.format(y_list[index]))
+                text_list.append('{0:,.0f}'.format(y_list[index]).replace(',', ' '))
+
+            hover_value = '{0:,.0f}'.format(item).replace(',', ' ')
+
+            if index in (0, len(y_list)-1):
+                hover_text_list.append('{}'.format(hover_value))
+            else:
+                if item > 0:
+                    hover_value += ' &#9650;'
+                elif item < 0:
+                    hover_value += ' &#9660;'
+
+                hover_text_list.append('{}<br>Предыдущее: {}'.format(hover_value,
+                                                                '{0:,.0f}'.format(initial_value).replace(',', ' ')))
+
+            initial_value += item
 
         for index, item in enumerate(text_list):
             if item[0] == '+' and index != 0 and index != len(text_list) - 1:
@@ -714,7 +741,7 @@ class VbmModel(Model):
 
         fig = go.Figure(go.Waterfall(
             name="Factor analysis", orientation="v",
-            measure=["absolute", *(values.shape[0]-2) * ["relative"], "total"],
+            measure=["absolute", *(values.shape[0]-2) * ["relative"], "absolute"],
             x=x_list,
             y=y_list,
             text=text_list,
@@ -728,6 +755,8 @@ class VbmModel(Model):
                       }
         ))
 
+        locale._override_localeconv = {'thousands_sep': ' '}
+
         fig.update_layout(
             title={'text': '<b>Факторный анализ</b><br><span style="color:#666666">{}</span>'.format(
                 out_indicator_name)},
@@ -739,16 +768,70 @@ class VbmModel(Model):
                 'size': 14
             },
             plot_bgcolor='rgba(0,0,0,0)',
+            yaxis=dict(tickformat=",.0f"),
             yaxis_title="руб.",
             shapes=dict_list
         )
 
         fig.update_xaxes(tickangle=-45, tickfont=dict(family='Open Sans, light', color='black', size=14))
-        fig.update_yaxes(tickangle=0, tickfont=dict(family='Open Sans, light', color='black', size=14))
+
+        y_tick_vals, y_tick_texts = self._get_y_vals_texts_for_fa_graph(y_list)
+
+        fig.update_yaxes(tickangle=0, tickfont=dict(family='Open Sans, light', color='black', size=14),
+                         tickvals=y_tick_vals, ticktext=y_tick_texts)
+
+        fig.update_traces(hoverinfo='text', hovertext=hover_text_list)
 
         graph_str = fig.to_html()
 
+        with open('fa.html', 'w', encoding='utf-8') as f:
+            f.write(graph_str)
+
         return graph_str
+
+    @staticmethod
+    def _get_y_vals_texts_for_fa_graph(y_values: list[int | float]) -> [list[int | float], list[str]]:
+
+        max_value = 0
+        current_value = 0
+
+        for index, y_value in enumerate(y_values):
+            if index == 0:
+                current_value = 0
+                max_value = y_value
+            elif index == len(y_values):
+                current_value = y_value
+            else:
+                current_value += y_value
+
+            if current_value > max_value:
+                max_value = current_value
+
+        max_value = 1.5*max_value
+
+        step = max_value/10
+
+        step_pow = 0
+        c_step = step
+
+        while c_step > 10:
+            c_step = c_step // 10
+            step_pow += 1
+
+        step = float('5e{}'.format(step_pow))
+        step = int(step)
+
+        value = 0
+
+        result_values = []
+        result_texts = []
+
+        while value < max_value:
+            result_values.append(value)
+            result_texts.append('{0:,.0f}'.format(value).replace(',', ' '))
+            value += step
+
+        return result_values, result_texts
 
     def _get_metrics(self, y: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
 
