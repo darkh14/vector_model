@@ -682,8 +682,6 @@ class VbmModel(Model):
         :return: formed html str
         """
 
-        locale.setlocale(locale.LC_ALL, 'ru_RU')
-
         x_list = list(values['title'])
         y_list = list(values['value'])
 
@@ -750,8 +748,6 @@ class VbmModel(Model):
                       "color": "black"
                       }
         ))
-
-        locale._override_localeconv = {'thousands_sep': ' '}
 
         fig.update_layout(
             title={'text': '<b>Факторный анализ</b><br><span style="color:#666666">{}</span>'.format(
