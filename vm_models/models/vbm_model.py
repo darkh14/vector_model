@@ -29,10 +29,6 @@ from data_processing.loading_engines import get_engine_class as get_loading_engi
 from ..data_transformers import get_transformer_class
 from ..model_types import DataTransformersTypes
 
-import locale
-
-
-locale.setlocale(locale.LC_ALL, 'ru_RU')
 
 __all__ = ['VbmModel', 'get_additional_actions']
 
