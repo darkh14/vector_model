@@ -784,9 +784,6 @@ class VbmModel(Model):
 
         graph_str = fig.to_html()
 
-        with open('fa.html', 'w', encoding='utf-8') as f:
-            f.write(graph_str)
-
         return graph_str
 
     @staticmethod
