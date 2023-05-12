@@ -135,87 +135,81 @@ class VbmModel(Model):
 
         return 'Model "{}" id "{}" fi calculation is dropped'.format(self.parameters.name, self.id)
 
-    def get_sensitivity_analysis(self, inputs_0: list[dict[str, Any]],
-                                 inputs_plus: list[dict[str, Any]],
-                                 inputs_minus: list[dict[str, Any]],
-                                 output_indicator: dict[str]) -> dict[str, Any]:
+    def get_sensitivity_analysis(self, inputs_base: list[dict[str, Any]],
+                                 input_indicators: list[dict[str, Any]],
+                                 output_indicator: dict[str],
+                                 deviations: list[int | float]) -> list[dict[str, Any]]:
         """
         For calculating and getting sensitivity analysis data
-        :param inputs_0: main input data
-        :param inputs_plus: plus deviation input data
-        :param inputs_minus: minus deviation input data
+        :param inputs_base: main input data
+        :param input_indicators: list input indicators to use
         :param output_indicator: output indicator parameters
+        :param deviations: list of deviations of data
         :return: calculated sensitivity analysis data
         """
 
         loading_engine = get_loading_engine_class()()
 
-        loading_engine.check_data(inputs_0, checking_parameter_name='inputs_0')
-        loading_engine.check_data(inputs_plus, checking_parameter_name='inputs_plus')
-        loading_engine.check_data(inputs_minus, checking_parameter_name='inputs_minus')
+        loading_engine.check_data(inputs_base, checking_parameter_name='inputs_base')
 
-        # pipeline = self._get_model_pipeline(for_predicting=True)
-        # data_0 = pipeline.transform(inputs_0)
+        sa = []
 
-        # data_plus = pipeline.transform(inputs_plus)
-        # data_minus = pipeline.transform(inputs_minus)
+        all_ids = list(set([ind['short_id'] for ind in self.parameters.x_indicators]))
 
-        # x_0 = self._data_to_x(data_0)
+        for indicator in input_indicators:
+            indicator['short_id'] = IdGenerator.get_short_id_from_dict_id_type(indicator)
 
-        # input_number = len(self.fitting_parameters.x_columns)
-        # output_number = len(self.fitting_parameters.y_columns)
-        # self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number)
+        ind_ids = [ind['short_id'] for ind in input_indicators if ind['short_id'] in all_ids]
 
-        # y_0 = self._engine.predict(x_0)
-
-        data_0 = self._predict_model(inputs_0)
+        data_base = self._predict_model(inputs_base)
 
         y_columns = self._get_sa_output_columns(self.fitting_parameters.y_columns, output_indicator)
 
-        data_0['y_all'] = data_0[y_columns].apply(sum, axis=1)
+        data_base['y_all'] = data_base[y_columns].apply(sum, axis=1)
+        data_base['y'] = data_base['y_all']
 
-        ind_ids = list(set([ind['short_id'] for ind in self.parameters.x_indicators]))
-
-        sa = {}
+        result_columns = ['organisation', 'scenario', 'period', 'y', 'y_0', 'delta', 'delta_percent']
 
         for ind_id in ind_ids:
 
-            x_ind_plus = self._replace_input_data_by_indicator(inputs_0, inputs_plus, ind_id)
-            x_ind_minus = self._replace_input_data_by_indicator(inputs_0, inputs_minus, ind_id)
+            sa_ind_data = {'indicator': [ind for ind in self.parameters.x_indicators if ind['short_id'] == ind_id][0]}
+            indicator_data_list = []
 
-            data_ind_plus = self._predict_model(x_ind_plus)
-            data_ind_minus = self._predict_model(x_ind_minus)
+            for dev in deviations:
 
-            data_ind_plus['y_all'] = data_ind_plus[y_columns].apply(sum, axis=1)
-            data_ind_minus['y_all'] = data_ind_minus[y_columns].apply(sum, axis=1)
+                c_inputs_plus = self._set_coefficient_to_data_by_ind(inputs_base, ind_id, 1+dev)
+                c_inputs_minus = self._set_coefficient_to_data_by_ind(inputs_base, ind_id, 1-dev)
 
-            data_ind_plus['y_0'] = data_0['y_all']
-            data_ind_minus['y_0'] = data_0['y_all']
+                c_data_plus = self._predict_model(c_inputs_plus)
+                c_data_minus = self._predict_model(c_inputs_minus)
 
-            data_ind_plus['delta'] = data_ind_plus['y_all'] - data_ind_plus['y_0']
-            data_ind_minus['delta'] = data_ind_minus['y_0'] - data_ind_minus['y_all']
+                c_data_plus['y_all'] = c_data_plus[y_columns].apply(sum, axis=1)
+                c_data_minus['y_all'] = c_data_minus[y_columns].apply(sum, axis=1)
 
-            data_ind_plus['delta_percent'] = data_ind_plus[['delta', 'y_0']].apply(lambda ss: ss['delta']/ss['y_0']
-                                                                                   if ss['y_0'] else 0, axis=1)
-            data_ind_minus['delta_percent'] = data_ind_minus[['delta', 'y_0']].apply(lambda ss: ss['delta']/ss['y_0']
-                                                                                   if ss['y_0'] else 0, axis=1)
+                c_data_plus['y_0'] = data_base['y_all']
+                c_data_minus['y_0'] = c_data_minus['y_all']
 
-            data_ind_plus = data_ind_plus.rename({'y_all': 'y'}, axis=1)
+                c_data_plus['delta'] = c_data_plus['y_all'] - c_data_plus['y_0']
+                c_data_minus['delta'] = c_data_minus['y_all'] - c_data_minus['y_0']
 
-            data_ind_minus = data_ind_minus.rename({'y_all': 'y'}, axis=1)
+                c_data_plus['delta_percent'] = c_data_plus[['delta', 'y_0']].apply(lambda ss: ss['delta']/ss['y_0']
+                                                                        if ss['y_0'] else 0, axis=1)
 
-            sa_ind_data = dict()
-            sa_ind_data['indicator'] = [ind for ind in self.parameters.x_indicators if ind['short_id'] == ind_id][0]
+                c_data_minus['delta_percent'] = c_data_minus[['delta', 'y_0']].apply(lambda ss: ss['delta']/ss['y_0']
+                                                                        if ss['y_0'] else 0, axis=1)
 
-            sa_ind_data_plus = data_ind_plus[['organisation', 'scenario', 'period', 'y', 'y_0',
-                                              'delta', 'delta_percent']].to_dict('records')
-            sa_ind_data_minus = data_ind_minus[['organisation', 'scenario', 'period', 'y', 'y_0',
-                                              'delta', 'delta_percent']].to_dict('records')
+                c_data_plus = c_data_plus.rename({'y_all': 'y'}, axis=1)
+                c_data_minus = c_data_minus.rename({'y_all': 'y'}, axis=1)
 
-            sa_ind_data['plus'] = sa_ind_data_plus
-            sa_ind_data['minus'] = sa_ind_data_minus
+                indicator_data = {'deviation': dev, 'data_plus': c_data_plus[result_columns].to_dict('records'),
+                                  'data_minus': c_data_minus[result_columns].to_dict('records')}
 
-            sa['ind_' + ind_id] = sa_ind_data
+                indicator_data_list.append(indicator_data)
+
+            sa_ind_data['data'] = indicator_data_list
+            sa_ind_data['data_0'] = data_base[['organisation', 'scenario', 'period', 'y']].to_dict('records')
+
+            sa.append(sa_ind_data)
 
         return sa
 
@@ -293,23 +287,26 @@ class VbmModel(Model):
         return {'fa': result_data, 'graph_data': graph_string}
 
     # noinspection PyMethodMayBeStatic
-    def _replace_input_data_by_indicator(self, input_data: list[dict[str, Any]], replacing_data: list[dict[str, Any]],
-                                        indicator_id: str) -> list[dict[str, Any]]:
+    def _set_coefficient_to_data_by_ind(self, input_data: list[dict[str, Any]], indicator_short_id: str,
+                                        coefficient: int | float) -> list[dict[str, Any]]:
 
-        data = pd.DataFrame(input_data)
-        r_data = pd.DataFrame(replacing_data)
+        c_data = pd.DataFrame(input_data)
+        c_data['indicator_short_id'] = c_data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
 
-        data['ind_short_id'] = data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
-        r_data['ind_short_id'] = r_data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
+        indicator_data = [el for el in self.parameters.x_indicators if el['short_id'] == indicator_short_id][0]
 
-        data = data.loc[data['ind_short_id'] != indicator_id]
-        r_data = r_data.loc[r_data['ind_short_id'] == indicator_id]
+        strs_to_change = c_data.loc[c_data['indicator_short_id'] == indicator_short_id].copy()
+        strs_not_to_change = c_data.loc[c_data['indicator_short_id'] != indicator_short_id].copy()
 
-        result = pd.concat([data, r_data], ignore_index=True)
-        result = result.drop('ind_short_id', axis=1)
+        for value_name in indicator_data['values']:
+            strs_to_change[value_name] = strs_to_change[value_name]*coefficient
+
+        result_data = pd.concat([strs_to_change, strs_not_to_change], axis=0, ignore_index=True)
+
+        result_data.drop('indicator_short_id', axis=1, inplace=True)
 
         # noinspection PyTypeChecker
-        return result.to_dict('records')
+        return result_data.to_dict('records')
 
     # noinspection PyMethodMayBeStatic
     def _get_sa_output_columns(self, y_columns: list[str], output_indicator: dict[str]) -> list[str]:
@@ -936,9 +933,9 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
 
     match parameters:
         case {'model': {'id': str(model_id)},
-              'inputs_0': list(inputs_0),
-              'inputs_plus': list(inputs_plus),
-              'inputs_minus': list(inputs_minus),
+              'input_indicators': list(input_indicators),
+              'inputs_base': list(inputs_base),
+              'deviations': list(deviations),
               'output_indicator': output_indicator} if model_id:
             model = VbmModel(model_id)
 
@@ -948,10 +945,10 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
                 case _:
                     ParametersFormatError('Wrong request parameters format! Check "output_indicator" parameter')
 
-            result = model.get_sensitivity_analysis(inputs_0, inputs_plus, inputs_minus, output_indicator)
+            result = model.get_sensitivity_analysis(inputs_base, input_indicators, output_indicator, deviations)
         case _:
-            raise ParametersFormatError('Wrong request parameters format! Check "model", "inputs_0", '
-                                        '"inputs_plus", "inputs_minus" parameters')
+            raise ParametersFormatError('Wrong request parameters format! Check "model", "inputs_base", '
+                                        '"input_indicators", "output_indicator", "deviations" parameters')
 
     return result
 

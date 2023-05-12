@@ -117,6 +117,7 @@ class VbmEngine(BaseEngine):
                 raise ParametersFormatError('Wrong "{}" parameter format'.format(checking_parameter_name) +
                                             ' in row(s) {}'.format(', '.join(wrong_row_numbers)))
 
+    # noinspection PyMethodMayBeStatic
     def _check_data_analytics(self, analytics: list[dict[str, Any]]) -> bool:
         """
         Method to check format of analytic lis in row of input data
