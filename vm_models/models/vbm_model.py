@@ -181,7 +181,7 @@ class VbmModel(Model):
         data_base['relative_delta'] = data_base[['delta', 'y_0']].apply(lambda ss: ss['delta'] / ss['y_0']
                                     if ss['y_0'] else 0, axis=1)
 
-        result_columns = ['organisation', 'scenario', 'period', 'y', 'y_0', 'delta', 'delta_percent']
+        result_columns = ['organisation', 'scenario', 'period', 'y', 'y_0', 'delta', 'relative_delta']
 
         for ind_id in ind_ids:
 
