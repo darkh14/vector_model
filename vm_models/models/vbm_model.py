@@ -178,7 +178,7 @@ class VbmModel(Model):
         data_base['y_0'] = data_base_output['y_0']
 
         data_base['delta'] = data_base['y_all'] - data_base['y_0']
-        data_base['delta_percent'] = data_base[['delta', 'y_0']].apply(lambda ss: ss['delta'] / ss['y_0']
+        data_base['relative_delta'] = data_base[['delta', 'y_0']].apply(lambda ss: ss['delta'] / ss['y_0']
                                     if ss['y_0'] else 0, axis=1)
 
         result_columns = ['organisation', 'scenario', 'period', 'y', 'y_0', 'delta', 'delta_percent']
