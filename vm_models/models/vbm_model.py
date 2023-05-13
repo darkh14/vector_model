@@ -219,7 +219,7 @@ class VbmModel(Model):
                 indicator_data_list.append(indicator_data)
 
             sa_ind_data['data'] = indicator_data_list
-            sa_ind_data['data_0'] = data_base[['organisation', 'scenario', 'period', 'y']].to_dict('records')
+            sa_ind_data['data_0'] = data_base[result_columns].to_dict('records')
 
             sa.append(sa_ind_data)
 
