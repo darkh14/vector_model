@@ -205,10 +205,10 @@ class VbmModel(Model):
                 c_data_plus['delta'] = c_data_plus['y_all'] - c_data_plus['y_0']
                 c_data_minus['delta'] = c_data_minus['y_all'] - c_data_minus['y_0']
 
-                c_data_plus['delta_percent'] = c_data_plus[['delta', 'y_0']].apply(lambda ss: ss['delta']/ss['y_0']
+                c_data_plus['relative_delta'] = c_data_plus[['delta', 'y_0']].apply(lambda ss: ss['delta']/ss['y_0']
                                                                         if ss['y_0'] else 0, axis=1)
 
-                c_data_minus['delta_percent'] = c_data_minus[['delta', 'y_0']].apply(lambda ss: ss['delta']/ss['y_0']
+                c_data_minus['relative_delta'] = c_data_minus[['delta', 'y_0']].apply(lambda ss: ss['delta']/ss['y_0']
                                                                         if ss['y_0'] else 0, axis=1)
 
                 c_data_plus = c_data_plus.rename({'y_all': 'y'}, axis=1)
