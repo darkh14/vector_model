@@ -163,10 +163,21 @@ class VbmModel(Model):
 
         data_base = self._predict_model(inputs_base)
 
+        pipeline = self._get_model_pipeline(for_predicting=True)
+        data_base_output = pipeline.transform(inputs_base)
+
         y_columns = self._get_sa_output_columns(self.fitting_parameters.y_columns, output_indicator)
+
+        data_base_output['y_0'] = data_base_output[y_columns].apply(sum, axis=1)
 
         data_base['y_all'] = data_base[y_columns].apply(sum, axis=1)
         data_base['y'] = data_base['y_all']
+
+        data_base['y_0'] = data_base_output['y_0']
+
+        data_base['delta'] = data_base['y_all'] - data_base['y_0']
+        data_base['delta_percent'] = data_base[['delta', 'y_0']].apply(lambda ss: ss['delta'] / ss['y_0']
+                                    if ss['y_0'] else 0, axis=1)
 
         result_columns = ['organisation', 'scenario', 'period', 'y', 'y_0', 'delta', 'delta_percent']
 
@@ -186,8 +197,8 @@ class VbmModel(Model):
                 c_data_plus['y_all'] = c_data_plus[y_columns].apply(sum, axis=1)
                 c_data_minus['y_all'] = c_data_minus[y_columns].apply(sum, axis=1)
 
-                c_data_plus['y_0'] = data_base['y_all']
-                c_data_minus['y_0'] = c_data_minus['y_all']
+                c_data_plus['y_0'] = data_base['y_0']
+                c_data_minus['y_0'] = data_base['y_0']
 
                 c_data_plus['delta'] = c_data_plus['y_all'] - c_data_plus['y_0']
                 c_data_minus['delta'] = c_data_minus['y_all'] - c_data_minus['y_0']
@@ -924,7 +935,7 @@ def _drop_fi_calculation(parameters: dict[str, Any]) -> str:
     return result
 
 
-def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
+def _get_sensitivity_analysis(parameters: dict[str, Any]) -> list[dict[str, Any]]:
     """
     For calculating and getting sensitivity analysis data
     :param parameters: request parameters
