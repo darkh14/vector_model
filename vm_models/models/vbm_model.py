@@ -163,9 +163,10 @@ class VbmModel(Model):
 
         data_base = self._predict_model(inputs_base)
 
-        pipeline = self._get_model_pipeline(for_predicting=False)
-        data_base_output = pipeline.fit_transform(inputs_base)
-        self._scaler = None
+        pipeline = self._get_model_pipeline(for_predicting=True, without_scaling=True)
+        # noinspection PyProtectedMember
+        pipeline.named_steps['row_column_transformer']._fitting_mode = True
+        data_base_output = pipeline.transform(inputs_base)
 
         y_columns = self._get_sa_output_columns(self.fitting_parameters.y_columns, output_indicator)
 

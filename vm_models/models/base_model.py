@@ -275,11 +275,13 @@ class Model:
         loading_engine.check_data(inputs)
 
     def _get_model_estimators(self, for_predicting: bool = False,
-                              fitting_parameters: Optional[dict[str, Any]] = None) -> list[tuple[str, Any]]:
+                              fitting_parameters: Optional[dict[str, Any]] = None,
+                              without_scaling: bool = False) -> list[tuple[str, Any]]:
         """
         Gets list of estimators for data transforming before fitting or predicting
         :param for_predicting: True is need to form estimators for predicting
         :param fitting_parameters: parameters for fitting
+        :param without_scaling: without scaler adding if True
         :return: list of estimators
         """
         estimator_types_list = self._get_estimator_types(for_predicting, fitting_parameters)
@@ -287,6 +289,8 @@ class Model:
         estimators = []
         for estimator_type in estimator_types_list:
             if estimator_type == DataTransformersTypes.SCALER:
+                if without_scaling:
+                    continue
                 estimator = self._scaler
             else:
                 estimator = self._get_estimator(estimator_type, fitting_parameters)
@@ -326,14 +330,15 @@ class Model:
         return estimator
 
     def _get_model_pipeline(self, for_predicting: bool = False,
-                            fitting_parameters: Optional[dict[str, Any]] = None) -> Pipeline:
+                            fitting_parameters: Optional[dict[str, Any]] = None,
+                            without_scaling: bool = False) -> Pipeline:
         """
         Gets pipeline of transformers for fitting or predicting
         :param for_predicting: True is need to form pipeline for predicting
         :param fitting_parameters: parameters of fitting
         :return: pipeline of estimators to transform data
         """
-        estimators = self._get_model_estimators(for_predicting, fitting_parameters)
+        estimators = self._get_model_estimators(for_predicting, fitting_parameters, without_scaling=without_scaling)
 
         return Pipeline(estimators)
 
