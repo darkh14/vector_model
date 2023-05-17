@@ -168,6 +168,7 @@ class VbmModel(Model):
         data_all = self._predict_model(pd_all_input_data)
         data_all['variant'] = data_all['scenario'].apply(self._get_sa_variant_from_scenario)
 
+
         data_base = data_all.loc[data_all['variant'] == 'base'].copy()
         inputs_base = pd_all_input_data.loc[pd_all_input_data['variant'] == 'base']
 
@@ -282,7 +283,13 @@ class VbmModel(Model):
 
         return result
 
+    @staticmethod
+    def _clear_suffix_from_scenario_id(series: pd.Series) -> dict[str]:
 
+        result = dict(series)
+        result['id'] = result['id'].split('_')[0]
+
+        return result
 
     def get_factor_analysis(self, inputs: list[dict[str, Any]], outputs: dict[str, Any],
                             input_indicators: list[dict[str, Any]], output_indicator: dict[str, Any],
