@@ -171,6 +171,8 @@ class VbmModel(Model):
 
         data_base = data_all.loc[data_all['variant'] == 'base'].copy()
         data_base.drop('variant', axis=1, inplace=True)
+        data_base.reset_index(drop=True, inplace=True)
+
         inputs_base = pd_all_input_data.loc[pd_all_input_data['variant'] == 'base']
 
         pipeline = self._get_model_pipeline(for_predicting=True, without_scaling=True)
@@ -203,10 +205,12 @@ class VbmModel(Model):
                 c_data_plus = data_all.loc[(data_all['variant'] ==
                                             'ind_{}_plus_{}'.format(ind_id, str(dev).replace(' ', '')))].copy()
                 c_data_plus.drop('variant', axis=1, inplace=True)
+                c_data_plus.reset_index(drop=True, inplace=True)
 
                 c_data_minus = data_all.loc[(data_all['variant'] ==
                                             'ind_{}_minus_{}'.format(ind_id, str(dev).replace(' ', '')))].copy()
                 c_data_minus.drop('variant', axis=1, inplace=True)
+                c_data_minus.reset_index(drop=True, inplace=True)
 
                 c_data_plus['y_all'] = c_data_plus[y_columns].apply(sum, axis=1)
                 c_data_minus['y_all'] = c_data_minus[y_columns].apply(sum, axis=1)
