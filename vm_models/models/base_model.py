@@ -374,7 +374,7 @@ class Model:
             self._engine = None
             self._scaler = None
 
-    def _predict_model(self, x_input: list[dict[str, Any]]) -> pd.DataFrame:
+    def _predict_model(self, x_input: list[dict[str, Any]] | pd.DataFrame) -> pd.DataFrame:
         """
         For predicting data after check and prepare parameters
         :param x_input: list of input data

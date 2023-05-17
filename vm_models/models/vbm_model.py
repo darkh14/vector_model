@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import math
 from functools import reduce
+from copy import deepcopy
 
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
@@ -161,7 +162,14 @@ class VbmModel(Model):
 
         ind_ids = [ind['short_id'] for ind in input_indicators if ind['short_id'] in all_ids]
 
-        data_base = self._predict_model(inputs_base)
+        pd_all_input_data = self._prepare_input_data_for_sa(inputs_base, ind_ids, deviations)
+        pd_all_input_data['variant'] = pd_all_input_data['scenario'].apply(self._get_sa_variant_from_scenario)
+
+        data_all = self._predict_model(pd_all_input_data)
+        data_all['variant'] = data_all['scenario'].apply(self._get_sa_variant_from_scenario)
+
+        data_base = data_all.loc[data_all['variant'] == 'base'].copy()
+        inputs_base = pd_all_input_data.loc[pd_all_input_data['variant'] == 'base']
 
         pipeline = self._get_model_pipeline(for_predicting=True, without_scaling=True)
         # noinspection PyProtectedMember
@@ -190,11 +198,11 @@ class VbmModel(Model):
 
             for dev in deviations:
 
-                c_inputs_plus = self._set_coefficient_to_data_by_ind(inputs_base, ind_id, 1+dev)
-                c_inputs_minus = self._set_coefficient_to_data_by_ind(inputs_base, ind_id, 1-dev)
+                c_data_plus = data_all.loc[(data_all['variant'] ==
+                                            'ind_{}_plus_{}'.format(ind_id, str(dev).replace(' ', '')))].copy()
 
-                c_data_plus = self._predict_model(c_inputs_plus)
-                c_data_minus = self._predict_model(c_inputs_minus)
+                c_data_minus = data_all.loc[(data_all['variant'] ==
+                                            'ind_{}_minus_{}'.format(ind_id, str(dev).replace(' ', '')))].copy()
 
                 c_data_plus['y_all'] = c_data_plus[y_columns].apply(sum, axis=1)
                 c_data_minus['y_all'] = c_data_minus[y_columns].apply(sum, axis=1)
@@ -220,11 +228,61 @@ class VbmModel(Model):
                 indicator_data_list.append(indicator_data)
 
             sa_ind_data['data'] = indicator_data_list
+
             sa_ind_data['data_0'] = data_base[result_columns].to_dict('records')
 
             sa.append(sa_ind_data)
 
         return sa
+
+    def _prepare_input_data_for_sa(self, inputs_base: list[dict[str, Any]],
+                                 ind_ids: list[str],
+                                 deviations: list[int | float]) -> pd.DataFrame:
+
+        data_list_to_concat = []
+
+        pd_input_base = pd.DataFrame(inputs_base)
+        pd_input_base['scenario'] = pd_input_base['scenario'].apply(lambda el: self._add_suffix_to_id(el, '_base'))
+
+        data_list_to_concat.append(pd_input_base)
+
+        for ind_id in ind_ids:
+
+            for dev in deviations:
+
+                pd_inputs_plus = self._set_coefficient_to_data_by_ind(inputs_base, ind_id, 1+dev)
+                suffix = '_ind_{}_plus_{}'.format(ind_id, str(dev).replace(' ', ''))
+                pd_inputs_plus['scenario'] = pd_inputs_plus['scenario'].apply(lambda el:
+                                                                              self._add_suffix_to_id(el, suffix))
+                data_list_to_concat.append(pd_inputs_plus)
+
+                pd_inputs_minus = self._set_coefficient_to_data_by_ind(inputs_base, ind_id, 1-dev)
+                suffix = '_ind_{}_minus_{}'.format(ind_id, str(dev).replace(' ', ''))
+                pd_inputs_minus['scenario'] = pd_inputs_minus['scenario'].apply(lambda el:
+                                                                              self._add_suffix_to_id(el, suffix))
+
+                data_list_to_concat.append(pd_inputs_minus)
+
+        data_result = pd.concat(data_list_to_concat, axis=0, ignore_index=True)
+
+        return data_result
+
+    @staticmethod
+    def _add_suffix_to_id(series: pd.Series, suffix: str) -> dict[str]:
+
+        result = dict(series)
+        result['id'] = result['id'] + suffix
+
+        return result
+
+    @staticmethod
+    def _get_sa_variant_from_scenario(series: pd.Series) -> str :
+
+        result = '_'.join(series['id'].split('_')[1:])
+
+        return result
+
+
 
     def get_factor_analysis(self, inputs: list[dict[str, Any]], outputs: dict[str, Any],
                             input_indicators: list[dict[str, Any]], output_indicator: dict[str, Any],
@@ -301,7 +359,7 @@ class VbmModel(Model):
 
     # noinspection PyMethodMayBeStatic
     def _set_coefficient_to_data_by_ind(self, input_data: list[dict[str, Any]], indicator_short_id: str,
-                                        coefficient: int | float) -> list[dict[str, Any]]:
+                                        coefficient: int | float) -> pd.DataFrame:
 
         c_data = pd.DataFrame(input_data)
         c_data['indicator_short_id'] = c_data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
@@ -318,8 +376,7 @@ class VbmModel(Model):
 
         result_data.drop('indicator_short_id', axis=1, inplace=True)
 
-        # noinspection PyTypeChecker
-        return result_data.to_dict('records')
+        return result_data
 
     # noinspection PyMethodMayBeStatic
     def _get_sa_output_columns(self, y_columns: list[str], output_indicator: dict[str]) -> list[str]:

@@ -15,7 +15,7 @@ class BaseDataPreprocessor:
 
     def __init__(self, **kwargs) -> None: ...
 
-    def preprocess_data_for_loading(self, data: list[dict[str, Any]], loading_id:
+    def preprocess_data_for_loading(self, data: list[dict[str, Any]] | pd.DataFrame, loading_id:
                                     str, package_id: str) -> pd.DataFrame:
         """ For preprocess data before loading
         :param data: - list of loading data

@@ -24,6 +24,7 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
         :param data: list of loading data
         :return: data after preprocessing
         """
+
         return self._preprocess_data(data)
 
     def preprocess_data_for_loading(self, data: list[dict[str, Any]],
@@ -36,14 +37,19 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
         """
         return self._preprocess_data(data, loading_id, package_id)
 
-    def _preprocess_data(self, data: list[dict[str, Any]], loading_id:  str = '', package_id: str = '') -> pd.DataFrame:
+    def _preprocess_data(self, data: list[dict[str, Any]] | pd.DataFrame,
+                         loading_id:  str = '', package_id: str = '') -> pd.DataFrame:
         """ Adds additional fields to data array and converts data list to pandas DataFrame.
                 :param data: list - data array to preprocess
                 :param loading_id: str - id of loading object, which uses to load data, will be added as field to data
                 :param package_id: str - id of package object, which uses to load data, will be added as field to data
                 :return: pd.Dataframe data after preprocessing
         """
-        pd_data = pd.DataFrame(data)
+
+        if not isinstance(data, pd.DataFrame):
+            pd_data = pd.DataFrame(data)
+        else:
+            pd_data = data.copy()
 
         pd_data = self.add_short_ids_to_data(pd_data)
         pd_data['loading_id'] = loading_id
