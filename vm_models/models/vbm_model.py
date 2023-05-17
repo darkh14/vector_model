@@ -167,7 +167,7 @@ class VbmModel(Model):
 
         data_all = self._predict_model(pd_all_input_data)
         data_all['variant'] = data_all['scenario'].apply(self._get_sa_variant_from_scenario)
-
+        data_all['scenario'] = data_all['scenario'].apply(self._clear_suffix_from_scenario_id)
 
         data_base = data_all.loc[data_all['variant'] == 'base'].copy()
         inputs_base = pd_all_input_data.loc[pd_all_input_data['variant'] == 'base']
