@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import math
 from functools import reduce
-from copy import deepcopy
 
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
@@ -284,7 +283,7 @@ class VbmModel(Model):
         return result
 
     @staticmethod
-    def _get_sa_variant_from_scenario(series: pd.Series) -> str :
+    def _get_sa_variant_from_scenario(series: pd.Series) -> str:
 
         result = '_'.join(series['id'].split('_')[1:])
 
