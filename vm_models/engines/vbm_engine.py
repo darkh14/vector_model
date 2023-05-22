@@ -152,17 +152,19 @@ class VbmNeuralNetwork(BaseEngine):
             if not os.path.isdir('tmp'):
                 os.mkdir('tmp')
 
-            self._inner_engine.save('tmp/model')
+            temp_id = IdGenerator.get_random_id()[-7:]
 
-            zipf = zipfile.ZipFile('tmp/model.zip', 'w', zipfile.ZIP_DEFLATED)
-            self._zipdir('tmp/model', zipf)
+            self._inner_engine.save('tmp/model_{}_{}'.format(self._model_id, temp_id))
+
+            zipf = zipfile.ZipFile('tmp/model_{}_{}.zip'.format(self._model_id, temp_id), 'w', zipfile.ZIP_DEFLATED)
+            self._zipdir('tmp/model_{}_{}'.format(self._model_id, temp_id), zipf)
             zipf.close()
 
-            with open('tmp/model.zip', 'rb') as f:
+            with open('tmp/model_{}_{}.zip'.format(self._model_id, temp_id), 'rb') as f:
                 engine_packed = f.read()
 
-            os.remove('tmp/model.zip')
-            shutil.rmtree('tmp/model')
+            os.remove('tmp/model_{}_{}.zip'.format(self._model_id, temp_id))
+            shutil.rmtree('tmp/model_{}_{}'.format(self._model_id, temp_id))
 
         return engine_packed
 
