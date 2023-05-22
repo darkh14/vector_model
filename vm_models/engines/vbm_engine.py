@@ -22,6 +22,7 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 
 from ..engines.base_engine import BaseEngine
+from id_generator import IdGenerator
 
 
 class VbmNeuralNetwork(BaseEngine):
@@ -113,19 +114,21 @@ class VbmNeuralNetwork(BaseEngine):
             inner_model = pickle.loads(model_data)
         else:
 
+            temp_id = IdGenerator.get_random_id()[-7:]
+
             if not os.path.isdir('tmp'):
                 os.mkdir('tmp')
 
-            with open('tmp/model.zip', 'wb') as f:
+            with open('tmp/model_{}_{}.zip'.format(self._model_id, temp_id), 'wb') as f:
                 f.write(model_data)
 
-            with zipfile.ZipFile('tmp/model.zip', 'r') as zip_h:
-                zip_h.extractall('tmp/model')
+            with zipfile.ZipFile('tmp/model_{}_{}.zip'.format(self._model_id,  temp_id), 'r') as zip_h:
+                zip_h.extractall('tmp/model_{}_{}'.format(self._model_id, temp_id))
 
-            inner_model = load_model('tmp/model')
+            inner_model = load_model('tmp/model_{}_{}'.format(self._model_id, temp_id))
 
-            os.remove('tmp/model.zip')
-            shutil.rmtree('tmp/model')
+            os.remove('tmp/model_{}_{}.zip'.format(self._model_id, temp_id))
+            shutil.rmtree('tmp/model_{}_{}'.format(self._model_id, temp_id))
 
         return inner_model
 
@@ -371,4 +374,3 @@ class PolynomialRegressionForFI(LinearRegression):
         x_pf = self._pf.fit_transform(x)
 
         return self._inner_engine.predict(x_pf)
-
