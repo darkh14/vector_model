@@ -175,14 +175,23 @@ class VbmNeuralNetwork(BaseEngine):
         :param path: path to dir, from which wwe make zipfile
         :param zipf: zip file object
         """
+
+        first_dir = True
+        root_dir = ''
         for root, dirs, files in os.walk(path):
+            if first_dir:
+                root_dir = root
             c_dir = root
-            c_dir = 'tmp/' + c_dir[10:]
+            c_dir = 'tmp/' + c_dir[len(root_dir) + 1:]
 
             for file in files:
                 zipf.write(os.path.join(root, file),
                            os.path.relpath(os.path.join(c_dir, file),
                                            os.path.join(path, '..')))
+
+            first_dir = False
+
+
 
     @staticmethod
     def compile_engine(engine):
