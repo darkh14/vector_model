@@ -191,8 +191,6 @@ class VbmNeuralNetwork(BaseEngine):
 
             first_dir = False
 
-
-
     @staticmethod
     def compile_engine(engine):
         """
