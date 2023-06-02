@@ -150,6 +150,12 @@ class Model:
         Deletes results of fitting from db
         :return: resul of dropping
         """
+
+        if (not self.fitting_parameters.is_fit
+                and not self.fitting_parameters.fitting_is_started
+                and not self.fitting_parameters.fitting_is_error):
+            raise ModelException('Can not drop fitting. Model is not fit')
+
         self._interrupt_fitting_job()
 
         if self._engine:

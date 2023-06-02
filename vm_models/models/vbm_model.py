@@ -129,6 +129,12 @@ class VbmModel(Model):
         Deletes calculated feature importances from db
         :return: result of deleting
         """
+
+        if (not self.fitting_parameters.fi_is_calculated
+                and not self.fitting_parameters.fi_calculation_is_started
+                and not self.fitting_parameters.fi_calculation_is_error):
+            raise ModelException('Can not drop fi calculation. FI is not calculated')
+
         self._interrupt_fi_calculation_job()
         self.fitting_parameters.set_drop_fi_calculation()
         self._write_to_db()
