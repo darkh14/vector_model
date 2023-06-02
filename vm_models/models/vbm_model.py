@@ -242,6 +242,20 @@ class VbmModel(Model):
 
         return sa
 
+    def get_action_before_background_job(self, job_name: str, parameters: dict[str, Any]) -> Optional[Callable]:
+
+        if job_name == 'model_calculate_feature_importances':
+            result = self.do_before_calculating_fi
+        else:
+            result = super().get_action_before_background_job(job_name, parameters)
+
+        return result
+
+    def do_before_calculating_fi(self, parameters: dict[str, Any]) -> None:
+
+        self.fitting_parameters.set_pre_start_fi_calculation(parameters)
+        self._write_to_db()
+
     def _prepare_input_data_for_sa(self, inputs_base: list[dict[str, Any]],
                                  ind_ids: list[str],
                                  deviations: list[int | float]) -> pd.DataFrame:
@@ -419,6 +433,15 @@ class VbmModel(Model):
 
         if self.fitting_parameters.fi_calculation_is_started:
             raise ModelException('Another fi calculation is started yet. Wait for end of fi calculation')
+
+        if fi_parameters.get('job_id'):
+            if not self.fitting_parameters.fi_calculation_is_pre_started:
+                raise ModelException('Model is not prepared for feature importances calculation in background. ' +
+                                     'Drop feature importances calculation and execute another fi calculation job')
+        else:
+            if self.fitting_parameters.fi_calculation_is_started:
+                raise ModelException('Model is not prepared for feature importances calculation. ' +
+                                     'Drop feature importances calculation and execute another fi calculation')
 
     # noinspection PyUnusedLocal
     def _fi_calculate_model(self, epochs, fi_parameters):
@@ -1055,5 +1078,17 @@ def _get_factor_analysis_data(parameters: dict[str, Any]) -> dict[str, Any]:
         case _:
             raise ParametersFormatError('Wrong request parameters format! Check "model", "inputs", '
                                         '"input_indicators", "outputs", "output_indicator" parameters')
+
+    return result
+
+
+def get_action_before_background_job(job_name: str, parameters: dict[str, Any]) -> Optional[Callable]:
+
+    match parameters:
+        case {'model': {'id': str(model_id), 'fi_parameters': dict()}} if model_id:
+            model = VbmModel(model_id)
+            result = model.get_action_before_background_job(job_name, parameters)
+        case _:
+            raise ParametersFormatError('Wrong request parameters format. Check "model" parameter')
 
     return result

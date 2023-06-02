@@ -3,7 +3,7 @@
     Classes:
         BackgroundJob
 """
-from typing import Any, Optional
+from typing import Any, Optional, Callable
 from datetime import datetime
 from importlib import import_module
 import sys
@@ -11,7 +11,6 @@ import subprocess
 import os
 import traceback
 import psutil
-
 
 import db_processing.connectors.base_connector
 from vm_logging.exceptions import BackgroundJobException, VMBaseException, DBConnectorException
@@ -115,7 +114,7 @@ class BackgroundJob:
                     func - function object to execute
                     wrapper_parameters - parameters to be transmitted to function
                 Returns:
-                    description of executing function
+                    description of executing function.
             :param func: function to execute in background mode
             :param wrapper_parameters: parameters executing function
             :return:decorated result of launching in background mode
@@ -123,6 +122,8 @@ class BackgroundJob:
 
         if self._subprocess_mode:
             raise BackgroundJobException('For executing function in background "subprocess_mode" must be False ')
+
+        self._do_action_before_job(func, wrapper_parameters)
 
         module_name, function_name = func.__module__, func.__name__
 
@@ -164,6 +165,7 @@ class BackgroundJob:
         """
         if self._status != JobStatuses.ERROR:
 
+            # noinspection PyBroadException
             try:
                 self._execute_function()
             except VMBaseException as exc:
@@ -225,7 +227,7 @@ class BackgroundJob:
 
     @classmethod
     def get_jobs_info(cls, job_filter:  dict[str, Any]) -> list[dict[str, Any]]:
-        """ Class method for getting jobs inf. Can get info of many job according to filter
+        """ Class method for getting jobs inf. Can get info of many job according to filter.
         :param job_filter: filter to find required jobs
         :return: dict of jobs information
         """
@@ -244,6 +246,19 @@ class BackgroundJob:
             result.append(c_job)
 
         return result
+
+    @staticmethod
+    def _do_action_before_job(func: Callable, parameters: dict[str, Any]) -> None:
+
+        # noinspection PyUnresolvedReferences
+        action_generator = func.__globals__.get('get_action_before_background_job')
+
+        if action_generator:
+
+            action_to_do = action_generator(parameters['request_type'], parameters)
+
+            if action_to_do:
+                action_to_do(parameters)
 
     def _execute_function(self) -> Any:
         """ Executes function in subprocess inside try-except block

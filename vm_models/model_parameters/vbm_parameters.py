@@ -224,6 +224,7 @@ class VbmFittingParameters(FittingParameters):
 
     fi_is_calculated: bool = False
     fi_calculation_is_started: bool = False
+    fi_calculation_is_pre_started: bool = False
     fi_calculation_is_error: bool = False
     fi_calculation_date: Optional[datetime] = None
     fi_calculation_start_date: Optional[datetime] = None
@@ -275,6 +276,7 @@ class VbmFittingParameters(FittingParameters):
 
         self.fi_is_calculated = parameters.get('fi_is_calculated') or False
         self.fi_calculation_is_started = parameters.get('fi_calculation_is_started') or False
+        self.fi_calculation_is_pre_started = parameters.get('fi_calculation_is_pre_started') or False
         self.fi_calculation_is_error = parameters.get('fi_calculation_is_error') or False
 
         if without_processing:
@@ -315,6 +317,7 @@ class VbmFittingParameters(FittingParameters):
         fi_parameters = {
             'fi_is_calculated': self.fi_is_calculated,
             'fi_calculation_is_started': self.fi_calculation_is_started,
+            'fi_calculation_is_pre_started': self.fi_calculation_is_pre_started,
             'fi_calculation_is_error': self.fi_calculation_is_error,
 
             'fi_calculation_date': self.fi_calculation_date,
@@ -388,6 +391,29 @@ class VbmFittingParameters(FittingParameters):
         """
         self.fi_is_calculated = False
         self.fi_calculation_is_started = True
+        self.fi_calculation_is_pre_started = False
+        self.fi_calculation_is_error = False
+
+        self.fi_calculation_date = None
+        self.fi_calculation_start_date = datetime.utcnow()
+        self.fi_calculation_error_date = None
+
+        self.fi_calculation_error_text = ''
+
+        self.fi_calculation_job_pid = os.getpid()
+
+        if fi_parameters.get('job_id'):
+            self.fi_calculation_job_id = fi_parameters['job_id']
+
+    def set_pre_start_fi_calculation(self, fi_parameters: dict[str, Any]) -> None:
+        """
+        For setting statuses and other parameters before starting fi calculation
+        :param fi_parameters: parameters of fi calculation, which will be started
+        """
+        self.fi_is_calculated = False
+        self.fi_calculation_is_started = False
+        self.fi_calculation_is_pre_started = True
+
         self.fi_calculation_is_error = False
 
         self.fi_calculation_date = None
@@ -411,6 +437,7 @@ class VbmFittingParameters(FittingParameters):
 
         self.fi_is_calculated = True
         self.fi_calculation_is_started = False
+        self.fi_calculation_is_pre_started = False
         self.fi_calculation_is_error = False
 
         self.fi_calculation_date = datetime.utcnow()
@@ -423,6 +450,7 @@ class VbmFittingParameters(FittingParameters):
         """
         self.fi_is_calculated = False
         self.fi_calculation_is_started = False
+        self.fi_calculation_is_pre_started = False
         self.fi_calculation_is_error = True
 
         self.fi_calculation_date = None
@@ -441,6 +469,7 @@ class VbmFittingParameters(FittingParameters):
 
         self.fi_is_calculated = False
         self.fi_calculation_is_started = False
+        self.fi_calculation_is_pre_started = False
         self.fi_calculation_is_error = False
 
         self.fi_calculation_date = None

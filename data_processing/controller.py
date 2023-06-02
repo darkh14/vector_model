@@ -14,7 +14,7 @@
 
 """
 
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from vm_logging.exceptions import RequestProcessException, ParametersFormatError
 from db_processing import get_connector
@@ -53,9 +53,12 @@ def load_package(parameters: dict[str, Any]) -> str:
     """
 
     match parameters:
-        case {'loading': {'id': str(loading_id), 'package': dict(package)}} if loading_id and package:
+        case {'loading': {'id': str(loading_id), 'package': dict(package)}} if (loading_id and package):
+
+            job_id = parameters.get('job_id', '')
+
             loading = Loading(loading_id)
-            loading.load_package(package)
+            loading.load_package(package, job_id)
         case _:
             raise ParametersFormatError('Wrong loading parameters format! Check "loading" parameter')
 
@@ -119,8 +122,6 @@ def get_loading_info(parameters: dict[str, Any]) -> dict[str, Any]:
     :return: loading information - statuses, dates etc
     """
 
-    info = None
-
     match parameters:
         case {'loading': {'id': str(loading_id)}} if loading_id:
             loading = Loading(loading_id)
@@ -161,3 +162,15 @@ def get_data_count(parameters: dict[str, Any]) -> int:
     data_filter = parameters.get('filter') or {}
     db_connector = get_connector()
     return db_connector.get_count('raw_data', data_filter)
+
+
+def get_action_before_background_job(job_name: str, parameters: dict[str, Any]) -> Optional[Callable]:
+
+    match parameters:
+        case {'loading': {'id': str(loading_id)}} if loading_id:
+            loading = Loading(loading_id)
+            result = loading.get_action_before_background_job(job_name, parameters)
+        case _:
+            raise ParametersFormatError('Wrong loading parameters format! Check "loading" parameter')
+
+    return result

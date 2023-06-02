@@ -15,6 +15,7 @@ __all__ = ['base_model', 'vbm_model', 'get_model_class', 'get_additional_actions
 
 SERVICE_NAME: str = ''
 
+
 def get_model_class() -> Type[base_model.Model]:
     """ Function for getting model class. Choosing from subclasses of Model class where
         service name = SERVICE_NAME var
@@ -25,8 +26,7 @@ def get_model_class() -> Type[base_model.Model]:
     if not SERVICE_NAME:
         SERVICE_NAME = get_var('SERVICE_NAME')
 
-    model_classes = [cls for cls in base_model.Model.__subclasses__()
-                      if cls.service_name == SERVICE_NAME]
+    model_classes = [cls for cls in base_model.Model.__subclasses__() if cls.service_name == SERVICE_NAME]
 
     if not model_classes:
         model_classes.append(base_model.Model)
@@ -43,7 +43,7 @@ def get_additional_actions() -> dict[str, Callable]:
 
     package_modules = []
     for mod_name, mod in globals().items():
-        if (type(mod) == types.ModuleType
+        if (isinstance(mod, types.ModuleType)
                 and mod.__package__ == __name__
                 and 'get_additional_actions' in mod.__dir__()):
 

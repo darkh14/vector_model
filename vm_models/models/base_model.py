@@ -163,6 +163,18 @@ class Model:
 
         return 'Model "{}" id "{}" fitting is dropped'.format(self.parameters.name, self.id)
 
+    def get_action_before_background_job(self, job_name: str, parameters: dict[str, Any]) -> Optional[Callable]:
+        result = None
+        if job_name == 'model_fit':
+            result = self.do_before_fit
+
+        return result
+
+    def do_before_fit(self, parameters: dict[str, Any]) -> None:
+
+        self.fitting_parameters.set_pre_start_fitting(parameters)
+        self._write_to_db()
+
     def _interrupt_fitting_job(self) -> None:
         """
         Interrupts fitting job process when fitting is launched in background mode
@@ -258,6 +270,15 @@ class Model:
 
         if self.fitting_parameters.fitting_is_started:
             raise ModelException('Another fitting is started yet. Wait for end of fitting')
+
+        if fitting_parameters.get('job_id'):
+            if not self.fitting_parameters.fitting_is_pre_started:
+                raise ModelException('Model is not prepared for fitting in background. ' +
+                                     'Drop fitting and execute another fitting job')
+        else:
+            if self.fitting_parameters.fitting_is_pre_started:
+                raise ModelException('Model is not prepared for fitting. ' +
+                                     'Drop fitting and execute another fitting')
 
     def _check_before_predicting(self, inputs: list[dict[str, Any]]) -> None:
         """

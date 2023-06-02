@@ -15,6 +15,7 @@ class LoadingTypes(Enum):
 class LoadingStatuses(Enum):
     NEW = 'new'
     REGISTERED = 'registered'
+    PRE_STARTED = 'pre_started'
     IN_PROCESS = 'in_process'
     PARTIALLY_LOADED = 'partially_loaded'
     LOADED = 'loaded'

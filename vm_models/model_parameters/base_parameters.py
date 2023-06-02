@@ -96,6 +96,7 @@ class FittingParameters:
     service_name: ClassVar[str] = ''
 
     is_fit: bool = False
+    fitting_is_pre_started: bool = False
     fitting_is_started: bool = False
     fitting_is_error: bool = False
     fitting_date: Optional[datetime] = None
@@ -133,6 +134,7 @@ class FittingParameters:
         :param without_processing: no need to convert parameters if True
         """
         self.is_fit = parameters.get('is_fit') or False
+        self.fitting_is_pre_started = parameters.get('fitting_is_pre_started') or False
         self.fitting_is_started = parameters.get('fitting_is_started') or False
         self.fitting_is_error = parameters.get('fitting_is_error') or False
 
@@ -168,6 +170,7 @@ class FittingParameters:
         """
         parameters = {
             'is_fit': self.is_fit,
+            'fitting_is_pre_started': self.fitting_is_pre_started,
             'fitting_is_started': self.fitting_is_started,
             'fitting_is_error': self.fitting_is_error,
 
@@ -195,12 +198,38 @@ class FittingParameters:
 
         return parameters
 
+    def set_pre_start_fitting(self, fitting_parameters: dict[str, Any]) -> None:
+        """
+        For setting statuses and other parameters before starting fitting
+        :param fitting_parameters: parameters of fitting, which will be started
+        """
+        self.is_fit = False
+        self.fitting_is_pre_started = True
+        self.fitting_is_started = False
+        self.fitting_is_error = False
+
+        self.fitting_start_date = datetime.utcnow()
+        self.fitting_date = None
+        self.fitting_error_date = None
+
+        self.fitting_error_text = ''
+
+        self.fitting_job_pid = os.getpid()
+
+        self.metrics = {}
+
+        if fitting_parameters.get('job_id'):
+            self.fitting_job_id = fitting_parameters['job_id']
+
+        self._first_fitting = not self.x_columns and not self.y_columns
+
     def set_start_fitting(self, fitting_parameters: dict[str, Any]) -> None:
         """
         For setting statuses and other parameters before starting fitting
         :param fitting_parameters: parameters of fitting, which will be started
         """
         self.is_fit = False
+        self.fitting_is_pre_started = False
         self.fitting_is_started = True
         self.fitting_is_error = False
 
@@ -227,6 +256,7 @@ class FittingParameters:
             raise ModelException('Can not finish fitting. Fitting is not started. Start fitting before')
 
         self.is_fit = True
+        self.fitting_is_pre_started = False
         self.fitting_is_started = False
         self.fitting_is_error = False
 
@@ -243,6 +273,7 @@ class FittingParameters:
             raise ModelException('Can not drop fitting. Model is not fit')
 
         self.is_fit = False
+        self.fitting_is_pre_started = False
         self.fitting_is_started = False
         self.fitting_is_error = False
 
@@ -251,6 +282,9 @@ class FittingParameters:
         self.fitting_error_date = None
 
         self.fitting_error_text = ''
+
+        self.fitting_job_pid = 0
+        self.fitting_job_id = ''
 
         self.x_columns = []
         self.y_columns = []
@@ -267,6 +301,7 @@ class FittingParameters:
         :param error_text: text of fitting error
         """
         self.is_fit = False
+        self.fitting_is_pre_started = False
         self.fitting_is_started = False
         self.fitting_is_error = True
 

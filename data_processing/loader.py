@@ -8,7 +8,7 @@
             delete_all_data - to delete all data according to filter
 """
 
-from typing import Any, Optional
+from typing import Any, Optional, Callable
 from _datetime import datetime
 
 from vm_logging.exceptions import LoadingProcessException, ParametersFormatError
@@ -115,21 +115,30 @@ class Package:
         self._db_connector.delete_lines('packages', {'loading_id': self._loading_id, 'id': self._id})
         self._status = LoadingStatuses.NEW
 
-    def load_data(self, data: list[dict[str, Any]]) -> bool:
+    def load_data(self, data: list[dict[str, Any]], job_id: str = '') -> bool:
         """ For loading data
         :param data: array of data to load to db
+        :param job_id: id of loading job if loading in background, else ''
         :return result of package data loading
         """
 
-        if self._status != LoadingStatuses.REGISTERED:
-            raise LoadingProcessException('Package status must be "registered". '
-                                          'Real status is "{}"'.format(self.status))
+        if job_id:
+            if self._status != LoadingStatuses.PRE_STARTED:
+                raise LoadingProcessException('Package status must be "pre started". '
+                                              'Real status is "{}"'.format(self.status))
+        else:
+            if self._status != LoadingStatuses.REGISTERED:
+                raise LoadingProcessException('Package status must be "registered". '
+                                              'Real status is "{}"'.format(self.status))
 
         self._check_data(data)
 
+        if self._status == LoadingStatuses.REGISTERED:
+            self._start_date = datetime.utcnow()
+            self._end_date = None
+
         self._status = LoadingStatuses.IN_PROCESS
-        self._start_date = datetime.utcnow()
-        self._end_date = None
+
         self.write_to_db()
 
         try:
@@ -172,6 +181,18 @@ class Package:
                         'error': self._error}
 
         return package_info
+
+    def do_before_load(self, parameters: dict[str, Any]):
+
+        if self._status != LoadingStatuses.REGISTERED:
+            raise LoadingProcessException('Package status must be "registered". '
+                                          'Real status is "{}"'.format(self._status))
+
+        self._status = LoadingStatuses.PRE_STARTED
+        self._start_date = datetime.utcnow()
+        self._end_date = None
+
+        self.write_to_db()
 
     @property
     def status(self) -> LoadingStatuses:
@@ -283,6 +304,7 @@ class Package:
         if len(data) != self._check_sum:
             raise LoadingProcessException('Data checksum is not right. Right checksum is {}'.format(self._check_sum))
 
+    # noinspection PyMethodMayBeStatic
     def _get_engine(self) -> BaseEngine:
         """ For getting engine object to load data
         :return loading engine
@@ -324,7 +346,9 @@ class Loading:
     def __init__(self, loading_id: str, loading_type: str = '', packages: Optional[list] = None) -> None:
         """
         Defines all inner variable of loading. Then variables are read from db if it is not new loading
-        :param loading_parameters: parameters to define variables of loading
+        :param loading_id: id of loading
+        :param loading_type: type of loading, full or increment
+        :param packages: parameters of packages in loading
         """
 
         self._id: str = loading_id
@@ -405,14 +429,12 @@ class Loading:
 
         return loading_info
 
-    def load_package(self, package_parameters: dict[str, Any]) -> bool:
+    def load_package(self, package_parameters: dict[str, Any], job_id: str = '') -> bool:
         """ For loading package data to db
         :param package_parameters: contains id (package id) and data (data array for loading)
+        :param job_id: background job id if loading in background
         :return result of loading package data. true if successful
         """
-
-        package_id = ''
-        package_data = None
 
         match package_parameters:
             case {'id': str(package_id), 'data': list(package_data)} if package_id and package_data:
@@ -420,19 +442,23 @@ class Loading:
             case _:
                 raise ParametersFormatError('Wrong package parameters format!')
 
-        if self._status not in [LoadingStatuses.REGISTERED, LoadingStatuses.PARTIALLY_LOADED]:
-            raise LoadingProcessException('Loading status must be "registered" or "partially loaded". '
+        if self._status not in [LoadingStatuses.REGISTERED, LoadingStatuses.PRE_STARTED,
+                                LoadingStatuses.PARTIALLY_LOADED]:
+            raise LoadingProcessException('Loading status must be "registered", "pre started" or "partially loaded". '
                                           'Real status is "{}"'.format(self._status))
 
-        first_package = not [package for package in self._packages if package.status != LoadingStatuses.REGISTERED]
+        first_package = not [package for package in self._packages if package.status not in [LoadingStatuses.REGISTERED,
+                                                                                        LoadingStatuses.PRE_STARTED]]
+
+        if first_package and self._type == LoadingTypes.FULL:
+            if self._status != LoadingStatuses.PRE_STARTED:
+                self._start_date = datetime.utcnow()
+                self._end_date = None
+            self._db_connector.delete_lines('raw_data')
 
         self._status = LoadingStatuses.IN_PROCESS
 
-        if first_package and self._type == LoadingTypes.FULL:
-            self._start_date = datetime.utcnow()
-            self._end_date = None
-            self._write_to_db()
-            self._db_connector.delete_lines('raw_data')
+        self._write_to_db()
 
         current_packages = [package for package in self._packages if package.id == package_id]
 
@@ -443,7 +469,7 @@ class Loading:
         current_package = current_packages[0]
 
         try:
-            current_package.load_data(package_data)
+            current_package.load_data(package_data, job_id=job_id)
         except LoadingProcessException as ex:
             self._error = str(ex)
             self._status = LoadingStatuses.ERROR
@@ -455,9 +481,10 @@ class Loading:
         if full_loaded:
             self._status = LoadingStatuses.LOADED
             self._end_date = datetime.utcnow()
-            self._write_to_db()
         else:
-            self.set_status(LoadingStatuses.PARTIALLY_LOADED)
+            self.set_status(LoadingStatuses.PARTIALLY_LOADED, need_to_write_to_db=False)
+
+        self._write_to_db()
 
         return True
 
@@ -504,11 +531,12 @@ class Loading:
         return {'loading': loading_info}
 
     def set_status(self, status_parameter: LoadingStatuses | str, set_for_packages: bool = False,
-                   from_outside: bool = False) -> bool:
+                   from_outside: bool = False, need_to_write_to_db: bool = True) -> bool:
         """ For setting loading status
         :param status_parameter: value of setting status
         :param set_for_packages: set this status for all packages in loading if True.
-        :param from_outside: True when status is set directly from http request, else False
+        :param from_outside: True when status is set directly from http request, else False.
+        :param need_to_write_to_db: False when status not need to be written to DB
         :return result of setting status, True if successful
         """
 
@@ -549,7 +577,8 @@ class Loading:
             for package in self._packages:
                 package.set_status(status_parameter)
 
-        self._write_to_db()
+        if need_to_write_to_db:
+            self._write_to_db()
 
         return True
 
@@ -611,6 +640,42 @@ class Loading:
         self._write_to_db()
 
         return True
+
+    def get_action_before_background_job(self, job_name: str, parameters: dict[str, Any]) -> Optional[Callable]:
+        result = None
+        if job_name == 'data_load_package':
+            result = self.do_before_load
+
+        return result
+
+    def do_before_load(self, parameters: dict[str, Any]):
+
+        if self._status not in [LoadingStatuses.REGISTERED, LoadingStatuses.PARTIALLY_LOADED]:
+            raise LoadingProcessException('Loading status must be "registered", "pre started" or "partially loaded". '
+                                          'Real status is "{}"'.format(self._status))
+
+        if self._status == LoadingStatuses.REGISTERED:
+            self._status = LoadingStatuses.PRE_STARTED
+            self._start_date = datetime.utcnow()
+            self._end_date = None
+
+        match parameters:
+            case {'loading': {'package': {'id': str(package_id)}}} if package_id:
+                pass
+            case _:
+                raise ParametersFormatError('Wrong loading parameters format!')
+
+        current_packages = [package for package in self._packages if package.id == package_id]
+
+        if not current_packages:
+            raise LoadingProcessException('Package id "{}" do not belong '
+                                          'to loading id "{}"'.format(package_id, self._id))
+
+        current_package = current_packages[0]
+
+        current_package.do_before_load(parameters['loading']['package'])
+
+        self._write_to_db()
 
     def _check_before_initializing(self) -> None:
         """ Check fullness of fields before initialization. Raises LoadingProcessException if checking is failed """

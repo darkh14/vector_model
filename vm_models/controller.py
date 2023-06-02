@@ -8,7 +8,7 @@
 
 """
 
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 from functools import wraps
 
 from vm_models.models import base_model, get_model_class
@@ -166,3 +166,17 @@ def get_additional_actions() -> dict[str | Callable]:
     :return: dict of actions (functions)
     """
     return model_get_actions()
+
+
+def get_action_before_background_job(job_name: str, parameters: dict[str, Any]) -> Optional[Callable]:
+
+    result = None
+
+    match parameters:
+        case {'model': {'id': str(model_id), 'fitting_parameters': dict(fitting_parameters)}} if model_id:
+            model = get_model_class()(model_id)
+            result = model.get_action_before_background_job(job_name, parameters)
+        case _:
+            raise ParametersFormatError('Wrong request parameters format. Check "model" parameter')
+
+    return result
