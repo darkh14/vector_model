@@ -767,16 +767,36 @@ class VbmModel(Model):
         """
         result_data = pd.DataFrame(result_data)
         result_data['title'] = result_data['indicator'].apply(lambda x: x['name'])
+
+        result_data['indicator_short_id'] = result_data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
+        need_to_add_other_line = len(result_data['indicator_short_id'].unique()) < len(self.parameters.x_indicators)
         result_data['order'] = list(range(2, result_data.shape[0]+2))
 
-        result_data.drop(['indicator'], axis=1, inplace=True)
+        result_data.drop(['indicator', 'indicator_short_id'], axis=1, inplace=True)
 
         base_line = {'title': 'Базовый', 'value': outputs['based'][value_name], 'order': 1}
+
+        lines_to_add = [base_line]
+
+        order_of_calculated = result_data.shape[0] + 2
+        if need_to_add_other_line:
+
+            sum_all = float(result_data[['value']].apply(sum, axis=0))
+
+            other_line = {'title': 'Прочие факторы',
+                          'value': outputs['calculated'][value_name] - sum_all - outputs['based'][value_name],
+                          'order': order_of_calculated}
+
+            order_of_calculated += 1
+
+            lines_to_add.append(other_line)
 
         calculated_line = {'title': 'Расчетный', 'value': outputs['calculated'][value_name],
                            'order': result_data.shape[0] + 2}
 
-        result_data = pd.concat([result_data, pd.DataFrame([base_line, calculated_line])])
+        lines_to_add.append(calculated_line)
+
+        result_data = pd.concat([result_data, pd.DataFrame(lines_to_add)])
 
         result_data = result_data.sort_values('order')
 
@@ -844,7 +864,7 @@ class VbmModel(Model):
 
         fig = go.Figure(go.Waterfall(
             name="Factor analysis", orientation="v",
-            measure=["absolute", *(values.shape[0]-2) * ["relative"], "absolute"],
+            measure=["absolute", *(values.shape[0]-2) * ["relative"], "total"],
             x=x_list,
             y=y_list,
             text=text_list,
