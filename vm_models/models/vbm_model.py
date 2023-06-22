@@ -774,7 +774,7 @@ class VbmModel(Model):
 
         result_data.drop(['indicator', 'indicator_short_id'], axis=1, inplace=True)
 
-        base_line = {'title': 'Базовый', 'value': outputs['based'][value_name], 'order': 1}
+        base_line = {'title': outputs['based']['name'], 'value': outputs['based'][value_name], 'order': 1}
 
         lines_to_add = [base_line]
 
@@ -791,7 +791,7 @@ class VbmModel(Model):
 
             lines_to_add.append(other_line)
 
-        calculated_line = {'title': 'Расчетный', 'value': outputs['calculated'][value_name],
+        calculated_line = {'title': outputs['calculated']['name'], 'value': outputs['calculated'][value_name],
                            'order': result_data.shape[0] + 2}
 
         lines_to_add.append(calculated_line)
