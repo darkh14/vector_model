@@ -782,14 +782,14 @@ class VbmModel(Model):
         if need_to_add_other_line:
 
             sum_all = float(result_data[['value']].apply(sum, axis=0))
+            other_value = outputs['calculated'][value_name] - sum_all - outputs['based'][value_name]
 
-            other_line = {'title': 'Прочие факторы',
-                          'value': outputs['calculated'][value_name] - sum_all - outputs['based'][value_name],
-                          'order': order_of_calculated}
+            if other_value:
 
-            order_of_calculated += 1
+                other_line = {'title': 'Прочие факторы', 'value': other_value, 'order': order_of_calculated}
+                order_of_calculated += 1
 
-            lines_to_add.append(other_line)
+                lines_to_add.append(other_line)
 
         calculated_line = {'title': outputs['calculated']['name'], 'value': outputs['calculated'][value_name],
                            'order': result_data.shape[0] + 2}
