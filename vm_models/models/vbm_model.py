@@ -1120,7 +1120,7 @@ def _drop_fi_calculation(parameters: dict[str, Any]) -> str:
     return result
 
 
-def _get_sensitivity_analysis(parameters: dict[str, Any]) -> list[dict[str, Any]]:
+def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
     """
     For calculating and getting sensitivity analysis data
     :param parameters: request parameters
@@ -1141,7 +1141,8 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> list[dict[str, Any]
                 case _:
                     ParametersFormatError('Wrong request parameters format! Check "output_indicator" parameter')
 
-            result = model.get_sensitivity_analysis(inputs_base, input_indicators, output_indicator, deviations)
+            result = model.get_sensitivity_analysis(inputs_base, input_indicators, output_indicator, deviations,
+                                                    parameters.get('get_graph'))
         case _:
             raise ParametersFormatError('Wrong request parameters format! Check "model", "inputs_base", '
                                         '"input_indicators", "output_indicator", "deviations" parameters')
