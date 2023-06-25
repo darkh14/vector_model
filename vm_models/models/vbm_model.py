@@ -144,13 +144,15 @@ class VbmModel(Model):
     def get_sensitivity_analysis(self, inputs_base: list[dict[str, Any]],
                                  input_indicators: list[dict[str, Any]],
                                  output_indicator: dict[str],
-                                 deviations: list[int | float]) -> list[dict[str, Any]]:
+                                 deviations: list[int | float],
+                                 get_graph: bool = False) -> dict[str, Any]:
         """
         For calculating and getting sensitivity analysis data
         :param inputs_base: main input data
         :param input_indicators: list input indicators to use
         :param output_indicator: output indicator parameters
         :param deviations: list of deviations of data
+        :param get_graph: returns sensitivity analysis graph if True
         :return: calculated sensitivity analysis data
         """
 
@@ -246,7 +248,69 @@ class VbmModel(Model):
 
             sa.append(sa_ind_data)
 
-        return sa
+        graph_string = self._get_sa_graph_html(sa)
+
+        return {'data': sa, 'graph_data': graph_string}
+
+    @staticmethod
+    def _get_sa_graph_html(graph_data: list[dict]) -> str:
+
+        x = [100*el['deviation'] for el in graph_data[0]['data']]
+        x.extend([-el for el in x])
+        x.append(0)
+
+        x.sort()
+
+        y_list = []
+        indicator_names = []
+
+        for data_ind_element in graph_data:
+
+            y_c = []
+            indicator_names.append(data_ind_element['indicator']['name'])
+
+            element_data_minus = data_ind_element['data'].copy()
+            element_data_minus.sort(key=lambda el: -el['deviation'])
+            for data_dev_element in element_data_minus:
+                y_minus_sum = sum([el['y'] for el in data_dev_element['data_minus']])
+                y_minus_sum_0 = sum([el['y_0'] for el in data_dev_element['data_minus']])
+
+                y_c.append(100*(y_minus_sum-y_minus_sum_0)/y_minus_sum_0 if y_minus_sum_0 else 0)
+
+            y_0_sum = sum([el['y'] for el in data_ind_element['data_0']])
+            y_0_sum_0 = sum([el['y_0'] for el in data_ind_element['data_0']])
+
+            y_c.append(100*(y_0_sum - y_0_sum_0) / y_0_sum_0 if y_0_sum_0 else 0)
+
+            for data_dev_element in data_ind_element['data']:
+                y_plus_sum = sum([el['y'] for el in data_dev_element['data_plus']])
+                y_plus_sum_0 = sum([el['y_0'] for el in data_dev_element['data_plus']])
+
+                y_c.append(100*(y_plus_sum-y_plus_sum_0)/y_plus_sum_0 if y_plus_sum_0 else 0)
+
+            y_list.append(y_c)
+
+        fig = go.Figure()
+
+        for ind, y in enumerate(y_list):
+            fig.add_trace(go.Scatter(x=x, y=y, name=indicator_names[ind]))
+
+        fig.update_layout(title='Анализ на чувствительность', showlegend=True, legend_orientation="h",
+                          xaxis_title="Отклонения входного показателя, %",
+                          yaxis_title="Отклонения выходного показателя, %",
+                          paper_bgcolor='White',
+                          plot_bgcolor='White')
+
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', zerolinecolor='Grey', tickvals=x)
+
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', zerolinecolor='Grey')
+
+        graph_html = fig.to_html()
+
+        with open('sa.html', 'w', encoding='utf-8') as f:
+            f.write(graph_html)
+
+        return graph_html
 
     def get_action_before_background_job(self, job_name: str, parameters: dict[str, Any]) -> Optional[Callable]:
 
