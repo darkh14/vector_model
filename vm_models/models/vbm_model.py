@@ -241,7 +241,8 @@ class VbmModel(Model):
                 c_data_plus = c_data_plus.rename({'y_all': 'y'}, axis=1)
                 c_data_minus = c_data_minus.rename({'y_all': 'y'}, axis=1)
 
-                result_deviation += (abs(c_data_plus['delta'].sum()) + abs(c_data_minus['delta'].sum()))
+                result_deviation += (abs(c_data_plus['relative_delta'].sum()) +
+                                     abs(c_data_minus['relative_delta'].sum()))
 
                 indicator_data = {'deviation': dev, 'data_plus': c_data_plus[result_columns].to_dict('records'),
                                   'data_minus': c_data_minus[result_columns].to_dict('records')}
@@ -310,9 +311,11 @@ class VbmModel(Model):
         for ind, y in enumerate(y_list):
             fig.add_trace(go.Scatter(x=x, y=y, name=indicator_names[ind]))
 
-        fig.update_layout(title='Анализ на чувствительность', showlegend=True,
-                          xaxis_title="Отклонения входного показателя, %",
-                          yaxis_title="Отклонения выходного показателя, %",
+        font_size = 10
+
+        fig.update_layout(title=dict(text='Анализ на чувствительность', font=dict(size=font_size+1)), showlegend=True,
+                          xaxis_title=dict(text="Отклонения входного показателя, %", font=dict(size=font_size)),
+                          yaxis_title=dict(text="Отклонения выходного показателя, %", font=dict(size=font_size)),
                           paper_bgcolor='White',
                           plot_bgcolor='White')
 
@@ -321,11 +324,7 @@ class VbmModel(Model):
                                     y=-0.2,
                                     traceorder="normal",
                                     orientation='h',
-                                    # font=dict(
-                                    #     family="sans-serif",
-                                    #     size=12,
-                                    #     color="black"
-                                    # ),
+                                    font=dict(size=font_size),
                                 ))
 
         fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', zerolinecolor='Grey', tickvals=x)
