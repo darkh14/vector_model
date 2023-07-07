@@ -145,7 +145,8 @@ class VbmModel(Model):
                                  input_indicators: list[dict[str, Any]],
                                  output_indicator: dict[str],
                                  deviations: list[int | float],
-                                 get_graph: bool = False) -> dict[str, Any]:
+                                 get_graph: bool = False,
+                                 auto_selection_number: int = 0) -> dict[str, Any]:
         """
         For calculating and getting sensitivity analysis data
         :param inputs_base: main input data
@@ -153,6 +154,7 @@ class VbmModel(Model):
         :param output_indicator: output indicator parameters
         :param deviations: list of deviations of data
         :param get_graph: returns sensitivity analysis graph if True
+        :param auto_selection_number: if > 0 sets, hom many indicators will be returned in sa
         :return: calculated sensitivity analysis data
         """
 
@@ -207,6 +209,8 @@ class VbmModel(Model):
             sa_ind_data = {'indicator': [ind for ind in self.parameters.x_indicators if ind['short_id'] == ind_id][0]}
             indicator_data_list = []
 
+            result_deviation = 0
+
             for dev in deviations:
 
                 c_data_plus = data_all.loc[(data_all['variant'] ==
@@ -237,6 +241,8 @@ class VbmModel(Model):
                 c_data_plus = c_data_plus.rename({'y_all': 'y'}, axis=1)
                 c_data_minus = c_data_minus.rename({'y_all': 'y'}, axis=1)
 
+                result_deviation += (abs(c_data_plus['delta'].sum()) + abs(c_data_minus['delta'].sum()))
+
                 indicator_data = {'deviation': dev, 'data_plus': c_data_plus[result_columns].to_dict('records'),
                                   'data_minus': c_data_minus[result_columns].to_dict('records')}
 
@@ -245,10 +251,19 @@ class VbmModel(Model):
             sa_ind_data['data'] = indicator_data_list
 
             sa_ind_data['data_0'] = data_base[result_columns].to_dict('records')
+            sa_ind_data['result_deviation'] = result_deviation
 
             sa.append(sa_ind_data)
 
-        graph_string = self._get_sa_graph_html(sa)
+        sa.sort(key=lambda el: el['result_deviation'], reverse=True)
+
+        if auto_selection_number:
+            sa = sa[:auto_selection_number]
+
+        if get_graph:
+            graph_string = self._get_sa_graph_html(sa)
+        else:
+            graph_string = ''
 
         return {'data': sa, 'graph_data': graph_string}
 
@@ -1154,7 +1169,8 @@ def _get_sensitivity_analysis(parameters: dict[str, Any]) -> dict[str, Any]:
                     ParametersFormatError('Wrong request parameters format! Check "output_indicator" parameter')
 
             result = model.get_sensitivity_analysis(inputs_base, input_indicators, output_indicator, deviations,
-                                                    parameters.get('get_graph'))
+                                                    parameters.get('get_graph'),
+                                                    parameters.get('auto_selection_number'))
         case _:
             raise ParametersFormatError('Wrong request parameters format! Check "model", "inputs_base", '
                                         '"input_indicators", "output_indicator", "deviations" parameters')
