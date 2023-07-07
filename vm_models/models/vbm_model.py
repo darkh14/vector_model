@@ -295,11 +295,23 @@ class VbmModel(Model):
         for ind, y in enumerate(y_list):
             fig.add_trace(go.Scatter(x=x, y=y, name=indicator_names[ind]))
 
-        fig.update_layout(title='Анализ на чувствительность', showlegend=True, legend_orientation="h",
+        fig.update_layout(title='Анализ на чувствительность', showlegend=True,
                           xaxis_title="Отклонения входного показателя, %",
                           yaxis_title="Отклонения выходного показателя, %",
                           paper_bgcolor='White',
                           plot_bgcolor='White')
+
+        fig.update_layout(legend=dict(
+                                    x=0,
+                                    y=-0.2,
+                                    traceorder="normal",
+                                    orientation='h',
+                                    # font=dict(
+                                    #     family="sans-serif",
+                                    #     size=12,
+                                    #     color="black"
+                                    # ),
+                                ))
 
         fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', zerolinecolor='Grey', tickvals=x)
 
