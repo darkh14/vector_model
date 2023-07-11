@@ -758,6 +758,8 @@ class VbmScaler(Scaler):
         :return: self scaling object
         """
 
+        x.to_json('x_y.json', orient='records')
+
         self._fitting_mode = True
 
         if self._new_scaler:
