@@ -37,14 +37,15 @@ class VbmEngine(BaseEngine):
 
         pd_data = self.preprocess_data(data, loading_id, package_id)
 
-        data_to_write = list(pd_data.to_dict('records'))
-
         if loading_type == LoadingTypes.INCREMENT:
             pd_data_grouped = pd_data[['organisation', 'scenario', 'period', 'indicator_short_id', 'analytics_key_id']]
             for row in pd_data_grouped.iterrows():
                 self._db_connector.delete_lines('raw_data', dict(row[1]))
 
-        self._db_connector.set_lines('raw_data', data_to_write)
+        data_to_write = list(pd_data.loc[pd_data['remove'] == False].to_dict('records'))
+
+        if data_to_write:
+            self._db_connector.set_lines('raw_data', data_to_write)
 
         return True
 
@@ -57,6 +58,7 @@ class VbmEngine(BaseEngine):
         self._db_connector.delete_lines('raw_data', {'loading_id': loading_id, 'package_id': package_id})
         return True
 
+    # noinspection PyMethodMayBeStatic
     def preprocess_data(self, data: list[dict[str, Any]], loading_id:  str = '', package_id: str = '') -> pd.DataFrame:
         """ Adds additional fields to data array and converts data list to pandas DataFrame
         :param data: rqw data array
@@ -89,7 +91,7 @@ class VbmEngine(BaseEngine):
                       'indicator': {'type': str(), 'name': str(), 'id': str()},
                       'analytics': list(r_analytics),
                       'sum': int() | float(),
-                      'qty': int() | float(),} if not for_fa:
+                      'qty': int() | float(), } if not for_fa:
 
                     if not self._check_data_analytics(r_analytics):
                         wrong_row_numbers.append(num + 1)
