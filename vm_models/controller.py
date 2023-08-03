@@ -31,7 +31,7 @@ def _transform_model_parameters_for_fitting(func: Callable):
     def wrapper(parameters: dict[str, Any]):
 
         match parameters:
-            case {'model': {'fitting_parameters': dict(fitting_parameters)}} if fitting_parameters:
+            case {'model': {'fitting_parameters': dict(fitting_parameters)}}:
 
                 c_fitting_parameters = fitting_parameters.copy()
 
