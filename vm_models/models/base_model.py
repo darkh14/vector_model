@@ -153,6 +153,7 @@ class Model:
 
         if (not self.fitting_parameters.is_fit
                 and not self.fitting_parameters.fitting_is_started
+                and not self.fitting_parameters.fitting_is_pre_started
                 and not self.fitting_parameters.fitting_is_error):
             raise ModelException('Can not drop fitting. Model is not fit')
 
