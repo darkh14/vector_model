@@ -48,7 +48,7 @@ class VbmNeuralNetwork(BaseEngine):
 
         self._read_from_db()
 
-    def fit(self, x: np.ndarray, y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def _fit_engine(self, x: np.ndarray, y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting ML engine
         :param x:  input data
@@ -64,6 +64,7 @@ class VbmNeuralNetwork(BaseEngine):
 
         return {'description': 'Fit OK', 'history': history.history}
 
+    # noinspection PyMethodMayBeStatic
     def check_fitting_parameters(self, fitting_parameters: dict[str, Any]) -> None:
 
         if 'epochs' not in fitting_parameters:
@@ -243,7 +244,7 @@ class VbmLinearModel(BaseEngine):
 
         self._read_from_db()
 
-    def fit(self, x: np.ndarray, y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def _fit_engine(self, x: np.ndarray, y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting ML engine
         :param x:  input data
@@ -332,7 +333,7 @@ class VbmPolynomialModel(VbmLinearModel):
 
     model_type: ClassVar[str] = 'polynomial_regression'
 
-    def fit(self, x: np.ndarray, y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def _fit_engine(self, x: np.ndarray, y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting ML engine
         :param x:  input data
@@ -345,7 +346,7 @@ class VbmPolynomialModel(VbmLinearModel):
 
         x_pf = pf.fit_transform(x)
 
-        return super().fit(x_pf, y, parameters)
+        return super()._fit_engine(x_pf, y, parameters)
 
     def predict(self, x: np.ndarray) -> np.ndarray:
         """
@@ -374,7 +375,7 @@ class PolynomialRegressionForFI(LinearRegression):
 
         self._pf = PolynomialFeatures(degree=2, interaction_only=True)
 
-    def fit(self, x: np.ndarray, y: np.ndarray, **kwargs) -> object:
+    def _fit_engine(self, x: np.ndarray, y: np.ndarray, **kwargs) -> object:
 
         x_pf = self._pf.fit_transform(x)
 

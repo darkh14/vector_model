@@ -101,7 +101,7 @@ class VbmModel(Model):
         self._write_to_db()
 
         try:
-            result = self._fi_calculate_model(fi_parameters['epochs'], fi_parameters)
+            result = self._fi_calculate_model(fi_parameters)
         except Exception as ex:
             self.fitting_parameters.set_error_fi_calculation(str(ex))
             self._write_to_db()
@@ -539,13 +539,10 @@ class VbmModel(Model):
                 raise ModelException('Model is not prepared for feature importances calculation. ' +
                                      'Drop feature importances calculation and execute another fi calculation')
 
-        self._engine.check_fitting_parameters(fi_parameters)
-
     # noinspection PyUnusedLocal
-    def _fi_calculate_model(self, epochs, fi_parameters):
+    def _fi_calculate_model(self, fi_parameters):
         """
         For fi calculation after prepare and check parameters. Method - permutation importances
-        :param epochs: number of epochs to fit
         :param fi_parameters: parameters to calculate fi
         :return: info of calculating
         """

@@ -43,7 +43,6 @@ class BaseEngine(ABC):
 
         self._inner_engine = Optional[object]
 
-    @abstractmethod
     def fit(self, x: np.ndarray,  y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting ML engine
@@ -52,6 +51,22 @@ class BaseEngine(ABC):
         :param parameters: additional parameters
         :return: history of fitting
         """
+
+        self._check_fitting_parameters(parameters)
+
+        self._fit_engine(x, y, parameters)
+
+    @abstractmethod
+    def _fit_engine(self, x: np.ndarray,  y: np.ndarray,
+                    parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        """
+        For fitting ML engine after checking
+        :param x: inputs
+        :param y: outputs (labels)
+        :param parameters: additional parameters
+        :return: history of fitting
+        """
+
 
     @abstractmethod
     def predict(self, x: np.ndarray) -> np.ndarray:
@@ -71,5 +86,5 @@ class BaseEngine(ABC):
         return self._inner_engine
 
     # noinspection PyMethodMayBeStatic
-    def check_fitting_parameters(self, parameters: dict[str, Any]) -> None:
+    def _check_fitting_parameters(self, parameters: dict[str, Any]) -> None:
         pass

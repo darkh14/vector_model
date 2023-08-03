@@ -283,8 +283,6 @@ class Model:
                 raise ModelException('Model is not prepared for fitting. ' +
                                      'Drop fitting and execute another fitting')
 
-        self._engine.check_fitting_parameters(fitting_parameters)
-
     def _check_before_predicting(self, inputs: list[dict[str, Any]]) -> None:
         """
         For checking statuses and other parameters before predicting. Raises ModelException if checking is failed
