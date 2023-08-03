@@ -539,6 +539,8 @@ class VbmModel(Model):
                 raise ModelException('Model is not prepared for feature importances calculation. ' +
                                      'Drop feature importances calculation and execute another fi calculation')
 
+        self._engine.check_fitting_parameters(fi_parameters)
+
     # noinspection PyUnusedLocal
     def _fi_calculate_model(self, epochs, fi_parameters):
         """
@@ -548,7 +550,7 @@ class VbmModel(Model):
         :return: info of calculating
         """
 
-        result = self._fit_model(fi_parameters['epochs'], fi_parameters, for_fi=True)
+        result = self._fit_model(fi_parameters, for_fi=True)
 
         self._calculate_fi_from_model(result['engine'], result['x'], result['y'])
 
@@ -556,11 +558,9 @@ class VbmModel(Model):
 
         return result
 
-    def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None, for_fi: bool = False) \
-            -> dict[str, Any]:
+    def _fit_model(self, fitting_parameters: Optional[dict[str, Any]] = None, for_fi: bool = False) -> dict[str, Any]:
         """
         For fitting model after checking, and preparing parameters
-        :param epochs: number of epochs for fitting
         :param fitting_parameters: additional fitting parameters
         :return: fitting history
         """
@@ -584,7 +584,7 @@ class VbmModel(Model):
 
         if for_fi:
             validation_split = fitting_parameters.get('validation_split') or 0.2 if fitting_parameters else 0.2
-            fi_engine = self._get_engine_for_fi(epochs, validation_split)
+            fi_engine = self._get_engine_for_fi(fitting_parameters, validation_split)
 
             history = fi_engine.fit(x, y)
 
@@ -597,7 +597,7 @@ class VbmModel(Model):
 
         else:
 
-            result = self._engine.fit(x, y, epochs, fitting_parameters)
+            result = self._engine.fit(x, y, fitting_parameters)
 
             y_pred = self._engine.predict(x)
 
@@ -625,11 +625,12 @@ class VbmModel(Model):
 
         return engine_for_fi
 
-    def _get_engine_for_fi(self, epochs: int, validation_split: float) -> [KerasRegressor | LinearRegression]:
+    def _get_engine_for_fi(self, fitting_parameters: dict[str, Any],
+                           validation_split: float) -> [KerasRegressor | LinearRegression]:
 
         if self._engine.model_type == 'neural_network':
             engine = KerasRegressor(build_fn=self._get_engine_fn_for_fi,
-                           epochs=epochs,
+                           epochs=fitting_parameters['epochs'],
                            verbose=2,
                            validation_split=validation_split)
         else:

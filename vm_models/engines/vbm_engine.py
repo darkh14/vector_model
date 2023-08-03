@@ -22,6 +22,7 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 
 from ..engines.base_engine import BaseEngine
+from vm_logging.exceptions import ModelException
 from id_generator import IdGenerator
 
 
@@ -47,21 +48,26 @@ class VbmNeuralNetwork(BaseEngine):
 
         self._read_from_db()
 
-    def fit(self, x: np.ndarray, y: np.ndarray, epochs: int,
-            parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def fit(self, x: np.ndarray, y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting ML engine
         :param x:  input data
         :param y: output data (labels)
-        :param epochs: nuber of epochs of fitting
         :param parameters: additional parameters
         :return: history of fitting
         """
-        history = self._inner_engine.fit(x, y, epochs=epochs, verbose=2, validation_split=self._validation_split)
+
+        history = self._inner_engine.fit(x, y, epochs=parameters['epochs'], verbose=2,
+                                         validation_split=self._validation_split)
 
         self._write_to_db()
 
         return {'description': 'Fit OK', 'history': history.history}
+
+    def check_fitting_parameters(self, fitting_parameters: dict[str, Any]) -> None:
+
+        if 'epochs' not in fitting_parameters:
+            raise ModelException('Parameter "epochs" not found in fitting parameters')
 
     def predict(self, x: np.ndarray) -> np.ndarray:
         """
@@ -237,13 +243,11 @@ class VbmLinearModel(BaseEngine):
 
         self._read_from_db()
 
-    def fit(self, x: np.ndarray, y: np.ndarray, epochs: int,
-            parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def fit(self, x: np.ndarray, y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting ML engine
         :param x:  input data
         :param y: output data (labels)
-        :param epochs: nuber of epochs of fitting
         :param parameters: additional parameters
         :return: history of fitting
         """
@@ -328,13 +332,11 @@ class VbmPolynomialModel(VbmLinearModel):
 
     model_type: ClassVar[str] = 'polynomial_regression'
 
-    def fit(self, x: np.ndarray, y: np.ndarray, epochs: int,
-            parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def fit(self, x: np.ndarray, y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting ML engine
         :param x:  input data
         :param y: output data (labels)
-        :param epochs: nuber of epochs of fitting
         :param parameters: additional parameters
         :return: history of fitting
         """
@@ -343,7 +345,7 @@ class VbmPolynomialModel(VbmLinearModel):
 
         x_pf = pf.fit_transform(x)
 
-        return super().fit(x_pf, y, epochs, parameters)
+        return super().fit(x_pf, y, parameters)
 
     def predict(self, x: np.ndarray) -> np.ndarray:
         """

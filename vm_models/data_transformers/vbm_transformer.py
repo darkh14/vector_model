@@ -72,7 +72,7 @@ class VbmChecker(Checker):
 
             if error_ids:
                 error_names = [el['name'] for el in self._model_parameters.x_indicators +
-                               self._model_parameters.x_indicators if el['short_id'] in error_ids]
+                               self._model_parameters.y_indicators if el['short_id'] in error_ids]
                 error_names = ['"{}"'.format(el) for el in error_names]
 
                 raise ModelException('Indicator(s) {} are not in fitting data'.format(', '.join(error_names)))

@@ -44,13 +44,11 @@ class BaseEngine(ABC):
         self._inner_engine = Optional[object]
 
     @abstractmethod
-    def fit(self, x: np.ndarray,  y: np.ndarray, epochs: int,
-            parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def fit(self, x: np.ndarray,  y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting ML engine
         :param x: inputs
         :param y: outputs (labels)
-        :param epochs: nuber of epochs
         :param parameters: additional parameters
         :return: history of fitting
         """
@@ -71,4 +69,7 @@ class BaseEngine(ABC):
 
     def get_engine_for_fi(self) -> Any:
         return self._inner_engine
-        
+
+    # noinspection PyMethodMayBeStatic
+    def check_fitting_parameters(self, parameters: dict[str, Any]) -> None:
+        pass

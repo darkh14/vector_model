@@ -119,7 +119,7 @@ class Model:
         self._write_to_db()
 
         try:
-            result = self._fit_model(fitting_parameters['epochs'], fitting_parameters)
+            result = self._fit_model(fitting_parameters)
         except Exception as ex:
             self.fitting_parameters.set_error_fitting(str(ex))
             self._write_to_db()
@@ -188,10 +188,9 @@ class Model:
         if self.fitting_parameters.fitting_is_started:
             set_background_job_interrupted(self.fitting_parameters.fitting_job_id)
 
-    def _fit_model(self, epochs: int, fitting_parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def _fit_model(self, fitting_parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting model after checking, and preparing parameters
-        :param epochs: number of epochs for fitting
         :param fitting_parameters: additional fitting parameters
         :return: fitting history
         """
@@ -210,7 +209,7 @@ class Model:
 
         self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number,
                                                             self.fitting_parameters.is_first_fitting())
-        result = self._engine.fit(x, y, epochs, fitting_parameters)
+        result = self._engine.fit(x, y, fitting_parameters)
 
         self._scaler = pipeline.named_steps['scaler']
 
@@ -271,9 +270,6 @@ class Model:
         if not self._initialized:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
 
-        if 'epochs' not in fitting_parameters:
-            raise ModelException('Parameter "epochs" not found in fitting parameters')
-
         if self.fitting_parameters.fitting_is_started:
             raise ModelException('Another fitting is started yet. Wait for end of fitting')
 
@@ -285,6 +281,8 @@ class Model:
             if self.fitting_parameters.fitting_is_pre_started:
                 raise ModelException('Model is not prepared for fitting. ' +
                                      'Drop fitting and execute another fitting')
+
+        self._engine.check_fitting_parameters(fitting_parameters)
 
     def _check_before_predicting(self, inputs: list[dict[str, Any]]) -> None:
         """
