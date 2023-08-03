@@ -67,7 +67,6 @@ class BaseEngine(ABC):
         :return: history of fitting
         """
 
-
     @abstractmethod
     def predict(self, x: np.ndarray) -> np.ndarray:
         """

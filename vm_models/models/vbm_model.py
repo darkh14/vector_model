@@ -524,9 +524,6 @@ class VbmModel(Model):
         if not self.fitting_parameters.is_fit:
             raise ModelException('Model is not fit. Fit model before fi calculation')
 
-        if 'epochs' not in fi_parameters:
-            raise ModelException('Parameter "epochs" not found in fi parameters')
-
         if self.fitting_parameters.fi_calculation_is_started:
             raise ModelException('Another fi calculation is started yet. Wait for end of fi calculation')
 

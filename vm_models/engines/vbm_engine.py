@@ -368,14 +368,14 @@ class VbmPolynomialModel(VbmLinearModel):
 
 class PolynomialRegressionForFI(LinearRegression):
 
-    def __init__(self, inner_ingine: LinearRegression):
+    def __init__(self, inner_engine: LinearRegression):
 
         super().__init__()
-        self._inner_engine = inner_ingine
+        self._inner_engine = inner_engine
 
         self._pf = PolynomialFeatures(degree=2, interaction_only=True)
 
-    def _fit_engine(self, x: np.ndarray, y: np.ndarray, **kwargs) -> object:
+    def fit(self, x: np.ndarray, y: np.ndarray, **kwargs) -> object:
 
         x_pf = self._pf.fit_transform(x)
 
@@ -386,3 +386,4 @@ class PolynomialRegressionForFI(LinearRegression):
         x_pf = self._pf.fit_transform(x)
 
         return self._inner_engine.predict(x_pf)
+
