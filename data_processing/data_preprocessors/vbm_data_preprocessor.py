@@ -10,9 +10,10 @@
 from typing import Any, ClassVar
 from datetime import datetime
 import pandas as pd
+from id_generator import IdGenerator
 
 from .base_data_preprocessor import BaseDataPreprocessor
-from id_generator import IdGenerator
+from .. import api_types
 
 
 class VbmDataPreprocessor(BaseDataPreprocessor):
@@ -25,94 +26,63 @@ class VbmDataPreprocessor(BaseDataPreprocessor):
         :return: data after preprocessing
         """
 
-        return self._preprocess_data(data)
+        pd_data = pd.DataFrame(data)
 
-    def preprocess_data_for_loading(self, data: list[dict[str, Any]],
+        return pd_data
+
+    def preprocess_data_for_loading(self, data: api_types.PackageWithData,
                                     loading_id: str, package_id: str) -> pd.DataFrame:
         """ For preprocessing data before loading
+
         :param data: list of loading data
         :param loading_id: id of loading object, which uses to load data, will be added as field to data;
         :param package_id: id of package object, which uses to load data, will be added as field to data.
         :return: data after preprocessing
         """
-        return self._preprocess_data(data, loading_id, package_id)
 
-    def _preprocess_data(self, data: list[dict[str, Any]] | pd.DataFrame,
-                         loading_id:  str = '', package_id: str = '') -> pd.DataFrame:
-        """ Adds additional fields to data array and converts data list to pandas DataFrame.
-                :param data: list - data array to preprocess
-                :param loading_id: str - id of loading object, which uses to load data, will be added as field to data
-                :param package_id: str - id of package object, which uses to load data, will be added as field to data
-                :return: pd.Dataframe data after preprocessing
-        """
+        pd_data = pd.DataFrame([el.model_dump() for el in data.data])
 
-        if not isinstance(data, pd.DataFrame):
-            pd_data = pd.DataFrame(data)
-        else:
-            pd_data = data.copy()
-
-        pd_data = self.add_short_ids_to_data(pd_data)
         pd_data['loading_id'] = loading_id
         pd_data['package_id'] = package_id
 
         if loading_id and package_id:
             pd_data['loading_date'] = datetime.utcnow()
 
-        pd_data['period_date'] = pd_data['period'].apply(lambda x: datetime.strptime(x, '%d.%m.%Y'))
-
-        pd_data['organisation_id'] = pd_data['organisation'].apply(lambda x: x['id'])
-        pd_data['organisation_name'] = pd_data['organisation'].apply(lambda x: x['name'])
-
-        pd_data['scenario_id'] = pd_data['scenario'].apply(lambda x: x['id'])
-        pd_data['scenario_name'] = pd_data['scenario'].apply(lambda x: x['name'])
-
-        pd_data['indicator_name'] = pd_data['indicator'].apply(lambda x: x['name'])
-
-        pd_data['indicator'] = pd_data[['indicator', 'indicator_short_id']].apply(
-            self.add_short_id_to_indicator, axis=1)
-
-        pd_data['analytics'] = pd_data['analytics'].apply(self.add_short_id_to_analytics)
+        pd_data['row_id'] = pd_data.apply(self.get_raw_data_row_hash, axis=1)
 
         return pd_data
 
-    def add_short_ids_to_data(self, pd_data: pd.DataFrame) -> pd.DataFrame:
-        """ Adds short ids to indicators, analytics and analytic keys
-                :param pd_data: pd.DataFrame - data array
-                :return: pd.DataFrame - data array with short ids added
+    def preprocess_additional_data(self, data: api_types.PackageWithData) -> dict[str, pd.DataFrame]:
+        """ For preprocess additional data before loading
+        :param data: - list of all loading data
+        :return: additional data after preprocessing
         """
-        pd_data['indicator_short_id'] = pd_data['indicator'].apply(IdGenerator.get_short_id_from_dict_id_type)
-        pd_data['analytics'] = pd_data['analytics'].apply(self.add_short_id_to_analytics)
 
-        pd_data['analytics_key_id'] = pd_data['analytics'].apply(self.get_short_id_for_analytics)
+        additional_data_fields = [el for el in data.get_data_fields() if el != 'data']
 
-        return pd_data
+        result = dict()
 
-    @staticmethod
-    def add_short_id_to_indicator(ind_value: pd.Series) -> dict[str, Any]:
-        """ Adds short id to indicator. Used in pandas data series apply() method
-                :param ind_value: pd.Series - value of indicator
-                :return: value with short id added
-        """
-        result = ind_value[0]
-        result['short_id'] = ind_value[1]
+        for field in additional_data_fields:
+            data_element = getattr(data, field)
+            if data_element:
+
+                result_element = pd.DataFrame([el.model_dump() for el in data_element])
+                if field == 'scenarios':
+                    result_element['periodicity'] = result_element['periodicity'].apply(lambda x: x.value)
+                result[field] = result_element
         return result
 
     @staticmethod
-    def add_short_id_to_analytics(analytics_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """ Adds short id to analytics. Used in pandas data series apply() method
-                :param analytics_list: list - array of analytics.
-                :return: analytics with short ids added
+    def get_raw_data_row_hash(data_row: pd.Series) -> str:
         """
-        for an_el in analytics_list:
-            an_el['short_id'] = IdGenerator.get_short_id_from_dict_id_type(an_el)
-
-        return analytics_list
-
-    @staticmethod
-    def get_short_id_for_analytics(analytics_list: list[dict[str, Any]]) -> str:
-        """ Adds short id to analytics. Used in pandas data series apply() method
-                :param analytics_list: list - array of analytics.
-                :return: analytic key id
+        For hash from data row (indicator, period and analytics) to form id of data row
+        this id helps to choose and delete specific rows while loading data
+        :param data_row: row of data to hash it
+        :return result of data hashing
         """
-        return IdGenerator.get_short_id_from_list_of_dict_short_id(analytics_list)
-
+        hash_str = ' '.join([data_row['period'].strftime('%d.%m.%Y %H:%M:%S'),
+                            data_row['organisation'],
+                            data_row['scenario'],
+                            data_row['indicator'],
+                            data_row['analytic_key']])
+        return IdGenerator.get_id_by_name(hash_str)

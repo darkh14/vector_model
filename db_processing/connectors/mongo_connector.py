@@ -36,12 +36,12 @@ class MongoConnector(Connector):
     """
     type: ClassVar[str] = 'mongo_db'
 
-    def __init__(self, db_path: str = '') -> None:
+    def __init__(self, db_path: str = '', db_name: str = '') -> None:
         """
         Defines _connection and _db values. No need to connect while __init__
         :param db_path:
         """
-        super().__init__(db_path)
+        super().__init__(db_path, db_name)
         self._connection: pymongo.MongoClient = self._get_connection()
         self._db = self._get_db()  # pymongo.database.Database
 
@@ -223,7 +223,28 @@ class MongoConnector(Connector):
 
     def _get_collection(self, collection_name):
         """ Gets collection object from db object
-        :param collection_name: name of required collection
+        :param collection_name: name of required collection,
         :return: collection object
         """
         return self._db.get_collection(collection_name)
+
+    def get_collection_names(self) -> list[str]:
+        """Method to copy current db,
+        :return list of collection names of current db
+        """
+
+        return self._db.list_collection_names()
+
+    def drop_db(self) -> str:
+        """Method to drop current database
+        :return result of dropping"""
+
+        collection_names = self.get_collection_names()
+
+        if not collection_names:
+            raise DBConnectorException('DB "{}" does not exist'.format(self.db_path))
+
+        for collection_name in collection_names:
+            self.delete_lines(collection_name)
+
+        return 'DB "{}" is dropped'.format(self.db_path)

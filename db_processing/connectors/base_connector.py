@@ -244,3 +244,14 @@ class Connector(ABC):
             return result
 
         return wrapper
+
+    @abstractmethod
+    def get_collection_names(self) -> list[str]:
+        """Method to copy current db,
+        :return list of collection names of current db
+        """
+
+    @abstractmethod
+    def drop_db(self) -> str:
+        """Method to drop current database
+        :return result of dropping"""

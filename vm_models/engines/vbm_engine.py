@@ -22,6 +22,7 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 
 from ..engines.base_engine import BaseEngine
+from ..model_types import ModelTypes
 from vm_logging.exceptions import ModelException
 from id_generator import IdGenerator
 
@@ -29,7 +30,7 @@ from id_generator import IdGenerator
 class VbmNeuralNetwork(BaseEngine):
     """ 3 layer direct distribution NN. Powered by tensorflow.keras """
     service_name: ClassVar[str] = 'vbm'
-    model_type: ClassVar[str] = 'neural_network'
+    model_type: ClassVar[ModelTypes] = ModelTypes.NeuralNetwork
 
     def __init__(self, model_id: str, input_number: int, output_number: int, new_engine: bool = False,
                  **kwargs) -> None:
@@ -216,7 +217,10 @@ class VbmNeuralNetwork(BaseEngine):
         return self._inner_engine
 
     def get_engine_for_fi(self) -> object:
-
+        """
+        Returns special type of model engine to calculate feature importances
+        @return: engine for fi
+        """
         inner_engine_for_fi = clone_model(self._inner_engine)
         self.compile_engine(inner_engine_for_fi)
 
@@ -224,9 +228,9 @@ class VbmNeuralNetwork(BaseEngine):
 
 
 class VbmLinearModel(BaseEngine):
-    """ Linear regression based on 1 layer NN inherited by VbmNeuralNetwork """
+    """ Linear regression (sklearn) """
     service_name: ClassVar[str] = 'vbm'
-    model_type: ClassVar[str] = 'linear_regression'
+    model_type: ClassVar[ModelTypes] = ModelTypes.LinearRegression
 
     def __init__(self, model_id: str, input_number: int, output_number: int, new_engine: bool = False,
                  **kwargs) -> None:
@@ -330,8 +334,10 @@ class VbmLinearModel(BaseEngine):
 
 
 class VbmPolynomialModel(VbmLinearModel):
-
-    model_type: ClassVar[str] = 'polynomial_regression'
+    """ 2 degree model based on sklearn.linear_model with polynomial transformation.
+    Inherited by VbmNeuralNetwork
+    """
+    model_type: ClassVar[ModelTypes] = ModelTypes.PolynomialRegression
 
     def _fit_engine(self, x: np.ndarray, y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
@@ -362,12 +368,16 @@ class VbmPolynomialModel(VbmLinearModel):
         return super().predict(x_pf)
 
     def get_engine_for_fi(self) -> object:
-
+        """
+        Returns special type of model engine to calculate feature importances
+        @return: engine for fi
+        """
         return PolynomialRegressionForFI(self._inner_engine)
 
 
 class PolynomialRegressionForFI(LinearRegression):
-
+    """ Model engine wrapper for linear and polynomial models.
+    For calculating feature importances"""
     def __init__(self, inner_engine: LinearRegression):
 
         super().__init__()
@@ -386,4 +396,3 @@ class PolynomialRegressionForFI(LinearRegression):
         x_pf = self._pf.fit_transform(x)
 
         return self._inner_engine.predict(x_pf)
-

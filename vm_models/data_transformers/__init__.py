@@ -9,7 +9,7 @@ from typing import Type, Optional
 
 from . import base_transformer
 from vm_settings import get_var
-from ..model_types import DataTransformersTypes
+from ..model_types import DataTransformersTypes, ModelTypes
 from .base_transformer import BaseTransformer
 from vm_logging.exceptions import ModelException
 from . import vbm_transformer
@@ -19,7 +19,7 @@ SERVICE_NAME: str = ''
 __all__ = ['base_transformer', 'vbm_transformer', 'get_transformer_class']
 
 
-def get_transformer_class(transformer_type: DataTransformersTypes, model_type: str) -> Type[BaseTransformer]:
+def get_transformer_class(transformer_type: DataTransformersTypes, model_type: ModelTypes) -> Type[BaseTransformer]:
     """ Function for getting data transformer class. Choosing from subclasses of DataTransformer class where
         service name = SERVICE_NAME var
         :param transformer_type: type of required transformer (reader, categorical encoder etc.)
@@ -34,10 +34,11 @@ def get_transformer_class(transformer_type: DataTransformersTypes, model_type: s
     transformer_class = _get_class_from_subclasses(BaseTransformer, SERVICE_NAME, model_type, transformer_type)
 
     if not transformer_class:
-        transformer_class = _get_class_from_subclasses(BaseTransformer, SERVICE_NAME, '', transformer_type)
+        transformer_class = _get_class_from_subclasses(BaseTransformer, SERVICE_NAME, None, transformer_type)
 
         if not transformer_class:
-            transformer_class = _get_class_from_subclasses(BaseTransformer, '', '', transformer_type)
+            transformer_class = _get_class_from_subclasses(BaseTransformer, '', None,
+                                                           transformer_type)
 
             if not transformer_class:
                 raise ModelException('Can not find right transformer class' +
@@ -46,7 +47,8 @@ def get_transformer_class(transformer_type: DataTransformersTypes, model_type: s
     return transformer_class
 
 
-def _get_class_from_subclasses(parent_class: Type[BaseTransformer], service_name: str = '', model_type: str = '',
+def _get_class_from_subclasses(parent_class: Type[BaseTransformer], service_name: str = '',
+                        model_type: Optional[ModelTypes] = None,
                         transformer_type: Optional[DataTransformersTypes] = None) -> Optional[Type[BaseTransformer]]:
     """
     Recursive function to seek required class from subclasses

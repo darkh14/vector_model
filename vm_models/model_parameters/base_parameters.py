@@ -9,9 +9,9 @@ from dataclasses import dataclass
 from datetime import datetime
 import os
 
-import db_processing
 from ..model_filters import base_filter, get_fitting_filter_class
-from vm_logging.exceptions import ModelException, ParametersFormatError
+from .. import model_types
+from vm_logging.exceptions import ModelException
 
 
 @dataclass
@@ -26,7 +26,7 @@ class ModelParameters:
     service_name: ClassVar[str] = ''
 
     name: str = ''
-    type: str = ''
+    type: model_types.ModelTypes = model_types.ModelTypes.NeuralNetwork
     data_filter: Optional[base_filter.FittingFilter] = None
 
     def __post_init__(self) -> None:
@@ -35,30 +35,16 @@ class ModelParameters:
         """
         self.data_filter = get_fitting_filter_class()({})
 
-    def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
+    def set_all(self, parameters: dict[str, Any]) -> None:
         """
         For setting all parameters, defined in "parameters" parameter
         :param parameters: input parameters to set
-        :param without_processing: no need to convert parameters if True
         """
-        self._check_new_parameters(parameters)
 
         self.name = parameters['name']
         self.type = parameters['type']
 
         self.data_filter = get_fitting_filter_class()(parameters.get('filter'))
-
-    def _check_new_parameters(self, parameters: dict[str, Any]) -> None:
-        """
-        For checking parameters. Raises ModelException if checking is failed
-        :param parameters: parameters to check
-        """
-
-        match parameters:
-            case {'id': str(model_id), 'name': str(name), 'type': str(model_type)}:
-                pass
-            case _:
-                raise ParametersFormatError('Wrong request parameters format. Check "model" parameter')
 
     def get_data_filter_for_db(self) -> dict[str, Any]:
         """
@@ -95,10 +81,8 @@ class FittingParameters:
     """
     service_name: ClassVar[str] = ''
 
-    is_fit: bool = False
-    fitting_is_pre_started: bool = False
-    fitting_is_started: bool = False
-    fitting_is_error: bool = False
+    fitting_status: model_types.FittingStatuses = model_types.FittingStatuses.NotFit
+
     fitting_date: Optional[datetime] = None
     fitting_start_date: Optional[datetime] = None
     fitting_error_date: Optional[datetime] = None
@@ -127,52 +111,36 @@ class FittingParameters:
         self.categorical_columns = []
         self.metrics = {}
 
-    def set_all(self, parameters: dict[str, Any], without_processing: bool = False) -> None:
+    def set_all(self, parameters: dict[str, Any]) -> None:
         """
         For setting all parameters, defined in "parameters" parameter
         :param parameters: input parameters to set
-        :param without_processing: no need to convert parameters if True
         """
-        self.is_fit = parameters.get('is_fit') or False
-        self.fitting_is_pre_started = parameters.get('fitting_is_pre_started') or False
-        self.fitting_is_started = parameters.get('fitting_is_started') or False
-        self.fitting_is_error = parameters.get('fitting_is_error') or False
+        self.fitting_status = parameters.get('fitting_status') or model_types.FittingStatuses.NotFit
 
-        if without_processing:
-            self.fitting_date = parameters['fitting_date']
-            self.fitting_start_date = parameters['fitting_start_date']
-            self.fitting_error_date = parameters['fitting_error_date']
-        else:
-            self.fitting_date = (datetime.strptime(parameters['fitting_date'], '%d.%m.%Y %H:%M:%S')
-                                 if parameters.get('fitting_date') else None)
-            self.fitting_start_date = (datetime.strptime(parameters['fitting_start_date'], '%d.%m.%Y %H:%M:%S')
-                                       if parameters.get('fitting_start_date') else None)
-            self.fitting_error_date = (datetime.strptime(parameters['fitting_error_date'], '%d.%m.%Y %H:%M:%S')
-                                       if parameters.get('fitting_error_date') else None)
+        self.fitting_date = parameters.get('fitting_date')
+        self.fitting_start_date = parameters.get('fitting_start_date')
+        self.fitting_error_date = parameters.get('fitting_error_date')
 
-        self.fitting_error_text = parameters.get('fitting_error_text') or ''
+        self.fitting_error_text = parameters.get('fitting_error_text', '')
 
-        self.fitting_job_id = parameters.get('fitting_job_id') or ''
-        self.fitting_job_pid = parameters.get('fitting_job_pid') or 0
+        self.fitting_job_id = parameters.get('fitting_job_id', '')
+        self.fitting_job_pid = parameters.get('fitting_job_pid', 0)
 
-        self.x_columns = parameters.get('x_columns') or []
-        self.y_columns = parameters.get('y_columns') or []
+        self.x_columns = parameters.get('x_columns', [])
+        self.y_columns = parameters.get('y_columns', [])
 
-        self.categorical_columns = parameters.get('categorical_columns') or []
+        self.categorical_columns = parameters.get('categorical_columns', [])
 
-        self.metrics = parameters.get('metrics') or {}
+        self.metrics = parameters.get('metrics', {})
 
-    def get_all(self, for_db: bool = False) -> dict[str, Any]:
+    def get_all(self) -> dict[str, Any]:
         """
         For getting values of all parameters
-        :param for_db: True if we need to get parameters for writing them to db
         :return: dict of values of all parameters
         """
         parameters = {
-            'is_fit': self.is_fit,
-            'fitting_is_pre_started': self.fitting_is_pre_started,
-            'fitting_is_started': self.fitting_is_started,
-            'fitting_is_error': self.fitting_is_error,
+            'fitting_status': self.fitting_status,
 
             'fitting_date': self.fitting_date,
             'fitting_start_date': self.fitting_start_date,
@@ -188,25 +156,14 @@ class FittingParameters:
             'metrics': self.metrics
         }
 
-        if not for_db:
-            parameters['fitting_date'] = (parameters['fitting_date'].strftime('%d.%m.%Y %H:%M:%S')
-                                    if parameters.get('fitting_date') else None)
-            parameters['fitting_start_date'] = (parameters['fitting_start_date'].strftime('%d.%m.%Y %H:%M:%S')
-                                    if parameters.get('fitting_start_date') else None)
-            parameters['fitting_error_date'] = (parameters['fitting_error_date'].strftime('%d.%m.%Y %H:%M:%S')
-                                    if parameters.get('fitting_error_date') else None)
-
         return parameters
 
-    def set_pre_start_fitting(self, fitting_parameters: dict[str, Any]) -> None:
+    def set_pre_start_fitting(self, job_id: str = '') -> None:
         """
         For setting statuses and other parameters before starting fitting
-        :param fitting_parameters: parameters of fitting, which will be started
+        :param job_id: id of ob if fitting is background
         """
-        self.is_fit = False
-        self.fitting_is_pre_started = True
-        self.fitting_is_started = False
-        self.fitting_is_error = False
+        self.fitting_status = model_types.FittingStatuses.PreStarted
 
         self.fitting_start_date = datetime.utcnow()
         self.fitting_date = None
@@ -218,20 +175,17 @@ class FittingParameters:
 
         self.metrics = {}
 
-        if fitting_parameters.get('job_id'):
-            self.fitting_job_id = fitting_parameters['job_id']
+        if job_id:
+            self.fitting_job_id = job_id
 
         self._first_fitting = not self.x_columns and not self.y_columns
 
-    def set_start_fitting(self, fitting_parameters: dict[str, Any]) -> None:
+    def set_start_fitting(self, job_id: str = '') -> None:
         """
         For setting statuses and other parameters before starting fitting
-        :param fitting_parameters: parameters of fitting, which will be started
+        :param job_id: id of job if fitting in background
         """
-        self.is_fit = False
-        self.fitting_is_pre_started = False
-        self.fitting_is_started = True
-        self.fitting_is_error = False
+        self.fitting_status = model_types.FittingStatuses.Started
 
         self.fitting_start_date = datetime.utcnow()
         self.fitting_date = None
@@ -243,22 +197,19 @@ class FittingParameters:
 
         self.metrics = {}
 
-        if fitting_parameters.get('job_id'):
-            self.fitting_job_id = fitting_parameters['job_id']
-
         self._first_fitting = not self.x_columns and not self.y_columns
+
+        if job_id:
+            self.fitting_job_id = job_id
 
     def set_end_fitting(self) -> None:
         """
         For setting statuses and other parameters after finishing fitting
         """
-        if not self.fitting_is_started:
+        if self.fitting_status != model_types.FittingStatuses.Started:
             raise ModelException('Can not finish fitting. Fitting is not started. Start fitting before')
 
-        self.is_fit = True
-        self.fitting_is_pre_started = False
-        self.fitting_is_started = False
-        self.fitting_is_error = False
+        self.fitting_status = model_types.FittingStatuses.Fit
 
         self.fitting_date = datetime.utcnow()
         self.fitting_error_date = None
@@ -269,13 +220,12 @@ class FittingParameters:
         """
         For setting statuses and other parameters when dropping fitting
         """
-        if not self.is_fit and not self.fitting_is_started and not self.fitting_is_error:
+        if self.fitting_status not in (model_types.FittingStatuses.Fit,
+                                       model_types.FittingStatuses.Started,
+                                       model_types.FittingStatuses.PreStarted):
             raise ModelException('Can not drop fitting. Model is not fit')
 
-        self.is_fit = False
-        self.fitting_is_pre_started = False
-        self.fitting_is_started = False
-        self.fitting_is_error = False
+        self.fitting_status = model_types.FittingStatuses.NotFit
 
         self.fitting_start_date = None
         self.fitting_date = None
@@ -300,10 +250,7 @@ class FittingParameters:
         For setting statuses and other parameters when error is while fitting
         :param error_text: text of fitting error
         """
-        self.is_fit = False
-        self.fitting_is_pre_started = False
-        self.fitting_is_started = False
-        self.fitting_is_error = True
+        self.fitting_status = model_types.FittingStatuses.Error
 
         self.fitting_date = None
         self.fitting_error_date = datetime.utcnow()

@@ -22,6 +22,7 @@ from vm_logging.exceptions import ModelException
 from ..model_parameters.base_parameters import ModelParameters, FittingParameters
 from .base_transformer import Reader, RowColumnTransformer, Checker, CategoricalEncoder, NanProcessor, Scaler, Shuffler
 from data_processing.data_preprocessors import get_data_preprocessing_class
+from id_generator import IdGenerator
 
 VbmScalerClass = TypeVar('VbmScalerClass', bound='VbmScaler')
 
@@ -56,11 +57,11 @@ class VbmChecker(Checker):
 
         if self._fitting_mode and self._fitting_parameters.is_first_fitting():
 
-            indicator_ids = list(x['indicator_short_id'].unique())
+            indicator_ids = list(x['indicator'].unique())
 
             model_indicators = self._model_parameters.x_indicators + self._model_parameters.y_indicators
 
-            model_indicator_ids = [el['short_id'] for el in model_indicators]
+            model_indicator_ids = [el['id'] for el in model_indicators]
 
             model_indicator_ids = set(model_indicator_ids)
 
@@ -72,7 +73,7 @@ class VbmChecker(Checker):
 
             if error_ids:
                 error_names = [el['name'] for el in self._model_parameters.x_indicators +
-                               self._model_parameters.y_indicators if el['short_id'] in error_ids]
+                               self._model_parameters.y_indicators if el['id'] in error_ids]
                 error_names = ['"{}"'.format(el) for el in error_names]
 
                 raise ModelException('Indicator(s) {} are not in fitting data'.format(', '.join(error_names)))
@@ -104,31 +105,43 @@ class VbmRowColumnTransformer(RowColumnTransformer):
             all_indicators = all_indicators + self._add_field_to_indicators(self._model_parameters.y_indicators,
                                                                             'is_y', True)
 
+        need_to_update_columns_descr = self._fitting_mode and self._fitting_parameters.is_first_fitting()
+
+        column_descriptions = list()
+
         for ind_parameters in all_indicators:
 
-            for value_name in ind_parameters['values']:
+            ind_data = self._get_raw_data_by_indicator(raw_data, ind_parameters)
 
-                ind_data = self._get_raw_data_by_indicator(raw_data, ind_parameters, value_name)
+            ind_data = self._process_data_periods(ind_data, ind_parameters)
 
-                ind_data = self._process_data_periods(ind_data, ind_parameters)
+            analytic_keys = self._get_analytic_parameters_from_data(ind_data, ind_parameters, analytic_bound_ids)
 
-                analytic_keys, analytic_ids = self._get_analytic_parameters_from_data(ind_data,
-                                                                                    ind_parameters, analytic_bound_ids)
+            ind_parameters['analytic_keys'] = analytic_keys.copy()
 
-                if not analytic_ids and not ind_parameters['use_analytics']:
-                    analytic_ids.append('')
+            if not analytic_keys and not ind_parameters['use_analytics']:
+                analytic_keys.append('')
 
-                for analytic_id in analytic_ids:
+            for analytic_key in analytic_keys:
 
-                    column_name = self._get_column_name(ind_parameters['short_id'], analytic_id, value_name,
+                for value_name in ('sum', 'qty'):
+
+                    if (value_name == 'sum' and not ind_parameters['use_sum']
+                            or value_name == 'qty' and not ind_parameters['use_qty']):
+                        continue
+
+                    column_descr = self._get_column_description(ind_parameters['id'], analytic_key, value_name,
                                                         ind_parameters)
 
-                    self._check_append_column_names(column_name, x_columns, y_columns, ind_parameters)
+                    if need_to_update_columns_descr:
+                        column_descriptions.append(column_descr)
 
-                    an_data = self._get_raw_data_by_analytics(ind_data, analytic_id)
+                    self._check_append_column_names(column_descr['name'], x_columns, y_columns, ind_parameters)
+
+                    an_data = self._get_raw_data_by_analytics(ind_data, analytic_key, value_name)
+                    an_data.rename({value_name: column_descr['name']}, axis=1, inplace=True)
 
                     data_result = data_result.merge(an_data, on=['organisation', 'scenario', 'period'], how='left')
-                    data_result = data_result.rename({'value': column_name}, axis=1)
 
         if self._fitting_mode and self._fitting_parameters.is_first_fitting():
             self._fitting_parameters.x_columns = x_columns
@@ -146,6 +159,10 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         if not self._fitting_mode:
             data_result = self._add_data_while_predicting(data_result, raw_data)
 
+        if need_to_update_columns_descr:
+            filter_names = {'name': {'$in': [el['name'] for el in column_descriptions]}}
+            self._db_connector.set_lines('column_descriptions', column_descriptions, filter_names)
+
         return data_result
 
     def _get_analytic_bound_ids(self) -> dict[str, list[str]]:
@@ -154,11 +171,11 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         for ind in self._model_parameters.x_indicators + self._model_parameters.y_indicators:
             if ind.get('analytics_bound'):
-                bound[ind['short_id']] = [el['short_id'] for el in ind['analytics_bound']]
+                bound[ind['id']] = ind['analytics_bound']
 
         return bound
 
-    # noinspection PyMethodMayBeStatic
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def _add_data_while_predicting(self, data_result: pd.DataFrame, raw_data: pd.DataFrame) -> pd.DataFrame:
         """
         Adds special fields to data after transforming while predicting
@@ -166,14 +183,6 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         :param raw_data: data before transforming
         :return: data after fields added
         """
-        merge_data_columns = ['organisation', 'organisation_struct', 'scenario', 'scenario_struct', 'index']
-        data_to_merge = raw_data[merge_data_columns]
-
-        merge_columns = ['organisation', 'scenario', 'index']
-
-        data_result = data_result.merge(data_to_merge, on=merge_columns, how='left')
-
-        data_result['period'] = data_result['period'].apply(lambda x: x.strftime('%d.%m.%Y'))
 
         return data_result
 
@@ -186,8 +195,7 @@ class VbmRowColumnTransformer(RowColumnTransformer):
 
         return indicators
 
-    @staticmethod
-    def _get_raw_data_from_x(x: pd.DataFrame) -> pd.DataFrame:
+    def _get_raw_data_from_x(self, x: pd.DataFrame) -> pd.DataFrame:
         """
         transforms data list of dicts to pd.DataFrame
         :param x: input data (list of dicts)
@@ -195,13 +203,12 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         """
         raw_data = x
 
-        raw_data['index'] = raw_data.index
+        if 'periodicity' not in raw_data.columns:
+            scenarios_description = self._db_connector.get_lines('scenarios')
 
-        raw_data.rename({'organisation': 'organisation_struct', 'scenario': 'scenario_struct', 'period': 'period_str',
-                         'indicator': 'indicator_struct'}, axis=1, inplace=True)
-
-        raw_data.rename({'organisation_id': 'organisation', 'scenario_id': 'scenario', 'period_date': 'period',
-                         'indicator_short_id': 'indicator'}, axis=1, inplace=True)
+            raw_data['periodicity'] = raw_data['scenario'].apply(lambda arg: [el['periodicity']
+                                                                              for el in scenarios_description
+                                                                              if el['id'] == arg][0])
 
         return raw_data
 
@@ -213,46 +220,43 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         :return: grouped data
         """
         return raw_data[['organisation', 'scenario',
-                        'period', 'index']].groupby(by=['organisation', 'scenario', 'period'], as_index=False).min()
+                        'period']].groupby(by=['organisation', 'scenario', 'period'], as_index=False).min()
 
     # noinspection PyMethodMayBeStatic
-    def _get_raw_data_by_indicator(self, data: pd.DataFrame, indicator_parameters: dict[str, Any],
-                                   value_name: str) -> pd.DataFrame:
+    def _get_raw_data_by_indicator(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
         """
         Gets raw_data where indicator == required indicator
         :param data: all data
         :param indicator_parameters: parameters of required indicator
         :return: data with one indicator
         """
-        fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytics_key_id', 'analytics', value_name]
-        ind_data = data[fields].loc[data['indicator'] == indicator_parameters['short_id']]
-
-        ind_data = ind_data.rename({value_name: 'value'}, axis=1)
+        fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytic_key', 'sum', 'qty']
+        ind_data = data[fields].loc[data['indicator'] == indicator_parameters['id']]
 
         return ind_data
 
     # noinspection PyMethodMayBeStatic
-    def _get_raw_data_by_analytics(self, data: pd.DataFrame, analytic_id: str) -> pd.DataFrame:
+    def _get_raw_data_by_analytics(self, data: pd.DataFrame, analytic_key: str, value_name: str) -> pd.DataFrame:
         """
         Gets raw indicator data by analytic key
         :param data: data with one indicator
-        :param analytic_id: id of required analytic key
+        :param analytic_key: id of required analytic key
         :return: data with one indicator and one analytic key
         """
-        fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytics_key_id', 'value']
-        if analytic_id:
-            an_data = data[fields].loc[data['analytics_key_id'] == analytic_id]
+        fields = ['organisation', 'scenario', 'period', 'periodicity', 'analytic_key', 'sum', 'qty']
+        if analytic_key:
+            an_data = data[fields].loc[data['analytic_key'] == analytic_key]
         else:
             an_data = data[fields]
 
         fields = ['organisation', 'scenario', 'period']
-        an_data = an_data[fields + ['value']].groupby(fields, as_index=False).sum()
+        an_data = an_data[fields + [value_name]].groupby(fields, as_index=False).sum()
 
         return an_data
 
     def _get_analytic_parameters_from_data(self, data: pd.DataFrame,
                                     indicator_parameters: dict[str, Any],
-                                    analytic_bound_ids: dict[str, list[str]]) -> tuple[list[dict[str, Any]], list[str]]:
+                                    analytic_bound_ids: dict[str, list[str]]) -> list[str]:
         """
         Gets all analytic keys and ids in data (for predicting and secondary fitting)
         :param data: data with one indicator
@@ -262,81 +266,37 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         if indicator_parameters['use_analytics']:
 
             if self._fitting_mode and self._fitting_parameters.is_first_fitting():
-
-                keys, ids = self._get_analytic_parameters_for_new_fitting(data, indicator_parameters,
-                                                                          analytic_bound_ids)
-
+                keys = self._get_analytic_parameters_for_new_fitting(data, indicator_parameters, analytic_bound_ids)
             else:
                 keys = indicator_parameters.get('analytic_keys') or []
-                ids = [el['short_id'] for el in keys]
-
         else:
+            keys = []
 
-            keys, ids = [], []
+        return keys
 
-        return keys, ids
-
-    def _get_analytic_parameters_for_new_fitting(self, data: pd.DataFrame,
-                                    indicator_parameters: dict[str, Any],
-                                    analytic_bound_ids: dict[str, list[str]]) -> tuple[list[dict[str, Any]], list[str]]:
+    # noinspection PyMethodMayBeStatic
+    def _get_analytic_parameters_for_new_fitting(self, data: pd.DataFrame, indicator_parameters: dict[str, Any],
+                                    analytic_bound_ids: dict[str, list[str]]) -> list[str]:
         """
         Gets analytic keys and id for new fitting
         :param data: data with one indicator
         :param indicator_parameters: parameters of current indicator
         :return: all analytic keys and ids found in data
         """
-        ids = []
 
-        data['number'] = data.index
-        fields_to_group = ['analytics_key_id']
-        fields = fields_to_group + ['number']
-        grouped_ind_data = data[fields].groupby(by=fields_to_group, as_index=False).min()
-
-        ind_data = grouped_ind_data.merge(data, on=['analytics_key_id', 'number'], how='left')
-
-        analytics_data = ind_data[['analytics_key_id', 'analytics']].to_dict('records')
+        result = list(data['analytic_key'].unique())
 
         use_bound = indicator_parameters.get('analytics_bound')
-        ind_bound_ids = [el['short_id'] for el in indicator_parameters['analytics_bound']] if use_bound else []
+        ind_bound_ids = [el for el in indicator_parameters['analytics_bound']] if use_bound else []
+        use_inv_bound = analytic_bound_ids.get(indicator_parameters['id'])
+        inv_ind_bound_ids = analytic_bound_ids.get(indicator_parameters['id']) if use_inv_bound else []
 
-        use_inv_bound = analytic_bound_ids.get(indicator_parameters['short_id'])
-        inv_ind_bound_ids = analytic_bound_ids.get(indicator_parameters['short_id']) if use_inv_bound else []
+        if use_bound:
+            result = [el for el in result if el in ind_bound_ids]
+        elif use_inv_bound:
+            result = [el for el in result if el not in inv_ind_bound_ids]
 
-        keys = []
-        for analytic_el in analytics_data:
-
-            if use_bound:
-                if analytic_el['analytics_key_id'] not in ind_bound_ids:
-                    continue
-            elif use_inv_bound:
-                if analytic_el['analytics_key_id'] in inv_ind_bound_ids:
-                    continue
-
-            ids.append(analytic_el['analytics_key_id'])
-
-            key = {'short_id': analytic_el['analytics_key_id'], 'analytics': analytic_el['analytics']}
-            keys.append(key)
-
-            model_keys = (self._fitting_parameters.y_analytic_keys if self._is_y_indicator(indicator_parameters)
-                          else self._fitting_parameters.x_analytic_keys)
-
-            model_key_ids = [el['short_id'] for el in model_keys]
-
-            if analytic_el['analytics_key_id'] not in model_key_ids:
-                model_keys.append(key)
-
-            model_analytics = (self._fitting_parameters.y_analytics if self._is_y_indicator(indicator_parameters)
-                               else self._fitting_parameters.x_analytics)
-
-            model_analytic_ids = [el['short_id'] for el in model_analytics]
-
-            for an_el in analytic_el['analytics']:
-                if an_el['short_id'] not in model_analytic_ids:
-                    model_analytics.append(an_el)
-
-        indicator_parameters['analytic_keys'] = keys
-
-        return keys, ids
+        return result
 
     @staticmethod
     def _is_y_indicator(indicator_parameters: dict[str, Any]) -> bool:
@@ -349,31 +309,40 @@ class VbmRowColumnTransformer(RowColumnTransformer):
         return indicator_parameters['is_y']
 
     # noinspection PyMethodMayBeStatic
-    def _get_column_name(self, indicator_id: str, analytic_id: str, value_name: str,
-                         indicator_parameters: dict[str, Any]) -> str:
+    def _get_column_description(self, indicator: str, analytic_key: str, value_name: str,
+                         indicator_parameters: dict[str, Any]) -> dict[str, Any]:
         """
         Form column name from indicator id, analytic key id and period parameters
-        :param indicator_id: id of current indicator
-        :param analytic_id: id of current analytic key
+        :param indicator: id of current indicator
+        :param analytic_key: id of current analytic key
         :param value_name: name of value ex. "value" or "value_quantity"
         :param indicator_parameters: parameters of current indicator
         :return: column name
         """
+        result = {'indicator': indicator,
+                  'use_analytics': indicator_parameters['use_analytics'],
+                  'analytic_key': analytic_key,
+                  'value_name': value_name,
+                  'period_shift': indicator_parameters['period_shift'],
+                  'period_number': indicator_parameters['period_number'],
+                  'period_accumulation': indicator_parameters['period_accumulation']}
 
         if indicator_parameters['use_analytics']:
-            result = 'ind_{}_val_{}_an_{}'.format(indicator_id, value_name, analytic_id)
+            result_name = 'ind_{}_val_{}_an_{}'.format(indicator, value_name, analytic_key)
         else:
-            result = 'ind_{}_val_{}'.format(indicator_id, value_name)
+            result_name = 'ind_{}_val_{}'.format(indicator, value_name)
 
         if indicator_parameters.get('period_shift'):
             if indicator_parameters['period_shift'] < 0:
-                result += '_p_m{}'.format(-indicator_parameters['period_shift'])
+                result_name += '_p_m{}'.format(-indicator_parameters['period_shift'])
             else:
-                result += '_p_p{}'.format(indicator_parameters['period_shift'])
+                result_name += '_p_p{}'.format(indicator_parameters['period_shift'])
         elif indicator_parameters.get('period_number'):
-            result += '_p_n{}'.format(indicator_parameters['period_number'])
+            result_name += '_p_n{}'.format(indicator_parameters['period_number'])
         elif indicator_parameters.get('period_accumulation'):
-            result += '_p_a'
+            result_name += '_p_a'
+
+        result['name'] = IdGenerator.get_id_by_name(result_name)
 
         return result
 
@@ -628,13 +597,9 @@ class VbmCategoricalEncoder(CategoricalEncoder):
         Defines fields parameter (fields to be encoded)
         :param model_parameters: model parameters object
         :param fitting_parameters: fitting parameters object
-        :param kwargs: additional parameters
         """
         super().__init__(model_parameters, fitting_parameters, **kwargs)
-        self._fields: list = []
-
-        if kwargs.get('fields'):
-            self._fields = kwargs['fields']
+        self._fields: list = model_parameters.categorical_features or []
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
         """

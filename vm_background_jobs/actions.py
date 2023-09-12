@@ -5,31 +5,44 @@
 
 """
 
-from typing import Callable, Any
+from typing import Callable, Optional
 from . import controller
+from . import api_types
 __all__ = ['get_actions']
 
 
-def get_actions() -> dict[str, Callable]:
+def get_actions() -> list[dict[str, Callable]]:
     """
     Returns actions of background jobs package
-    :return: dict of actions (functions)
+    :return: list of actions dict (functions and its parameters)
     """
-    return {'jobs_get_info': _get_jobs_info, 'jobs_delete': _delete_background_job}
+    result = list()
+
+    result.append({'name': 'jobs_get_info', 'path': 'jobs/get_info', 'func': _get_jobs_info, 'http_method': 'post',
+                   'requires_db': True})
+
+    result.append({'name': 'jobs_delete', 'path': 'jobs/delete', 'func': _delete_background_job, 'http_method': 'get',
+                   'requires_db': True})
+
+    return result
 
 
-def _get_jobs_info(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ Returning background jobs info (id, status, start_date, end_date, pid) according to filter
-    :param parameters: dict of request parameters
-    :return: dict if job information
+def _get_jobs_info(job_filter: Optional[api_types.FilterBody] = None) -> list[api_types.JobInfo]:
+    """ Returning background jobs info (id, status, start_date, end_date, pid) according to filter,
+    :param job_filter: filter to choose jobs
+    :return: list if job information
     """
-    return controller.get_jobs_info(parameters)
+
+    job_filter_dict = job_filter.model_dump() if job_filter else None
+
+    result = controller.get_jobs_info(job_filter_dict)['jobs']
+    return list(map(api_types.JobInfo.model_validate, result))
 
 
-def _delete_background_job(parameters: dict[str, Any]) -> str:
+def _delete_background_job(id: str) -> str:
     """ Removing job line from db
-    :param parameters: dict of request parameters
+    :param id: id of job to delete
     :return: result of job deleting
     """
-    result = controller.delete_background_job(parameters)
+    result = controller.delete_background_job(id)
     return result

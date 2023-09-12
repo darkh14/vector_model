@@ -9,13 +9,11 @@
 from typing import Type
 
 from . import base_engine, vbm_engine
-from vm_settings import get_var
+from vm_settings import SERVICE_NAME
 from vm_logging.exceptions import LoadingProcessException
 from .base_engine import BaseEngine
 
 __all__ = ['base_engine', 'vbm_engine', 'get_engine_class', 'BaseEngine']
-
-SERVICE_NAME: str = ''
 
 
 def get_engine_class() -> Type[base_engine.BaseEngine]:
@@ -23,10 +21,6 @@ def get_engine_class() -> Type[base_engine.BaseEngine]:
         SERVICE_NAME var
         :return: required loading engine class
     """
-    global SERVICE_NAME
-
-    if not SERVICE_NAME:
-        SERVICE_NAME = get_var('SERVICE_NAME')
 
     engine_classes = [cls for cls in base_engine.BaseEngine.__subclasses__() if cls.service_name == SERVICE_NAME]
 

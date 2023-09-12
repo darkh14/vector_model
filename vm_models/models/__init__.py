@@ -34,12 +34,12 @@ def get_model_class() -> Type[base_model.Model]:
     return model_classes[0]
 
 
-def get_additional_actions() -> dict[str, Callable]:
+def get_additional_actions() -> list[dict[str, Callable]]:
     """
     Gets additional actions of modules of model package
     :return: dict of actions (functions)
     """
-    additional_actions = {}
+    additional_actions = list()
 
     package_modules = []
     for mod_name, mod in globals().items():
@@ -50,6 +50,6 @@ def get_additional_actions() -> dict[str, Callable]:
             package_modules.append(mod)
 
     for mod in package_modules:
-        additional_actions.update(mod.get_additional_actions())
+        additional_actions.extend(mod.get_additional_actions())
 
     return additional_actions

@@ -3,7 +3,7 @@
     Classes:
         Model - base model class, provides fitting and predicting. Saves itself to db
 """
-
+import enum
 from typing import Any, Callable, Optional, ClassVar
 
 import numpy as np
@@ -16,7 +16,7 @@ from db_processing import get_connector as get_db_connector
 from db_processing.connectors import base_connector
 from ..data_transformers import get_transformer_class, base_transformer
 from ..engines import get_engine_class, base_engine
-from ..model_types import DataTransformersTypes
+from ..model_types import DataTransformersTypes, FittingStatuses
 from vm_background_jobs.controller import set_background_job_interrupted
 from data_processing.loading_engines import get_engine_class as get_loading_engine_class
 
@@ -57,14 +57,15 @@ class Model:
 
         self._read_from_db()
 
-    def initialize(self, model_parameters: dict[str, Any]) -> dict[str, Any]:
+    def initialize(self, model_parameters: dict[str, Any]) -> str:
         """
         For initializing model in db
-        :param model_parameters:
-        :return: model info dict
+        :param model_parameters: data of new model
+        :return: result of initializing
         """
         if self._initialized:
-            raise ModelException('Model "{}" id - "{}" is always initialized'.format(self.parameters.name, self._id))
+            raise ModelException('Model "{}" id - "{}" is always initialized'.format(self.parameters.name,
+                                                                                     self._id))
 
         self.parameters.set_all(model_parameters)
         self.fitting_parameters.set_all(model_parameters)
@@ -73,7 +74,7 @@ class Model:
 
         self._initialized = True
 
-        return self.get_info()
+        return 'Model is initialized'
 
     def drop(self) -> str:
         """ Deletes model from db. sets initializing = False
@@ -107,30 +108,31 @@ class Model:
 
         return model_info
 
-    def fit(self, fitting_parameters: dict[str, Any]) -> dict[str, Any]:
+    def fit(self, fitting_parameters: dict[str, Any], job_id: str = '') -> str:
         """
         For fitting model
         :param fitting_parameters: parameters of fitting (ex. epochs)
+        :param job_id: id of job if fitting is background
         :return: fitting history
         """
-        self._check_before_fitting(fitting_parameters)
+        self._check_before_fitting(job_id)
 
-        self.fitting_parameters.set_start_fitting(fitting_parameters)
+        self.fitting_parameters.set_start_fitting(job_id)
         self._write_to_db()
 
         try:
-            result = self._fit_model(fitting_parameters)
+            self._fit_model(fitting_parameters)
         except Exception as ex:
             self.fitting_parameters.set_error_fitting(str(ex))
             self._write_to_db()
             raise ex
 
-        if not self.fitting_parameters.fitting_is_error:
+        if not self.fitting_parameters.fitting_status == FittingStatuses.Error:
 
             self.fitting_parameters.set_end_fitting()
             self._write_to_db()
 
-        return result
+        return 'Model is fit'
 
     def predict(self, x: list[dict[str, Any]]) -> dict[str, Any]:
         """
@@ -143,7 +145,7 @@ class Model:
         result_data = self._predict_model(x)
         result_data = result_data.drop(self.fitting_parameters.x_columns, axis=1)
 
-        return {'output': result_data.to_dict('records'), 'description': self._form_output_columns_description()}
+        return {'output': result_data.to_dict('records')}
 
     def drop_fitting(self) -> str:
         """
@@ -151,10 +153,11 @@ class Model:
         :return: resul of dropping
         """
 
-        if (not self.fitting_parameters.is_fit
-                and not self.fitting_parameters.fitting_is_started
-                and not self.fitting_parameters.fitting_is_pre_started
-                and not self.fitting_parameters.fitting_is_error):
+        if self.fitting_parameters.fitting_status not in (FittingStatuses.Fit,
+                                                          FittingStatuses.PreStarted,
+                                                          FittingStatuses.Started,
+                                                          FittingStatuses.Error):
+
             raise ModelException('Can not drop fitting. Model is not fit')
 
         self._interrupt_fitting_job()
@@ -170,29 +173,39 @@ class Model:
 
         return 'Model "{}" id "{}" fitting is dropped'.format(self.parameters.name, self.id)
 
-    def get_action_before_background_job(self, job_name: str, parameters: dict[str, Any]) -> Optional[Callable]:
+    def get_action_before_background_job(self, func_name: str,
+                                         args: tuple[Any],
+                                         kwargs: dict[str, Any]) -> Optional[Callable]:
+        """Returns function which will be executed before model fi calculating
+        @param func_name: name of fi calculating function
+        @param args: positional arguments of fi calculating function
+        @param kwargs: keyword arguments of fi calculating function.
+        @return: function to execute before fi calculating
+        """
         result = None
-        if job_name == 'model_fit':
+        if func_name == 'fit':
             result = self.do_before_fit
 
         return result
 
-    def do_before_fit(self, parameters: dict[str, Any]) -> None:
+    # noinspection PyUnusedLocal
+    def do_before_fit(self, args: tuple[Any], kwargs: dict[str, Any]) -> None:
 
-        self.fitting_parameters.set_pre_start_fitting(parameters)
+        self.fitting_parameters.set_pre_start_fitting(kwargs.get('job_id', ''))
         self._write_to_db()
 
     def _interrupt_fitting_job(self) -> None:
         """
         Interrupts fitting job process when fitting is launched in background mode
         """
-        if self.fitting_parameters.fitting_is_started:
+        if self.fitting_parameters.fitting_status == FittingStatuses.Started:
             set_background_job_interrupted(self.fitting_parameters.fitting_job_id)
 
-    def _fit_model(self, fitting_parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def _fit_model(self, fitting_parameters: dict[str, Any], job_id: str = '') -> dict[str, Any]:
         """
-        For fitting model after checking, and preparing parameters
-        :param fitting_parameters: additional fitting parameters
+        For fitting model after checking, and preparing parameters,
+        :param fitting_parameters: parameters of fitting
+        :param job_id: id of job if fitting is background
         :return: fitting history
         """
 
@@ -210,7 +223,8 @@ class Model:
 
         self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number,
                                                             self.fitting_parameters.is_first_fitting())
-        result = self._engine.fit(x, y, fitting_parameters)
+        fitting_result = self._engine.fit(x, y, fitting_parameters)
+        result_history = fitting_result['history']
 
         self._scaler = pipeline.named_steps['scaler']
 
@@ -227,7 +241,9 @@ class Model:
 
         self.fitting_parameters.metrics = self._get_metrics(y, y_pred)
 
-        return result
+        result_engine = self._engine
+
+        return {'history': result_history, 'x': x, 'y': y, 'engine': result_engine}
 
     def _data_to_x_y(self, data: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -263,23 +279,23 @@ class Model:
 
         return result
 
-    def _check_before_fitting(self, fitting_parameters: dict[str, Any]) -> None:
+    def _check_before_fitting(self, job_id: str = '') -> None:
         """
         For checking statuses and other parameters before fitting. Raises ModelException if checking is failed
-        :param fitting_parameters: parameters to check
+        :param job_id: if of fitting job if fitting is background
         """
         if not self._initialized:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
 
-        if self.fitting_parameters.fitting_is_started:
+        if self.fitting_parameters.fitting_status == FittingStatuses.Started:
             raise ModelException('Another fitting is started yet. Wait for end of fitting')
 
-        if fitting_parameters.get('job_id'):
-            if not self.fitting_parameters.fitting_is_pre_started:
+        if job_id:
+            if not self.fitting_parameters.fitting_status == FittingStatuses.PreStarted:
                 raise ModelException('Model is not prepared for fitting in background. ' +
                                      'Drop fitting and execute another fitting job')
         else:
-            if self.fitting_parameters.fitting_is_pre_started:
+            if self.fitting_parameters.fitting_status == FittingStatuses.PreStarted:
                 raise ModelException('Model is not prepared for fitting. ' +
                                      'Drop fitting and execute another fitting')
 
@@ -290,7 +306,7 @@ class Model:
         if not self._initialized:
             raise ModelException('Model id - {} is not initialized'.format(self._id))
 
-        if not self.fitting_parameters.is_fit:
+        if not self.fitting_parameters.fitting_status == FittingStatuses.Fit:
             raise ModelException(('Model "{}" id "{}" is not fit. ' +
                                  'Fit model before predicting').format(self.parameters.name, self._id))
 
@@ -324,7 +340,13 @@ class Model:
 
     # noinspection PyUnusedLocal,PyMethodMayBeStatic
     def _get_estimator_types(self, for_predicting: bool = False,
-                             fitting_parameters: Optional[dict[str, Any]] = None) -> list:
+                             fitting_parameters: Optional[dict[str, Any]] = None) -> list[DataTransformersTypes]:
+        """
+        Returns list of estimator types
+        @param for_predicting: True if it needs to form estimator list to predict data otherwise to fit model
+        @param fitting_parameters: dict of fitting parameters
+        @return: list of estimator types
+        """
 
         estimator_types = [DataTransformersTypes.READER,
                            DataTransformersTypes.CHECKER,
@@ -372,7 +394,11 @@ class Model:
         """
         model_to_db = {'id': self._id}
         model_to_db.update(self.parameters.get_all())
-        model_to_db.update(self.fitting_parameters.get_all(for_db=True))
+        model_to_db.update(self.fitting_parameters.get_all())
+
+        for key, value in model_to_db.items():
+            if isinstance(value, enum.Enum):
+                model_to_db[key] = value.value
 
         model_to_db['filter'] = model_to_db['filter'].get_value_as_bytes()
 
@@ -385,8 +411,14 @@ class Model:
         model_from_db = self._db_connector.get_line('models', {'id': self._id})
 
         if model_from_db:
-            self.parameters.set_all(model_from_db, without_processing=True)
-            self.fitting_parameters.set_all(model_from_db, without_processing=True)
+            for key, value in model_from_db.items():
+                if isinstance(self.parameters.__dict__.get(key), enum.Enum):
+                    model_from_db[key] = getattr(self.parameters, key).__class__(value)
+                if isinstance(self.fitting_parameters.__dict__.get(key), enum.Enum):
+                    model_from_db[key] = getattr(self.fitting_parameters, key).__class__(value)
+
+            self.parameters.set_all(model_from_db)
+            self.fitting_parameters.set_all(model_from_db)
 
             self._initialized = True
         else:
@@ -425,14 +457,13 @@ class Model:
 
         return result_data
 
-    def _form_output_columns_description(self):
-        """
-        Creates columns description
-        :return: description
-        """
-        return self.fitting_parameters.y_columns
-
     def _get_metrics(self, y: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
+        """
+        Returns value of model quality metrics
+        @param y: True output values
+        @param y_pred: Predicted output values
+        @return: dict of metrics
+        """
         return {}
 
     @property

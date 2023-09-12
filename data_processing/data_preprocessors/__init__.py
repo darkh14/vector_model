@@ -9,13 +9,11 @@
 from typing import Type
 
 from . import base_data_preprocessor, vbm_data_preprocessor
-from vm_settings import get_var
+from vm_settings import SERVICE_NAME
 from vm_logging.exceptions import LoadingProcessException
 from .base_data_preprocessor import BaseDataPreprocessor
 
 __all__ = ['base_data_preprocessor', 'vbm_data_preprocessor', 'get_data_preprocessing_class', 'BaseDataPreprocessor']
-
-SERVICE_NAME: str = ''
 
 
 def get_data_preprocessing_class() -> Type[BaseDataPreprocessor]:
@@ -23,15 +21,12 @@ def get_data_preprocessing_class() -> Type[BaseDataPreprocessor]:
         SERVICE_NAME var
         :return: required class for preprocessing data
     """
-    global SERVICE_NAME
-
-    if not SERVICE_NAME:
-        SERVICE_NAME = get_var('SERVICE_NAME')
 
     data_preprocessing_classes = [cls for cls in base_data_preprocessor.BaseDataPreprocessor.__subclasses__()
                       if cls.service_name == SERVICE_NAME]
 
     if not data_preprocessing_classes:
-        raise LoadingProcessException('Can not find data preprocessing class for service "{}"'.format(SERVICE_NAME))
+        raise LoadingProcessException('Can not find '
+                                      'data preprocessing class for service "{}"'.format(SERVICE_NAME))
 
     return data_preprocessing_classes[0]

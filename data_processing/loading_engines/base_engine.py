@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from db_processing.connectors import base_connector
 from db_processing.controller import get_connector
 from ..loading_types import LoadingTypes
+from .. import api_types
 
 
 class BaseEngine(ABC):
@@ -22,14 +23,19 @@ class BaseEngine(ABC):
         self._db_connector: base_connector.Connector = get_connector()
 
     @abstractmethod
-    def load_data(self, data: list[dict[str, Any]], loading_id:  str, package_id: str,
-                  loading_type: LoadingTypes) -> bool:
+    def load_data(self,
+                  data: api_types.PackageWithData,
+                  loading_id:  str,
+                  package_id: str,
+                  loading_type: LoadingTypes,
+                  is_first_package: bool = False) -> bool:
         """
         Abstract method for data loading
         :param data: data array to load in db
         :param loading_id: id of data loading
         :param package_id: id of current data package
         :param loading_type: full or increment
+        :param is_first_package: True if it is first package of loading
         :return True if loading is successful else False
         """
         ...
@@ -44,7 +50,7 @@ class BaseEngine(ABC):
         """
 
     @abstractmethod
-    def check_data(self, data: list[dict[str, Any]], checking_parameter_name: str = 'data', **kwargs) -> None:
+    def check_data(self, data: api_types.PackageWithData, checking_parameter_name: str = 'data', **kwargs) -> None:
         """
         Checks raw data: checks fields content in rows of data.
         :param data: data list to check

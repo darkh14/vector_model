@@ -9,6 +9,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 from db_processing import connectors, get_connector
+from ..model_types import ModelTypes
 
 
 class BaseEngine(ABC):
@@ -20,7 +21,7 @@ class BaseEngine(ABC):
              drop - for deleting engine from db
     """
     service_name: ClassVar[str] = ''
-    model_type: ClassVar[str] = ''
+    model_type: ClassVar[ModelTypes] = ModelTypes.NeuralNetwork
 
     def __init__(self, model_id: str, input_number: int, output_number: int, new_engine: bool = False,
                  **kwargs) -> None:
@@ -54,7 +55,9 @@ class BaseEngine(ABC):
 
         self._check_fitting_parameters(parameters)
 
-        self._fit_engine(x, y, parameters)
+        result = self._fit_engine(x, y, parameters)
+
+        return result
 
     @abstractmethod
     def _fit_engine(self, x: np.ndarray,  y: np.ndarray,
@@ -82,6 +85,10 @@ class BaseEngine(ABC):
         self._db_connector.delete_lines('engines', {'model_id': self._model_id})
 
     def get_engine_for_fi(self) -> Any:
+        """
+        Returns special type of model engine to calculate feature importances
+        @return: engine for fi
+        """
         return self._inner_engine
 
     # noinspection PyMethodMayBeStatic

@@ -20,9 +20,11 @@ from typing import Any
 from . import defaults, passwords
 from vm_logging.exceptions import SettingsControlException
 
-CONTROLLER = None
 
-__all__ = ['SettingsController', 'get_var', 'get_secret_var', 'set_var']
+__all__ = ['SettingsController', 'get_var', 'get_secret_var', 'set_var', 'SERVICE_NAME']
+
+
+CONTROLLER = None
 
 
 class SettingsController:
@@ -139,7 +141,7 @@ class SettingsController:
         """ Converts vars to str according to types in self._special_type_keys
             available types - dict, list, int, float, bool
             :param value: value to convert
-            :param type_str: type of value for converting
+            :param type_str: type of value for converting,
             :return: converted value
         """
         if type_str in ('dict', 'list'):
@@ -157,7 +159,7 @@ class SettingsController:
         """ Converts str vars to type specified in self._special_type_keys
             available types - dict, list, int, float, bool
             :param str_value: value to convert from str
-            :param type_str: type of converted value
+            :param type_str: type of converted value,
             :return: converted value
         """
         if type_str in ('dict', 'list'):
@@ -242,3 +244,6 @@ def _get_settings_controller() -> SettingsController:
         CONTROLLER = SettingsController()
 
     return CONTROLLER
+
+
+SERVICE_NAME = get_var('SERVICE_NAME')

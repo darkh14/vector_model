@@ -8,48 +8,38 @@
 
 """
 
-from typing import Callable, Any
+from typing import Any
 from vm_versions import get_version
-from general import test, ping
+from general import ping
 
-__all__ = ['get_actions', 'get_action_names_without_db_using']
+__all__ = ['get_actions']
 
 
-def get_actions() -> dict[str, Callable]:
+def get_actions() -> list[dict[str, Any]]:
     """ forms general actions` dict.
     :return: dict of function object (general actions)
     """
-    return dict({'test': _test, 'get_version': _get_version, 'ping': _ping})
+
+    result = list()
+
+    result.append({'name': 'ping', 'path': 'ping', 'func': _ping, 'http_method': 'get',
+                   'requires_db': False})
+    result.append({'name': 'get_version', 'path': 'get_version', 'func': _get_version, 'http_method': 'get',
+                   'requires_db': False})
+
+    return result
 
 
-def get_action_names_without_db_using() -> list[str]:
+def _ping() -> dict[str, Any]:
+    """ Action for testing connection with service
+    :return: result of checking connection
     """
-    Returns action names without db using not to initialize db connector
-    :return: action names list
-    """
-    return ['ping']
+    return ping()
 
 
-def _get_version(parameters: dict[str, Any]) -> str:
+def _get_version() -> str:
     """
     Returns version of vector_model
-    :param parameters: dict of request parameters
     :return: version of module
     """
     return get_version()
-
-
-def _test(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ Action for testing and debugging
-    :param parameters: dict of request parameters
-    :return: result of testing
-    """
-    return test(parameters)
-
-
-def _ping(parameters: dict[str, Any]) -> dict[str, Any]:
-    """ Action for testing connection with service
-    :param parameters: dict of request parameters
-    :return: result of checking connection
-    """
-    return ping(parameters)

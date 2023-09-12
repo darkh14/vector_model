@@ -13,72 +13,97 @@
 
 __all__ = ['get_actions']
 
-from typing import Callable, Any
+from typing import Any
 
 from . import controller
+from . import api_types
+import api_types as general_api_types
+from data_processing import api_types as data_api_types
 
 
-def get_actions() -> dict[str, Callable]:
+def get_actions() -> list[dict[str, Any]]:
     """ forms actions dict available for vm_models
     :return: dict of actions (functions)
     """
-    actions = {
-        'model_fit': _fit,
-        'model_predict': _predict,
-        'model_initialize': _initialize,
-        'model_drop': _drop,
-        'model_get_info': _get_info,
-        'model_drop_fitting': _drop_fitting
-               }
 
-    actions.update(controller.get_additional_actions())
+    result = list()
 
-    return actions
+    result.append({'name': 'model_initialize', 'path': 'model/initialize',
+                   'func': _initialize,
+                   'http_method': 'post', 'requires_db': True})
+
+    result.append({'name': 'model_get_info', 'path': 'model/get_info',
+                   'func': _get_info,
+                   'http_method': 'get', 'requires_db': True})
+
+    result.append({'name': 'model_drop', 'path': 'model/drop',
+                   'func': _drop,
+                   'http_method': 'get', 'requires_db': True})
+
+    result.append({'name': 'model_fit', 'path': 'model/fit',
+                   'func': _fit,
+                   'http_method': 'post', 'requires_db': True})
+
+    result.append({'name': 'model_predict', 'path': 'model/predict',
+                   'func': _predict,
+                   'http_method': 'post', 'requires_db': True})
+
+    result.append({'name': 'model_drop_fitting', 'path': 'model/drop_fitting',
+                   'func': _drop_fitting,
+                   'http_method': 'get', 'requires_db': True})
+
+    result.extend(controller.get_additional_actions())
+
+    return result
 
 
-def _fit(parameters: dict[str, Any]) -> dict[str, Any]:
+def _fit(id: str, fitting_parameters: api_types.FittingParameters,
+         background_job: bool = False) -> general_api_types.BackgroundJobResponse:
     """ For fitting model
-    :param parameters: request parameters
+    :param id: id of model to fit
+    :param fitting_parameters: parameters of fitting
     :return: result of fitting
     """
-    return controller.fit(parameters)
+    return controller.fit(id, fitting_parameters.model_dump(), background_job=background_job)
 
 
-def _predict(parameters: dict[str, Any]) -> dict[str, Any]:
+def _predict(id: str, inputs: data_api_types.Inputs) -> data_api_types.PredictedOutputs:
     """ For predicting data with model
-    :param parameters: request parameters
+    :param inputs: list of input data
     :return: predicted data with description
     """
-    return controller.predict(parameters)
+
+    result = controller.predict(id, inputs.model_dump()['inputs'])
+    return data_api_types.PredictedOutputs.model_validate(result)
 
 
-def _initialize(parameters: dict[str, Any]) -> dict[str, Any]:
+def _initialize(model: api_types.Model) -> str:
     """ For initializing new model
-    :param parameters: request parameters
-    :return: model info
+    :param model: data of new model,
+    :return: result of initializing
     """
-    return controller.initialize(parameters)
+    return controller.initialize(model)
 
 
-def _drop(parameters: dict[str, Any]) -> str:
+def _drop(id: str) -> str:
     """ For deleting model from db
-    :param parameters: request parameters
+    :param id: id of model to drop
     :return: result of dropping
     """
-    return controller.drop(parameters)
+    return controller.drop(id)
 
 
-def _get_info(parameters: dict[str, Any]) -> dict[str, Any]:
+def _get_info(id: str) -> api_types.ModelInfo:
     """ For getting model info
-    :param parameters: request parameters
+    :param id: id of model to get info
     :return: model info
     """
-    return controller.get_info(parameters)
+    return controller.get_info(id)
 
 
-def _drop_fitting(parameters: dict[str, Any]) -> str:
+def _drop_fitting(id: str) -> str:
     """ For deleting fit data from model
-    :param parameters: request parameters
+    :param id: id of model to drop fitting
     :return: result of dropping
     """
-    return controller.drop_fitting(parameters)
+    return controller.drop_fitting(id)

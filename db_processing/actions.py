@@ -7,20 +7,46 @@
 
 __all__ = ['get_actions']
 
-from typing import Callable, Any
-from .controller import check_connection
+from typing import Any
+from .controller import check_connection, copy_db, drop_db
+from . import api_types
 
 
-def get_actions() -> dict[str, Callable]:
+def get_actions() -> list[dict[str, Any]]:
     """ forms actions dict available for db_processing
-    :return: dict of actions
+    :return: list of action descriptions
     """
-    return dict({'db_check_connection': _check_connection})
+
+    result = list()
+
+    result.append({'name': 'db_check_connection', 'path': 'db/check_connection', 'func': _check_connection,
+                   'http_method': 'get', 'requires_db': True})
+    result.append({'name': 'db_copy', 'path': 'db/copy', 'func': _copy_db,
+                   'http_method': 'post', 'requires_db': True})
+    result.append({'name': 'db_drop', 'path': 'db/drop', 'func': _drop_db,
+                   'http_method': 'get', 'requires_db': True})
+    return result
 
 
-def _check_connection(parameters: dict[str, Any]) -> str:
+def _check_connection() -> str:
     """ For checking connection
-    :param parameters: dict of request parameters
     :return: result of checking connection
     """
-    return check_connection(parameters)
+    return check_connection()
+
+
+def _copy_db(db_class: api_types.DBCopyTo) -> str:
+    """ For checking connection
+    :param db_class: data model contains db connection string copy to
+    :return: result of checking connection
+    """
+
+    return copy_db(db_class.db_copy_to)
+
+
+def _drop_db() -> str:
+    """
+    For checking connection. Raises exception if checking is failed
+    :return: str result of checking
+    """
+    return drop_db()

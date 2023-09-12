@@ -1,19 +1,15 @@
-""" Module for defining custom exceptions
-
-    classes:
-        VMBaseException - base custom exception. Writing error text to DB added
-        RequestProcessException - Custom exception for request processing
+"""
+Module for defining custom exceptions
 """
 
 __all__ = ['VMBaseException',
-           'RequestProcessException',
            'SettingsControlException',
-           'ParameterNotFoundException',
            'ParametersFormatError',
            'DBConnectorException',
            'LoadingProcessException',
            'BackgroundJobException',
-           'ModelException']
+           'ModelException',
+           'GeneralException']
 
 
 class VMBaseException(Exception):
@@ -74,29 +70,6 @@ class VMBaseException(Exception):
         pass
 
 
-class ParameterNotFoundException(VMBaseException):
-    """Custom exception class raising when field is not found in request parameters
-        raises with parameter - missing_parameter -  parameter name which is not found
-    """
-
-    def __init__(self, missing_parameter: str, message: str = '', write_log: bool = False):
-        """
-        Defines _missing_parameter value
-        :param missing_parameter: parameter that not found
-        :param message: custom error message
-        :param write_log: need to write log to db if True
-        """
-        super().__init__(message, write_log)
-        self._missing_parameter = missing_parameter
-
-    def _get_full_error_message(self) -> str:
-        """
-        Error message for parameter not found exception
-        :return: error message
-        """
-        return 'Parameter "{}" is not found in request parameters! '.format(self._missing_parameter)
-
-
 class ParametersFormatError(VMBaseException):
     """ Custom exception for format error (in match - case) """
     def _get_full_error_message(self) -> str:
@@ -106,17 +79,6 @@ class ParametersFormatError(VMBaseException):
         """
         default_message = super()._get_full_error_message()
         return 'Error in model! ' + default_message
-
-
-class RequestProcessException(VMBaseException):
-    """Custom exception class for request processing"""
-    def _get_full_error_message(self) -> str:
-        """
-        Error message for request process exception
-        :return: error message
-        """
-        default_message = super()._get_full_error_message()
-        return 'Error while request processing! ' + default_message
 
 
 class SettingsControlException(VMBaseException):
@@ -180,4 +142,7 @@ class ModelException(VMBaseException):
         """
         default_message = super()._get_full_error_message()
         return 'Error in model! ' + default_message
-    
+
+
+class GeneralException(VMBaseException):
+    pass

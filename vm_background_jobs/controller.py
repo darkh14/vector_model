@@ -6,35 +6,28 @@
 """
 
 from typing import Any
-from vm_logging.exceptions import ParametersFormatError
 from .background_jobs import BackgroundJob
 
 __all__ = ['get_jobs_info', 'delete_background_job', 'set_background_job_interrupted']
 
 
-def get_jobs_info(parameters: dict[str, Any]) -> dict[str, Any]:
+def get_jobs_info(job_filter: dict[str, Any]) -> dict[str, Any]:
     """ For getting jobs info. return info of jobs according to filter
-    :param parameters: dict of request parameters
+    :param job_filter: dict of filter to choose job
     :return: dict if job information
     """
-
-    job_filter = parameters.get('filter')
 
     return {'jobs': BackgroundJob.get_jobs_info(job_filter)}
 
 
-def delete_background_job(parameters: dict[str, Any]) -> str:
+def delete_background_job(job_id: str) -> str:
     """ Deleting one job from id
-    :param parameters: dict of request parameters
+    :param job_id: id of job to delete
     :return: result of job deleting
     """
 
-    match parameters:
-        case {'job': {'id': str(job_id)}} if job_id:
-            background_job = BackgroundJob(job_id)
-            background_job.delete()
-        case _:
-            raise ParametersFormatError('Wrong request parameters format.Check "job" parameter')
+    background_job = BackgroundJob(job_id)
+    background_job.delete()
 
     return 'Background job is deleted'
 

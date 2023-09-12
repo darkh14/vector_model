@@ -19,14 +19,15 @@ def execute_in_background(func: Callable) -> Callable:
     """
 
     @wraps(func)
-    def wrapper(wrapper_parameters: dict[str, Any], **kwargs) -> dict[str, Any]:
+    def wrapper(*args, **kwargs) -> Any:
 
-        if wrapper_parameters.get('background_job'):
+        background_job = kwargs.pop('background_job', False)
 
+        if background_job:
             background_job = BackgroundJob(subprocess_mode=False)
-            result = background_job.execute_function(func, wrapper_parameters)
+            result = background_job.execute_function(func, args, kwargs)
         else:
-            result = func(wrapper_parameters, **kwargs)
+            result = func(*args, **kwargs)
 
         return result
 

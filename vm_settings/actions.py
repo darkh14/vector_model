@@ -7,63 +7,40 @@
 
 __all__ = ['get_actions']
 
-from typing import Callable, Any, Optional
-from functools import wraps
-from vm_logging.exceptions import ParameterNotFoundException
+from typing import Callable
 from .controller import get_var, set_var
+from . import api_types
 
 
-def action(check_fields: Optional[list[str]] = None) -> Callable:
-    """ Decorator. Adds checking required field in request parameters.
-        Fields for checking define in "check_fields" parameter
-        :param check_fields: fields to be checked in decorator
-        :return: decorated method
-    """
-    def action_with_check(func: Callable):
-        @wraps(func)
-        def wrapper(parameters, *args, **kwargs):
-            nonlocal check_fields
-            if not check_fields:
-                c_check_fields = []
-            else:
-                c_check_fields = check_fields.copy()
-
-            for field in c_check_fields:
-                if field not in parameters:
-                    raise ParameterNotFoundException(field)
-
-            result = func(parameters, *args, *kwargs)
-
-            return result
-
-        return wrapper
-
-    return action_with_check
-
-
-@action(['settings_name'])
-def _get_var(parameters: dict[str, str]) -> Any:
+def _get_var(name: str) -> str | int | float | bool:
     """
     For getting var from settings
-    :param parameters: dict of request parameters
+    :param name: name of parameter
     :return: required var
     """
-    return get_var(parameters['settings_name'])
+    return get_var(name)
 
 
-@action(['settings_name', 'settings_value'])
-def _set_var(parameters: dict[str, Any]) -> str:
+def _set_var(var_to_set: api_types.VarToSet) -> str:
     """
     For setting var to settings
-    :param parameters: dict of request parameters
+    :param var_to_set: name and value of var
     :return: result of set var
     """
-    set_var(parameters['settings_name'], parameters['settings_value'])
-    return 'Parameter "{}" is set'.format(parameters['settings_name'])
+    set_var(var_to_set.name, var_to_set.value)
+    return 'Parameter "{}" is set'.format(var_to_set.name)
 
 
-def get_actions() -> dict[str, Callable]:
+def get_actions() -> list[dict[str, Callable]]:
     """ forms actions dict available for vm_logging
     :return: dict of available actions (functions)
     """
-    return {'settings_get_var': _get_var, 'settings_set_var': _set_var}
+
+    result = list()
+
+    result.append({'name': 'settings_get_var', 'path': 'settings/get_var', 'func': _get_var, 'http_method': 'get',
+                   'requires_db': False, 'result_type': str | int | float | bool})
+    result.append({'name': 'settings_set_var', 'path': 'settings/set_var', 'func': _set_var, 'http_method': 'post',
+                   'requires_db': False, 'result_type': str})
+
+    return result

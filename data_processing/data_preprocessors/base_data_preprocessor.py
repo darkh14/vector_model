@@ -6,6 +6,8 @@
 from typing import ClassVar, Any
 import pandas as pd
 
+from .. import api_types
+
 
 class BaseDataPreprocessor:
     """ Abstract class for preprocessing data. Providing primary data processing.
@@ -15,7 +17,7 @@ class BaseDataPreprocessor:
 
     def __init__(self, **kwargs) -> None: ...
 
-    def preprocess_data_for_loading(self, data: list[dict[str, Any]] | pd.DataFrame, loading_id:
+    def preprocess_data_for_loading(self, data: api_types.PackageWithData, loading_id:
                                     str, package_id: str) -> pd.DataFrame:
         """ For preprocess data before loading
         :param data: - list of loading data
@@ -23,7 +25,7 @@ class BaseDataPreprocessor:
         :param package_id: current id of package
         :return: data after preprocessing
         """
-        return pd.DataFrame(data)
+        return pd.DataFrame(data.data)
 
     def preprocess_data_for_predicting(self, data: list[dict[str, Any]]) -> pd.DataFrame:
         """ For preprocess data before predicting
@@ -31,3 +33,10 @@ class BaseDataPreprocessor:
         :return: data after preprocessing
         """
         return pd.DataFrame(data)
+
+    def preprocess_additional_data(self, data: api_types.PackageWithData) -> dict[str, pd.DataFrame]:
+        """ For preprocess data before loading
+        :param data: - list of all loading data
+        :return: data after preprocessing
+        """
+        return dict()

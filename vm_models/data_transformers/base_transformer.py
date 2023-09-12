@@ -20,7 +20,7 @@ from ..model_parameters.base_parameters import ModelParameters, FittingParameter
 from db_processing import get_connector
 from db_processing.connectors import base_connector
 from vm_logging.exceptions import ModelException
-from ..model_types import DataTransformersTypes
+from ..model_types import DataTransformersTypes, ModelTypes
 from ..model_filters import get_fitting_filter_class, base_filter
 
 BaseTransformerClass = TypeVar('BaseTransformerClass', bound='BaseTransformer')
@@ -45,7 +45,7 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
     """
     service_name: ClassVar[str] = ''
-    model_type: ClassVar[str] = ''
+    model_type: ClassVar[Optional[ModelTypes]] = None
     transformer_type: ClassVar[DataTransformersTypes] = DataTransformersTypes.NONE
 
     def __init__(self, model_parameters: ModelParameters, fitting_parameters: FittingParameters,
@@ -291,9 +291,11 @@ class Scaler(BaseTransformer):
 
 
 class Shuffler(BaseTransformer):
+    """
+    Transformer class to shuffle data rows
+    """
     service_name: ClassVar[str] = ''
     transformer_type: ClassVar[DataTransformersTypes] = DataTransformersTypes.SHUFFLER
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
         return x.sample(frac=1).reset_index(drop=True).copy()
-
