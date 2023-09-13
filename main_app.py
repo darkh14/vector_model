@@ -80,19 +80,17 @@ def initialize_validation_error_schema():
     utils.validation_error_response_definition = custom_validation_error_response_definition
 
 
-if __name__ == "__main__":
+http_processor = Processor()
 
-    http_processor = Processor()
+method_descr_list = http_processor.get_requests_methods_description()
 
-    method_descr_list = http_processor.get_requests_methods_description()
+for method_descr in method_descr_list:
+    if method_descr['http_method'] == 'get':
+        api_method = app.get('/{}/'.format(method_descr['path']))(method_descr['func'])
+    elif method_descr['http_method'] == 'post':
+        api_method = app.post('/{}/'.format(method_descr['path']))(method_descr['func'])
 
-    for method_descr in method_descr_list:
-        if method_descr['http_method'] == 'get':
-            api_method = app.get('/{}/'.format(method_descr['path']))(method_descr['func'])
-        elif method_descr['http_method'] == 'post':
-            api_method = app.post('/{}/'.format(method_descr['path']))(method_descr['func'])
+initialize_validation_error_schema()
 
-    initialize_validation_error_schema()
-
-    if TEST_MODE:
-        uvicorn.run(app, host="127.0.0.1", port=8070, log_level="info")
+if TEST_MODE:
+    uvicorn.run(app, host="127.0.0.1", port=8070, log_level="info")
