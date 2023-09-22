@@ -246,9 +246,9 @@ class VbmFittingParameters(FittingParameters):
         For setting statuses and other parameters when dropping fi calculation
         """
         if self.fi_status not in (model_types.FittingStatuses.Fit,
-                              model_types.FittingStatuses.Started,
-                              model_types.FittingStatuses.PreStarted,
-                              model_types.FittingStatuses.Error):
+                                  model_types.FittingStatuses.Started,
+                                  model_types.FittingStatuses.PreStarted,
+                                  model_types.FittingStatuses.Error):
             raise ModelException('Can not drop fi calculation. FI is not calculated')
 
         self.fi_status = model_types.FittingStatuses.NotFit

@@ -6,6 +6,9 @@
 *.json
 *.env
 
-/parameters_test/*
+/app/parameters_test/ping.json
 /venv/*
 /.idea/*
+/tmp/*
+/logs/
+/db/data/*

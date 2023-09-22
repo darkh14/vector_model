@@ -8,7 +8,8 @@ from typing import Any, Optional, ClassVar
 import numpy as np
 from abc import ABC, abstractmethod
 
-from db_processing import connectors, get_connector
+from db_processing import get_connector
+from db_processing.connectors.base_connector import Connector
 from ..model_types import ModelTypes
 
 
@@ -35,7 +36,7 @@ class BaseEngine(ABC):
         """
         self._model_id: str = model_id
 
-        self._db_connector: connectors.base_connector.Connector = get_connector()
+        self._db_connector: Connector = get_connector()
 
         self._input_number: int = input_number
         self._output_number: int = output_number

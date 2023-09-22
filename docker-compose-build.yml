@@ -1,0 +1,49 @@
+version: "3.1.0.0"
+
+services:
+
+  web:
+    image: nginx:alpine
+    container_name: vm_nginx
+    ports:
+      - 8083:80
+    depends_on:
+      - app
+    volumes:
+      - ./.nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - custom
+  app:
+    container_name: vm_app
+    image: vm_app
+    environment:
+      - TEST_MODE=False
+      - SERVICE_NAME=vbm
+      - DB_TYPE=mongo_db
+      - DB_HOST=db
+      - DB_PORT=27017
+    build:
+        context: ./app
+        dockerfile: Dockerfile
+    ports:
+      - "8060:8060"
+    volumes:
+      - ./app_settings:/app_settings
+    networks:
+      - custom
+    depends_on:
+      - db
+  db:
+
+    image: mongo
+    container_name: vm_db
+    ports:
+      - "27019:27017"
+    volumes:
+      - ./db/data:/data/db
+    networks:
+      - custom
+
+networks:
+  custom:
+    driver: bridge

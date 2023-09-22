@@ -1,0 +1,16 @@
+*.zip
+*.log
+*.pdf
+*.xls
+*.xlsx
+*.json
+
+../app_settings/.env
+**/.git
+__pycache__
+
+/parameters_test
+/venv
+/.idea
+/tmp
+/logs

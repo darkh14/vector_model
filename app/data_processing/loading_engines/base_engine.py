@@ -4,7 +4,7 @@
 """
 
 
-from typing import ClassVar, Any
+from typing import ClassVar
 from abc import ABC, abstractmethod
 from db_processing.connectors import base_connector
 from db_processing.controller import get_connector

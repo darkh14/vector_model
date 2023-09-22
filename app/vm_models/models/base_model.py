@@ -11,7 +11,8 @@ import pandas as pd
 from sklearn.pipeline import Pipeline
 
 from vm_logging.exceptions import ModelException
-from vm_models.model_parameters import base_parameters, get_model_parameters_class
+from vm_models.model_parameters import get_model_parameters_class
+from ..model_parameters import base_parameters
 from db_processing import get_connector as get_db_connector
 from db_processing.connectors import base_connector
 from ..data_transformers import get_transformer_class, base_transformer

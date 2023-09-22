@@ -13,7 +13,7 @@ import math
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 
-from keras.wrappers.scikit_learn import KerasRegressor
+from scikeras.wrappers import KerasRegressor
 from keras.models import Sequential
 from eli5.sklearn import PermutationImportance
 import plotly.graph_objects as go
@@ -29,7 +29,6 @@ from ..model_types import DataTransformersTypes, FittingStatuses, ModelTypes
 from data_processing import api_types as data_api_types
 from .. import api_types
 import api_types as general_api_types
-
 
 __all__ = ['VbmModel', 'get_additional_actions']
 
@@ -748,7 +747,8 @@ class VbmModel(Model):
         """
 
         if self._engine.model_type == ModelTypes.NeuralNetwork:
-            engine = KerasRegressor(build_fn=self._get_engine_fn_for_fi,
+            engine = KerasRegressor(model=self._get_engine_fn_for_fi(),
+                                    build_fn=self._get_engine_fn_for_fi,
                            epochs=fitting_parameters['epochs'],
                            verbose=2,
                            validation_split=validation_split)
@@ -1195,7 +1195,7 @@ def get_additional_actions() -> list[dict[str, Callable]]:
 
 # noinspection PyShadowingNames
 def _calculate_feature_importances(id: str, fi_parameters: api_types.FittingParameters,
-         background_job: bool = False) -> general_api_types.BackgroundJobResponse:
+                                   background_job: bool = False) -> general_api_types.BackgroundJobResponse:
     """
     For calculating feature importances
     :param id: id of model

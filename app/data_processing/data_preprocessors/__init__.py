@@ -23,7 +23,7 @@ def get_data_preprocessing_class() -> Type[BaseDataPreprocessor]:
     """
 
     data_preprocessing_classes = [cls for cls in base_data_preprocessor.BaseDataPreprocessor.__subclasses__()
-                      if cls.service_name == SERVICE_NAME]
+                                  if cls.service_name == SERVICE_NAME]
 
     if not data_preprocessing_classes:
         raise LoadingProcessException('Can not find '

@@ -9,7 +9,7 @@
 
 """
 TEST_MODE = False
-SERVICE_NAME = 'vector_model'
+SERVICE_NAME = 'vbm'
 
 DB_NAMES = {}
 DB_HOST = 'localhost'

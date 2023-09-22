@@ -12,14 +12,13 @@ import traceback
 import psutil
 import pickle
 
-import db_processing.connectors.base_connector
 from vm_logging.exceptions import BackgroundJobException, VMBaseException, DBConnectorException
 from vm_logging.loggers import JobContextLoggerManager
 from db_processing import get_connector
 from id_generator import IdGenerator
 from .job_types import JobStatuses
 import api_types as general_api_types
-
+from db_processing.connectors.base_connector import Connector
 
 __all__ = ['BackgroundJob']
 
@@ -72,7 +71,7 @@ class BackgroundJob:
         self._error: str = ''
 
         try:
-            self._db_connector: Optional[db_processing.connectors.base_connector.Connector] = get_connector()
+            self._db_connector: Optional[Connector] = get_connector()
             self._status: JobStatuses = JobStatuses.NEW
         except DBConnectorException as db_ex:
             self._db_connector = None

@@ -25,7 +25,7 @@ async def get():
     @return: HTML response with ok micro html
     """
     return fastapi.responses.HTMLResponse('<h2>VBM module v. {}</h2> <br> '.format(get_version()) +
-                                          '<h3>Connection established TEST TEST</h3>')
+                                          '<h3>Connection established</h3>')
 
 
 # noinspection PyUnusedLocal

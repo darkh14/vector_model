@@ -16,7 +16,6 @@ from vm_background_jobs.decorators import execute_in_background
 from . import api_types
 import api_types as general_api_types
 
-
 __all__ = ['fit', 'predict', 'initialize', 'drop', 'get_info', 'drop_fitting', 'get_additional_actions']
 
 

@@ -5,13 +5,13 @@
         get_connector - for getting connector, see this function docs
 """
 
-from . import connectors
 import vm_settings
 from typing import Type, Optional
 from vm_logging.exceptions import DBConnectorException
+from db_processing.connectors.base_connector import Connector
 
-CONNECTORS: list[connectors.base_connector.Connector] = []
-CURRENT_CONNECTOR: Optional[connectors.base_connector.Connector] = None
+CONNECTORS: list[Connector] = []
+CURRENT_CONNECTOR: Optional[Connector] = None
 DB_TYPE = ''
 
 __all__ = ['get_connector',
@@ -23,7 +23,7 @@ __all__ = ['get_connector',
            'drop_db']
 
 
-def get_connector(db_path: str = '', without_caching: bool = False) -> connectors.base_connector.Connector:
+def get_connector(db_path: str = '', without_caching: bool = False) -> Connector:
     """ Gets correct connector. Tries to get connector from cache (find by db_path).
         If it could not find correct connector, it creates connector by DB_TYPE and add to CONNECTORS cache
         :param db_path: path to required db
@@ -101,13 +101,13 @@ def drop_connector() -> None:
     CURRENT_CONNECTOR = None
 
 
-def _get_connector_class() -> Type[connectors.base_connector.Connector]:
+def _get_connector_class() -> Type[Connector]:
     """ Chooses right connector from subclasses of base Connector class by DB_TYPE
     :return: db connector class
     """
     global DB_TYPE
 
-    cls_list = [cls for cls in connectors.base_connector.Connector.__subclasses__() if cls.type == DB_TYPE]
+    cls_list = [cls for cls in Connector.__subclasses__() if cls.type == DB_TYPE]
 
     if not cls_list:
         raise DBConnectorException('Can not find correct class for creating db connector. DB_TYPE -{}'.format(DB_TYPE))
