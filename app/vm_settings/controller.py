@@ -48,7 +48,8 @@ class SettingsController:
             loading settings from .env file to environ,
             setting default values for vars, which are not set"""
 
-        self._dotenv_path = os.path.join(os.path.dirname(__file__), '../../app_settings/.env')
+        self._dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+
         self._keys = defaults.get_keys()
         self._secret_keys = defaults.get_secret_keys()
         self._special_type_keys = defaults.get_var_special_types()
