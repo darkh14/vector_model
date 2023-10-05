@@ -20,11 +20,11 @@ def get_actions() -> list[dict[str, Any]]:
     result = list()
 
     result.append({'name': 'db_check_connection', 'path': 'db/check_connection', 'func': _check_connection,
-                   'http_method': 'get', 'requires_db': True})
+                   'http_method': 'get', 'requires_db': True, 'requires_authentication': True})
     result.append({'name': 'db_copy', 'path': 'db/copy', 'func': _copy_db,
-                   'http_method': 'post', 'requires_db': True})
+                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
     result.append({'name': 'db_drop', 'path': 'db/drop', 'func': _drop_db,
-                   'http_method': 'get', 'requires_db': True})
+                   'http_method': 'get', 'requires_db': True, 'requires_authentication': True})
     return result
 
 

@@ -6,11 +6,15 @@
 import traceback
 import inspect
 from functools import wraps
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Annotated
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer
 
 
 # noinspection PyUnresolvedReferences
 import vm_logging
+# noinspection PyUnresolvedReferences
+import vm_security
 # noinspection PyUnresolvedReferences
 import vm_models
 # noinspection PyUnresolvedReferences
@@ -26,9 +30,13 @@ import actions
 # noinspection PyUnresolvedReferences
 import general
 #
-from vm_logging.exceptions import GeneralException
+from vm_logging.exceptions import GeneralException, VMBaseException, UserNotFoundException
 from api_types import get_response_type
 from db_processing.controller import initialize_connector, drop_connector
+from vm_security import User, get_current_user, get_authentication_enabled, get_use_authentication
+from vm_settings import get_var
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 class Processor:
@@ -53,9 +61,13 @@ class Processor:
             method_descr_list = module_obj.get_actions()
 
             for method_descr in method_descr_list:
+                if not get_use_authentication() and method_descr['name'] == 'get_token':
+                    continue
+
                 api_method = method_descr['func']
                 api_method.__name__ = method_descr['name']
-                api_method = self._check_and_complete_method(method_descr['requires_db'])(api_method)
+                api_method = self._check_and_complete_method(method_descr['requires_db'],
+                                                             method_descr.get('requires_authentication'))(api_method)
 
                 sig = inspect.signature(api_method)
 
@@ -66,6 +78,15 @@ class Processor:
                                                  annotation=str)
 
                 parameters_list = [parameter_db] + parameters_list
+
+                if get_use_authentication() and method_descr.get('requires_authentication'):
+
+                    parameter_c_user = inspect.Parameter('current_user',
+                                                     kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                                     annotation=Annotated[User, Depends(self._get_current_user)],
+                                                     default=None)
+
+                    parameters_list.append(parameter_c_user)
 
                 sig = sig.replace(parameters=parameters_list,
                                   return_annotation=get_response_type(sig.return_annotation))
@@ -88,6 +109,7 @@ class Processor:
         result = ['data_processing',
                   'db_processing',
                   'vm_settings',
+                  'vm_security',
                   'vm_models',
                   'vm_background_jobs',
                   'actions']
@@ -95,7 +117,12 @@ class Processor:
         return result
 
     @staticmethod
-    def _check_and_complete_method(need_to_initialize_db: bool) -> Callable:
+    def _get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> Optional[User]:
+        user_dict = get_current_user(token)
+        return User.model_validate(user_dict) if user_dict else None
+
+    @staticmethod
+    def _check_and_complete_method(need_to_initialize_db: bool, requires_authentication: bool) -> Callable:
         """
         Changes method description, checks method
         @return changed method
@@ -111,16 +138,31 @@ class Processor:
                 if need_to_initialize_db:
                     initialize_connector(db)
 
+                if get_authentication_enabled() and requires_authentication:
+                    user = kwargs.get('current_user')
+
+                    if not user:
+                        raise UserNotFoundException('User not found')
+
+                    if user.disabled:
+                        raise UserNotFoundException('User is disabled')
+
+                    del kwargs['current_user']
+
                 # noinspection PyBroadException
                 try:
                     result = func(*args, **kwargs)
                     print(result)
-                except Exception:
-                    error_text += 'Error!\n' + traceback.format_exc()
-                    print(error_text)
+                except Exception as exc:
 
-                    raise GeneralException(error_text)
+                    if isinstance(exc, VMBaseException):
+                        print(str(exc))
+                        raise exc
+                    else:
+                        error_text += 'Error!\n' + traceback.format_exc()
+                        final_exc = GeneralException
 
+                        raise final_exc(error_text)
                 result = {'result': result, 'status': status, 'error_text': error_text}
 
                 if need_to_initialize_db:
@@ -131,4 +173,3 @@ class Processor:
             return wrapper
 
         return decorator
-

@@ -22,35 +22,35 @@ def get_actions() -> list[dict[str, Any]]:
 
     result.append({'name': 'data_initialize_loading', 'path': 'data/initialize_loading',
                    'func': _data_initialize_loading,
-                   'http_method': 'post', 'requires_db': True})
+                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
 
     result.append({'name': 'data_get_loading_info', 'path': 'data/get_loading_info',
                    'func': _data_get_loading_info,
-                   'http_method': 'get', 'requires_db': True})
+                   'http_method': 'get', 'requires_db': True, 'requires_authentication': True})
 
     result.append({'name': 'data_get_count', 'path': 'data/get_count',
                    'func': _get_data_count,
-                   'http_method': 'post', 'requires_db': True})
+                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
 
     result.append({'name': 'data_delete', 'path': 'data/delete',
                    'func': _data_delete,
-                   'http_method': 'post', 'requires_db': True})
+                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
 
     result.append({'name': 'data_set_package_status', 'path': 'data/set_package_status',
                    'func': _data_set_package_status,
-                   'http_method': 'post', 'requires_db': True})
+                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
 
     result.append({'name': 'data_set_loading_status', 'path': 'data/set_loading_status',
                    'func': _data_set_loading_status,
-                   'http_method': 'post', 'requires_db': True})
+                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
 
     result.append({'name': 'data_drop_loading', 'path': 'data/drop_loading',
                    'func': _data_drop_loading,
-                   'http_method': 'get', 'requires_db': True})
+                   'http_method': 'get', 'requires_db': True, 'requires_authentication': True})
 
     result.append({'name': 'data_load_package', 'path': 'data/load_package',
                    'func': _data_load_package,
-                   'http_method': 'post', 'requires_db': True})
+                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
 
     return result
 

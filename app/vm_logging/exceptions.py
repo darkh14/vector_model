@@ -2,6 +2,9 @@
 Module for defining custom exceptions
 """
 
+from typing import Optional
+from fastapi import status
+
 __all__ = ['VMBaseException',
            'SettingsControlException',
            'ParametersFormatError',
@@ -9,7 +12,12 @@ __all__ = ['VMBaseException',
            'LoadingProcessException',
            'BackgroundJobException',
            'ModelException',
-           'GeneralException']
+           'GeneralException',
+           'SecurityException',
+           'UserNotFoundException',
+           'UserAlreadyExistsException',
+           'CredentialsException',
+           'TokenException']
 
 
 class VMBaseException(Exception):
@@ -40,6 +48,14 @@ class VMBaseException(Exception):
         """
         result = self._get_full_error_message()
         return result
+
+    # noinspection PyMethodMayBeStatic
+    def get_http_status(self) -> Optional[status]:
+        return None
+
+    # noinspection PyMethodMayBeStatic
+    def get_http_headers(self) -> Optional[dict[str, str]]:
+        return None
 
     @property
     def message(self):
@@ -146,3 +162,39 @@ class ModelException(VMBaseException):
 
 class GeneralException(VMBaseException):
     pass
+
+
+class SecurityException(VMBaseException):
+
+    def get_http_status(self) -> Optional[status]:
+        return status.HTTP_401_UNAUTHORIZED
+
+
+class UserNotFoundException(SecurityException):
+
+    def get_http_status(self) -> Optional[status]:
+        return status.HTTP_404_NOT_FOUND
+
+
+class UserAlreadyExistsException(SecurityException):
+
+    def get_http_status(self) -> Optional[status]:
+        return status.HTTP_403_FORBIDDEN
+
+
+class CredentialsException(SecurityException):
+
+    def get_http_status(self) -> Optional[status]:
+        return status.HTTP_401_UNAUTHORIZED
+
+    def get_http_headers(self) -> Optional[dict[str, str]]:
+        return {"WWW-Authenticate": "Bearer"}
+
+
+class TokenException(SecurityException):
+
+    def get_http_status(self) -> Optional[status]:
+        return status.HTTP_410_GONE
+
+    def get_http_headers(self) -> Optional[dict[str, str]]:
+        return {"WWW-Authenticate": "Bearer"}

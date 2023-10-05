@@ -4,8 +4,8 @@
 *.xls
 *.xlsx
 *.json
+*.env
 
-../app_settings/.env
 **/.git
 __pycache__
 

@@ -4,13 +4,14 @@ import uvicorn
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from fastapi.openapi import utils
+from fastapi.requests import Request
 
 from vm_versions import get_version
 from vm_settings import controller as settings_controller
 from processor import Processor
-from api_types import RequestValidationErrorSchema
-from vm_logging.exceptions import GeneralException
+from vm_logging.exceptions import VMBaseException
+from db_processing import initialize_connector
+
 
 TEST_MODE: bool = bool(settings_controller.get_var('TEST_MODE'))
 """ In test mode errors raise but not process """
@@ -28,21 +29,44 @@ async def get():
                                           '<h3>Connection established</h3>')
 
 
+@app.middleware('http')
+def test(request: Request, call_next):
+
+    db_path = request.query_params.get('db', '')
+    if db_path:
+        initialize_connector(db_path)
+    result = call_next(request)
+    return result
+
+
 # noinspection PyUnusedLocal
-@app.exception_handler(GeneralException)
-async def internal_exception_handler(request: fastapi.Request, exc: GeneralException):
+@app.exception_handler(VMBaseException)
+def internal_exception_handler(request: fastapi.Request, exc: VMBaseException):
     """
     Handler to process exceptions adds status and error text
     @param request: input request
     @param exc: formed exception
     @return: json response of error
     """
-    content = jsonable_encoder({'status': 'error',
-                'error_text': exc.message})
+
+    http_status = None
+    http_headers = None
+    if isinstance(exc, VMBaseException):
+        http_status = exc.get_http_status()
+        http_headers = exc.get_http_headers()
+
+    if not http_status:
+        http_status = fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    message = str(exc)
+
+    print(message)
 
     return JSONResponse(
-        status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=content)
+        status_code=http_status,
+        content=message,
+        headers=http_headers
+    )
 
 
 # noinspection PyUnusedLocal
@@ -59,25 +83,9 @@ async def validation_exception_handler(request: fastapi.Request,
     content = jsonable_encoder({'status': 'error',
                 'error_text': 'Request validation error!', 'details': exc.errors()})
 
-    print(content)
-
     return JSONResponse(
         status_code=fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=content)
-
-
-def initialize_validation_error_schema():
-    """
-    Correct validation error schema
-    @return: result validation error schema
-    """
-    validation_schema = RequestValidationErrorSchema.model_json_schema()
-
-    validation_schema.update({"title": "HTTPValidationError"})
-
-    custom_validation_error_response_definition = dict(validation_schema)
-
-    utils.validation_error_response_definition = custom_validation_error_response_definition
 
 
 http_processor = Processor()
@@ -85,12 +93,12 @@ http_processor = Processor()
 method_descr_list = http_processor.get_requests_methods_description()
 
 for method_descr in method_descr_list:
-    if method_descr['http_method'] == 'get':
-        api_method = app.get('/{}/'.format(method_descr['path']))(method_descr['func'])
-    elif method_descr['http_method'] == 'post':
-        api_method = app.post('/{}/'.format(method_descr['path']))(method_descr['func'])
 
-initialize_validation_error_schema()
+    pr_method = method_descr['func']
+    if method_descr['http_method'] == 'get':
+        api_method = app.get('/{}/'.format(method_descr['path']))(pr_method)
+    elif method_descr['http_method'] == 'post':
+        api_method = app.post('/{}/'.format(method_descr['path']))(pr_method)
 
 if TEST_MODE:
     uvicorn.run(app, host="127.0.0.1", port=8070, log_level="info")

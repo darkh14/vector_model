@@ -19,6 +19,16 @@ DB_PASSWORD = ''
 DB_AUTH_SOURCE = ''
 DB_TYPE = 'mongo_db'
 
+# to get a string like this run:
+# openssl rand -hex 32
+JWT_SECRET = '5b2fab20d79eeabd17d980d4b212e0f9'
+ACCESS_TOKEN_EXPIRE_MINUTES = 24*60
+
+USE_AUTHENTICATION = False
+
+ROOT_USER = 'admin'
+ROOT_PASSWORD = 'admin'
+
 
 def get_keys() -> list[str]:
     """Returns list of all keys of settings
@@ -43,6 +53,8 @@ def get_var_special_types() -> dict[str, str]:
     result['DB_NAMES'] = 'dict'
     result['DB_PORT'] = 'int'
     result['TEST_MODE'] = 'bool'
+    result['ACCESS_TOKEN_EXPIRE_MINUTES'] = 'int'
+    result['USE_AUTHENTICATION'] = 'bool'
 
     return result
 

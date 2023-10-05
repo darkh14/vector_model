@@ -39,8 +39,8 @@ def get_actions() -> list[dict[str, Callable]]:
     result = list()
 
     result.append({'name': 'settings_get_var', 'path': 'settings/get_var', 'func': _get_var, 'http_method': 'get',
-                   'requires_db': False, 'result_type': str | int | float | bool})
+                   'requires_db': False, 'requires_authentication': True})
     result.append({'name': 'settings_set_var', 'path': 'settings/set_var', 'func': _set_var, 'http_method': 'post',
-                   'requires_db': False, 'result_type': str})
+                   'requires_db': False, 'requires_authentication': True})
 
     return result

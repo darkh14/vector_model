@@ -15,6 +15,7 @@ CURRENT_CONNECTOR: Optional[Connector] = None
 DB_TYPE = ''
 
 __all__ = ['get_connector',
+           'get_connector_by_name',
            'check_connection',
            'initialize_connector',
            'initialize_connector_by_db_name',
@@ -45,6 +46,16 @@ def get_connector(db_path: str = '', without_caching: bool = False) -> Connector
             raise DBConnectorException('Can not initialize db connector with empty db path')
 
     return CURRENT_CONNECTOR
+
+
+def get_connector_by_name(db_name: str = '') -> Connector:
+
+    global DB_TYPE
+
+    if not DB_TYPE:
+        DB_TYPE = vm_settings.get_var('DB_TYPE')
+
+    return _get_connector_class()(db_name=db_name)
 
 
 def initialize_connector_by_db_name(db_name: str) -> None:

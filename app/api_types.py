@@ -47,25 +47,6 @@ class RequestValidationErrorDetail(BaseModel):
     type: str
 
 
-class RequestValidationErrorSchema(BaseModel):
-    """
-    Response of request validation error (422 http code)
-    """
-    status: RequestStatuses
-    error_text: str
-    detail: list[RequestValidationErrorDetail]
-
-    @classmethod
-    def model_json_schema(cls, *args, **kwargs) -> dict[str, Any]:
-
-        result = super().model_json_schema(*args, **kwargs)
-        result['properties']['status'] = result['$defs']['RequestStatuses']
-
-        result['properties']['detail']['items'] = {'$ref': '#/components/schemas/ValidationError'}
-
-        return result
-
-
 class ExecutionModes(enum.Enum):
     """
     Execution modes:

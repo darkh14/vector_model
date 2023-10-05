@@ -19,10 +19,10 @@ def get_actions() -> list[dict[str, Callable]]:
     result = list()
 
     result.append({'name': 'jobs_get_info', 'path': 'jobs/get_info', 'func': _get_jobs_info, 'http_method': 'post',
-                   'requires_db': True})
+                   'requires_db': True, 'requires_authentication': True})
 
     result.append({'name': 'jobs_delete', 'path': 'jobs/delete', 'func': _delete_background_job, 'http_method': 'get',
-                   'requires_db': True})
+                   'requires_db': True, 'requires_authentication': True})
 
     return result
 
