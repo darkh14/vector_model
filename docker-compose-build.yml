@@ -1,4 +1,4 @@
-version: "3.1.0.0"
+version: "3.2.0.0"
 
 services:
 
@@ -15,7 +15,7 @@ services:
       - custom
   app:
     container_name: vm_app
-    image: vm_app
+    image: darkh14/vm_app:latest
     environment:
       - TEST_MODE=False
       - SERVICE_NAME=vbm
