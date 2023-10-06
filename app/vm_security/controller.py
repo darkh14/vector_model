@@ -184,9 +184,11 @@ class AuthenticationController:
 
     def get_root_user(self, include_password: bool = False) -> Optional[dict[str, Any]]:
         root_user = self._db_connector.get_line('users', {'name': get_var('ROOT_USER')})
-        root_user['disabled'] = False
-        if root_user and not include_password:
-            del root_user['hashed_password']
+
+        if root_user:
+            root_user['disabled'] = False
+            if not include_password:
+                del root_user['hashed_password']
         return root_user
 
 
