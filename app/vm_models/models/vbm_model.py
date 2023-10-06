@@ -217,7 +217,7 @@ class VbmModel(Model):
         data_all_grouped = data_all[['organisation', 'scenario', 'indicator', 'deviation', 'y', 'y_0', 'delta',
                                      'relative_delta']].loc[data_all['indicator'] != '']
         data_all_grouped = data_all_grouped.groupby(['organisation', 'scenario',
-                                                     'indicator', 'deviation'], axis=0, as_index=False).sum()
+                                                     'indicator', 'deviation'], as_index=False).sum()
 
         data_all_grouped['relative_delta'] = data_all_grouped[['delta', 'y_0']].apply(lambda ss: ss['delta'] / ss['y_0']
                              if ss['y_0'] else 0, axis=1)
@@ -226,9 +226,10 @@ class VbmModel(Model):
 
             data_all_grouped_ind = data_all_grouped[['indicator', 'y', 'y_0', 'delta',
                                          'relative_delta']].loc[data_all['indicator'] != '']
-            data_all_grouped_ind = data_all_grouped_ind.groupby(['indicator'], axis=0, as_index=False).sum()
-
             data_all_grouped_ind['abs_relative_delta'] = data_all_grouped_ind['relative_delta'].apply(abs)
+
+            data_all_grouped_ind = data_all_grouped_ind.groupby(['indicator'], as_index=False).sum()
+
             data_all_grouped_ind.sort_values('abs_relative_delta', ascending=False, inplace=True)
 
             data_all_grouped_ind['relative_delta'] = data_all_grouped_ind[['delta', 'y_0']].apply(

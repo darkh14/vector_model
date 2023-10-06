@@ -6,6 +6,7 @@
 from typing import Any, Optional, Callable
 from datetime import datetime
 from importlib import import_module
+import os
 import sys
 import subprocess
 import traceback
@@ -138,11 +139,11 @@ class BackgroundJob:
 
         self._do_action_before_job(func, args, kwargs)
 
-        python_command, python_path = self._get_path_command()
+        python_path, python_command = self._get_path_command()
 
         with JobContextLoggerManager(self._id, context_mode=True) as (f_out, f_err):
-            job_process = subprocess.Popen([python_command,
-                                            python_path,
+            job_process = subprocess.Popen([python_path,
+                                            python_command,
                                             '-background_job',
                                             self._id,
                                             self._job_name,
@@ -315,16 +316,16 @@ class BackgroundJob:
         """
         venv_python = sys.executable
         if not venv_python:
-            python_command = 'python'
+            python_path = 'python'
 
             if sys.platform == "linux" or sys.platform == "linux2":
-                python_command = 'python3'
+                python_path = 'python3'
         else:
-            python_command = venv_python
+            python_path = venv_python
 
-        python_path = 'background_job_launcher.py'
+        python_command = os.sep.join(__file__.split(os.sep)[:-2] + ['background_job_launcher.py'])
 
-        return python_command, python_path
+        return python_path, python_command
 
     def _read_from_db(self) -> None:
         """ For reading job fields from db """
