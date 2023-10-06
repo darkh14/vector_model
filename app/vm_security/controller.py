@@ -36,10 +36,13 @@ class UsersController:
         :param include_password: includes hashed password if True
         :return: user dict
         """
-        user = self._db_connector.get_line('users', {'name': username})
+        if username == get_var('ROOT_USER'):
+            user = AuthenticationController().get_root_user(include_password)
+        else:
+            user = self._db_connector.get_line('users', {'name': username})
 
         if user:
-            if not include_password:
+            if not include_password and user.get('hashed_password'):
                 del user['hashed_password']
 
         return user
@@ -93,7 +96,7 @@ class UsersController:
     def delete_user(self, username) -> None:
         existing_user = self.get_user(username)
         if not existing_user:
-            raise exceptions.UserNotFoundException('User {} not found'.format(username))
+            raise exceptions.UserNotFoundException('User {} is not found'.format(username))
 
         self._db_connector.delete_lines('users', {'name': username})
 
@@ -125,7 +128,7 @@ class UsersController:
 
     @staticmethod
     def _get_hash(input_string: str) -> str:
-        return pwd_context.hash(input_string)
+        return _get_hash(input_string)
 
     def _set_user_status(self, username: str, disabled: bool = True):
         existing_user = self.get_user(username, include_password=True)
@@ -153,6 +156,8 @@ class AuthenticationController:
         self._db_connector = get_connector_by_name('vm_settings')
         if AUTHENTICATION_ENABLED is None:
             AUTHENTICATION_ENABLED = self.get_use()
+            if not self.get_root_user():
+                self.create_root_user()
 
     def set_use(self, use: bool) -> None:
         set_var('USE_AUTHENTICATION', use)
@@ -172,6 +177,22 @@ class AuthenticationController:
     def get_enabled(self) -> bool:
         return bool(AUTHENTICATION_ENABLED)
 
+    def create_root_user(self):
+        self._db_connector.set_line('users', {'name': get_var('ROOT_USER'),
+                                              'hashed_password': _get_hash(get_var('ROOT_PASSWORD'))},
+                                    {'name': get_var('ROOT_USER')})
+
+    def get_root_user(self, include_password: bool = False) -> Optional[dict[str, Any]]:
+        root_user = self._db_connector.get_line('users', {'name': get_var('ROOT_USER')})
+        root_user['disabled'] = False
+        if root_user and not include_password:
+            del root_user['hashed_password']
+        return root_user
+
+
+def _get_hash(input_string: str) -> str:
+    return pwd_context.hash(input_string)
+
 
 def get_current_user(token: str) -> dict[str, Any]:
     users = UsersController()
@@ -179,13 +200,6 @@ def get_current_user(token: str) -> dict[str, Any]:
 
 
 def set_use_authentication(use: bool = False) -> None:
-
-    if use:
-        users_controller = UsersController()
-
-        users = users_controller.get_all_users()
-        if not users:
-            raise exceptions.VMBaseException('There are no users for authentication')
 
     auth = AuthenticationController()
 
@@ -237,6 +251,3 @@ def set_user_password(username: str, password: str) -> None:
 def delete_user(username: str) -> None:
     users = UsersController()
     users.delete_user(username)
-
-
-
