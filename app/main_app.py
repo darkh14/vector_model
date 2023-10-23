@@ -30,11 +30,25 @@ async def get():
 
 
 @app.middleware('http')
-def test(request: Request, call_next):
+def set_db_connector(request: Request, call_next):
+
+    processor = Processor()
+    c_method_descr = processor.get_requests_methods_description()
+
+    methods_url_list = [el['path'][10:] for el in c_method_descr if el['path'].startswith('{db_name}/')]
+
+    request_url = request.url.path
+    if request_url.startswith('/'):
+        request_url = request_url[1:]
+
+    if request_url.endswith('/'):
+        request_url = request_url[:-1]
+
     db_name = ''
-    url_parts = request.url.path.split('/')
-    if len(url_parts) > 1 and url_parts[1].startswith('db_'):
-        db_name = url_parts[1]
+    url_parts = request_url.split('/')
+
+    if len(url_parts) > 1 and '/'.join(url_parts[1:]) in methods_url_list:
+        db_name = url_parts[0]
     if db_name:
         initialize_connector_by_name(db_name)
     result = call_next(request)
