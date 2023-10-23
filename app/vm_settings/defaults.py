@@ -11,7 +11,6 @@
 TEST_MODE = False
 SERVICE_NAME = 'vbm'
 
-DB_NAMES = {}
 DB_HOST = 'localhost'
 DB_PORT = 27017
 DB_USER = ''
@@ -50,7 +49,6 @@ def get_var_special_types() -> dict[str, str]:
         :return: dict of vars and types
     """
     result = dict()
-    result['DB_NAMES'] = 'dict'
     result['DB_PORT'] = 'int'
     result['TEST_MODE'] = 'bool'
     result['ACCESS_TOKEN_EXPIRE_MINUTES'] = 'int'

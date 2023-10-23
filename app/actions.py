@@ -23,9 +23,9 @@ def get_actions() -> list[dict[str, Any]]:
     result = list()
 
     result.append({'name': 'ping', 'path': 'ping', 'func': _ping, 'http_method': 'get',
-                   'requires_db': False, 'requires_authentication': False})
+                   'requires_authentication': False})
     result.append({'name': 'get_version', 'path': 'get_version', 'func': _get_version, 'http_method': 'get',
-                   'requires_db': False, 'requires_authentication': True})
+                   'requires_authentication': True})
 
     return result
 

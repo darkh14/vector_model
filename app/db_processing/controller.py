@@ -6,25 +6,33 @@
 """
 
 import vm_settings
-from typing import Type, Optional
+from typing import Type, Optional, Any
 from vm_logging.exceptions import DBConnectorException
-from db_processing.connectors.base_connector import Connector
+from db_processing.connectors.base_connector import Connector, SETTINGS_DB_NAME
 
 CONNECTORS: list[Connector] = []
 CURRENT_CONNECTOR: Optional[Connector] = None
 DB_TYPE = ''
 
-__all__ = ['get_connector',
+__all__ = ['get_connector_by_path',
            'get_connector_by_name',
+           'get_connector',
            'check_connection',
-           'initialize_connector',
-           'initialize_connector_by_db_name',
+           'initialize_connector_by_path',
+           'initialize_connector_by_name',
            'drop_connector',
            'copy_db',
-           'drop_db']
+           'create_db',
+           'drop_db',
+           'get_db_list',
+           'SETTINGS_DB_NAME']
 
 
-def get_connector(db_path: str = '', without_caching: bool = False) -> Connector:
+def get_connector():
+    return CURRENT_CONNECTOR
+
+
+def get_connector_by_path(db_path: str = '', without_caching: bool = False) -> Connector:
     """ Gets correct connector. Tries to get connector from cache (find by db_path).
         If it could not find correct connector, it creates connector by DB_TYPE and add to CONNECTORS cache
         :param db_path: path to required db
@@ -37,28 +45,52 @@ def get_connector(db_path: str = '', without_caching: bool = False) -> Connector
         if not DB_TYPE:
             DB_TYPE = vm_settings.get_var('DB_TYPE')
 
-        return _get_connector_class()(db_path)
+        return _get_connector_class()(db_path=db_path)
 
     if not CURRENT_CONNECTOR:
         if db_path:
-            initialize_connector(db_path)
+            initialize_connector_by_path(db_path=db_path)
         else:
             raise DBConnectorException('Can not initialize db connector with empty db path')
 
     return CURRENT_CONNECTOR
 
 
-def get_connector_by_name(db_name: str = '') -> Connector:
+def get_connector_by_name(db_name: str = '', without_caching: bool = False) -> Connector:
 
     global DB_TYPE
 
-    if not DB_TYPE:
-        DB_TYPE = vm_settings.get_var('DB_TYPE')
+    if without_caching:
+        if not DB_TYPE:
+            DB_TYPE = vm_settings.get_var('DB_TYPE')
 
-    return _get_connector_class()(db_name=db_name)
+        return _get_connector_class()(db_name=db_name)
+
+    if db_name == SETTINGS_DB_NAME:
+
+        global CONNECTORS
+
+        c_connectors = [con for con in CONNECTORS if con.db_name == db_name]
+        if c_connectors:
+            return c_connectors[0]
+        else:
+            if not DB_TYPE:
+                DB_TYPE = vm_settings.get_var('DB_TYPE')
+
+            c_connector = _get_connector_class()(db_name=db_name)
+            CONNECTORS.append(c_connector)
+            return c_connector
+
+    if not CURRENT_CONNECTOR:
+        if db_name:
+            initialize_connector_by_name(db_name=db_name)
+        else:
+            raise DBConnectorException('Can not initialize db connector with empty db path')
+
+    return CURRENT_CONNECTOR
 
 
-def initialize_connector_by_db_name(db_name: str) -> None:
+def initialize_connector_by_name(db_name: str) -> None:
     """
     Creates db connector by db_name and adds it to CONNECTORS
     @param db_name: name (id) of DB to initialize connector
@@ -67,10 +99,10 @@ def initialize_connector_by_db_name(db_name: str) -> None:
     _initialize_connector_by_path_name(db_name=db_name)
 
 
-def initialize_connector(db_path: str) -> None:
+def initialize_connector_by_path(db_path: str) -> None:
     """
-    Creates db connector by db_name and adds it to CONNECTORS
-    @param db_path: connection string of DB to initialize connector
+    Creates db connector by db_path and adds it to CONNECTORS
+    @param db_path: name of DB to initialize connector
     @return: None
     """
     _initialize_connector_by_path_name(db_path=db_path)
@@ -100,7 +132,7 @@ def _initialize_connector_by_path_name(db_path: str = '', db_name: str = '') -> 
         CURRENT_CONNECTOR = c_connectors[0]
     else:
         if db_path:
-            CURRENT_CONNECTOR = _get_connector_class()(db_path)
+            CURRENT_CONNECTOR = _get_connector_class()(db_path=db_path)
         else:
             CURRENT_CONNECTOR = _get_connector_class()(db_name=db_name)
         CONNECTORS.append(CURRENT_CONNECTOR)
@@ -146,6 +178,13 @@ def check_connection() -> str:
     return 'DB connection is OK'
 
 
+def create_db(db_path: str) -> dict[str, Any]:
+    connector = get_connector_by_name(SETTINGS_DB_NAME)
+    result = connector.create_db(db_path)
+
+    return result
+
+
 def copy_db(db_copy_to: str) -> str:
     """
     For copying db,
@@ -154,7 +193,8 @@ def copy_db(db_copy_to: str) -> str:
     """
 
     connector_source = get_connector()
-    connector_receiver = get_connector(db_copy_to, without_caching=True)
+    connector_source.settings_connector.create_db(db_copy_to)
+    connector_receiver = get_connector_by_path(db_path=db_copy_to, without_caching=True)
 
     collection_names = connector_receiver.get_collection_names()
 
@@ -168,6 +208,12 @@ def copy_db(db_copy_to: str) -> str:
         connector_receiver.set_lines(collection_name, current_collection)
 
     return 'DB is copied to "{}"'.format(db_copy_to)
+
+
+def get_db_list() -> list[dict[str, Any]]:
+    connector = get_connector_by_name(SETTINGS_DB_NAME)
+    db_list = connector.get_lines('bases')
+    return db_list
 
 
 def drop_db() -> str:

@@ -5,7 +5,15 @@
     Subpackages:
         connectors - for connectors for different types of DB
 """
-__all__ = ['get_actions', 'controller', 'get_connector', 'get_connector_by_name', 'initialize_connector']
+__all__ = ['get_actions',
+           'controller',
+           'get_connector',
+           'get_connector_by_name',
+           'initialize_connector_by_name',
+           'initialize_connector_by_path',
+           'SETTINGS_DB_NAME']
+
 from .actions import get_actions
 from . import controller
-from .controller import get_connector, initialize_connector, get_connector_by_name
+from .controller import (get_connector, initialize_connector_by_name, initialize_connector_by_path,
+                         get_connector_by_name, SETTINGS_DB_NAME)

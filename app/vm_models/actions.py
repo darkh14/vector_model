@@ -28,29 +28,29 @@ def get_actions() -> list[dict[str, Any]]:
 
     result = list()
 
-    result.append({'name': 'model_initialize', 'path': 'model/initialize',
+    result.append({'name': 'model_initialize', 'path': '{db_name}/model/initialize',
                    'func': _initialize,
-                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
+                   'http_method': 'post', 'requires_authentication': True})
 
-    result.append({'name': 'model_get_info', 'path': 'model/get_info',
+    result.append({'name': 'model_get_info', 'path': '{db_name}/model/get_info',
                    'func': _get_info,
                    'http_method': 'get', 'requires_db': True, 'requires_authentication': True})
 
-    result.append({'name': 'model_drop', 'path': 'model/drop',
+    result.append({'name': 'model_drop', 'path': '{db_name}/model/drop',
                    'func': _drop,
-                   'http_method': 'get', 'requires_db': True, 'requires_authentication': True})
+                   'http_method': 'get', 'requires_authentication': True})
 
-    result.append({'name': 'model_fit', 'path': 'model/fit',
+    result.append({'name': 'model_fit', 'path': '{db_name}/model/fit',
                    'func': _fit,
-                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
+                   'http_method': 'post', 'requires_authentication': True})
 
-    result.append({'name': 'model_predict', 'path': 'model/predict',
+    result.append({'name': 'model_predict', 'path': '{db_name}/model/predict',
                    'func': _predict,
-                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
+                   'http_method': 'post', 'requires_authentication': True})
 
-    result.append({'name': 'model_drop_fitting', 'path': 'model/drop_fitting',
+    result.append({'name': 'model_drop_fitting', 'path': '{db_name}/model/drop_fitting',
                    'func': _drop_fitting,
-                   'http_method': 'get', 'requires_db': True, 'requires_authentication': True})
+                   'http_method': 'get', 'requires_authentication': True})
 
     result.extend(controller.get_additional_actions())
 

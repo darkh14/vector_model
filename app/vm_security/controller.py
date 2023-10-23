@@ -6,7 +6,7 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 
-from db_processing import get_connector, get_connector_by_name
+from db_processing import get_connector, get_connector_by_name, SETTINGS_DB_NAME
 from vm_settings import get_var, set_var
 import vm_logging.exceptions as exceptions
 
@@ -54,7 +54,8 @@ class UsersController:
 
         jwt_secret = get_var('JWT_SECRET')
 
-        token = jwt.encode({'sub': username, 'exp': datetime.utcnow() + access_token_expires},
+        token = jwt.encode({'sub': username, 'db': get_connector().db_name,
+                            'exp': datetime.utcnow() + access_token_expires},
                            jwt_secret, algorithm=TOKEN_ALGORITHM)
 
         return token
@@ -64,6 +65,11 @@ class UsersController:
         try:
             payload = jwt.decode(token, get_var('JWT_SECRET'), algorithms=['HS256'])
             username = payload.get('sub')
+
+            db_name = get_connector().db_name
+            if payload.get('db') != db_name:
+                raise exceptions.CredentialsException('Token is not allowed in db "{}"'.format(db_name))
+
             if username is None:
                 raise exceptions.CredentialsException("Could not validate credentials")
         except JWTError as exp:
@@ -153,7 +159,7 @@ class AuthenticationController:
 
     def __init__(self):
         global AUTHENTICATION_ENABLED
-        self._db_connector = get_connector_by_name('vm_settings')
+        self._db_connector = get_connector_by_name(SETTINGS_DB_NAME)
         if AUTHENTICATION_ENABLED is None:
             AUTHENTICATION_ENABLED = self.get_use()
             if not self.get_root_user():

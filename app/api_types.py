@@ -64,18 +64,3 @@ class BackgroundJobResponse(BaseModel):
     description: str
     mode: ExecutionModes
     pid: int
-
-
-def get_response_type(result_class: BaseResult) -> Type[Response]:
-    """
-    Returns response type of result model class to update return annotation
-    @param result_class: class of response
-    @return: type of response
-    """
-    class ResponseType(Response):
-        result: result_class
-
-    ResponseType.__name__ = 'Response' + result_class.__name__ if hasattr(result_class, '__name__') \
-        else 'str_int_float_bool_'
-
-    return ResponseType

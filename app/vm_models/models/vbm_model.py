@@ -1171,25 +1171,26 @@ def get_additional_actions() -> list[dict[str, Callable]]:
 
     result = list()
 
-    result.append({'name': 'model_get_sensitivity_analysis', 'path': 'model/get_sensitivity_analysis',
+    result.append({'name': 'model_get_sensitivity_analysis', 'path': '{db_name}/model/get_sensitivity_analysis',
                    'func': _get_sensitivity_analysis,
-                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
+                   'http_method': 'post', 'requires_authentication': True})
 
-    result.append({'name': 'model_calculate_feature_importances', 'path': 'model/calculate_feature_importances',
+    result.append({'name': 'model_calculate_feature_importances',
+                   'path': '{db_name}/model/calculate_feature_importances',
                    'func': _calculate_feature_importances,
-                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
+                   'http_method': 'post', 'requires_authentication': True})
 
-    result.append({'name': 'model_get_feature_importances', 'path': 'model/get_feature_importances',
+    result.append({'name': 'model_get_feature_importances', 'path': '{db_name}/model/get_feature_importances',
                    'func': _get_feature_importances,
-                   'http_method': 'get', 'requires_db': True, 'requires_authentication': True})
+                   'http_method': 'get', 'requires_authentication': True})
 
-    result.append({'name': 'model_drop_fi_calculation', 'path': 'model/drop_fi_calculation',
+    result.append({'name': 'model_drop_fi_calculation', 'path': '{db_name}/model/drop_fi_calculation',
                    'func': _drop_fi_calculation,
-                   'http_method': 'get', 'requires_db': True, 'requires_authentication': True})
+                   'http_method': 'get', 'requires_authentication': True})
 
-    result.append({'name': 'model_get_factor_analysis', 'path': 'model/get_factor_analysis',
+    result.append({'name': 'model_get_factor_analysis', 'path': '{db_name}/model/get_factor_analysis',
                    'func': _get_factor_analysis,
-                   'http_method': 'post', 'requires_db': True, 'requires_authentication': True})
+                   'http_method': 'post', 'requires_authentication': True})
 
     return result
 

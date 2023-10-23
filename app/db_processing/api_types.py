@@ -3,8 +3,9 @@
 from api_types import BaseResult
 
 
-class DBCopyTo(BaseResult):
-    """
-    DB connection string of DB receiver
-    """
-    db_copy_to: str
+class InputDB(BaseResult):
+    path: str
+
+
+class OutputDB(InputDB):
+    name: str

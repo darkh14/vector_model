@@ -93,47 +93,47 @@ def get_actions() -> list[dict[str, Callable]]:
 
     result = list()
 
-    result.append({'name': 'get_token', 'path': 'token', 'func': _get_token, 'http_method': 'post',
-                   'requires_db': True, 'requires_authentication': False})
+    result.append({'name': 'get_token', 'path': '{db_name}/token', 'func': _get_token, 'http_method': 'post',
+                   'requires_authentication': False})
 
     result.append({'name': 'set_use_authentication', 'path': 'authentication/set_use',
                    'func': _set_use_authentication, 'http_method': 'get',
-                   'requires_db': False, 'requires_authentication': True})
+                   'requires_authentication': True})
 
     result.append({'name': 'get_use_authentication', 'path': 'authentication/get_use',
                    'func': _get_use_authentication, 'http_method': 'get',
-                   'requires_db': False, 'requires_authentication': False})
+                   'requires_authentication': False})
 
     result.append({'name': 'get_authentication_enabled', 'path': 'authentication/get_enabled',
                    'func': _get_authentication_enabled, 'http_method': 'get',
-                   'requires_db': False, 'requires_authentication': False})
+                   'requires_authentication': False})
 
-    result.append({'name': 'users_create', 'path': 'users/create',
+    result.append({'name': 'users_create', 'path': '{db_name}/users/create',
                    'func': _create_user, 'http_method': 'post',
-                   'requires_db': True, 'requires_authentication': True})
+                   'requires_authentication': True})
 
-    result.append({'name': 'users_delete', 'path': 'users/delete',
+    result.append({'name': 'users_delete', 'path': '{db_name}/users/delete',
                    'func': _delete_user, 'http_method': 'get',
-                   'requires_db': True, 'requires_authentication': True})
+                   'requires_authentication': True})
 
-    result.append({'name': 'users_get', 'path': 'users/get',
+    result.append({'name': 'users_get', 'path': '{db_name}/users/get',
                    'func': _get_user, 'http_method': 'get',
-                   'requires_db': True, 'requires_authentication': True})
+                   'requires_authentication': True})
 
-    result.append({'name': 'users_get_all', 'path': 'users/get_all',
+    result.append({'name': 'users_get_all', 'path': '{db_name}/users/get_all',
                    'func': _get_all_users, 'http_method': 'get',
-                   'requires_db': True, 'requires_authentication': True})
+                   'requires_authentication': True})
 
-    result.append({'name': 'users_set_password', 'path': 'users/set_password',
+    result.append({'name': 'users_set_password', 'path': '{db_name}/users/set_password',
                    'func': _set_password, 'http_method': 'post',
-                   'requires_db': True, 'requires_authentication': True})
+                   'requires_authentication': True})
 
-    result.append({'name': 'users_set_enabled', 'path': 'users/set_enabled',
+    result.append({'name': 'users_set_enabled', 'path': '{db_name}/users/set_enabled',
                    'func': _set_enabled, 'http_method': 'get',
-                   'requires_db': True, 'requires_authentication': True})
+                   'requires_authentication': True})
 
-    result.append({'name': 'users_set_disabled', 'path': 'users/set_disabled',
+    result.append({'name': 'users_set_disabled', 'path': '{db_name}/users/set_disabled',
                    'func': _set_disabled, 'http_method': 'get',
-                   'requires_db': True, 'requires_authentication': True})
+                   'requires_authentication': True})
 
     return result

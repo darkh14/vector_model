@@ -9,12 +9,13 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional, ClassVar, Mapping, Callable, Type
 from functools import wraps
 import inspect
-import vm_settings
 from vm_logging.exceptions import DBConnectorException
 from id_generator import IdGenerator
 
-__all__ = ['Connector', 'DBFilter', 'db_filter_type']
+__all__ = ['Connector', 'DBFilter', 'db_filter_type', 'SETTINGS_DB_NAME']
 db_filter_type = Mapping[str, Any]
+
+SETTINGS_DB_NAME = 'vm_settings'
 
 
 class DBFilter(ABC):
@@ -44,14 +45,14 @@ class DBFilter(ABC):
         """
 
 
-class Connector(ABC):
+class Connector:
     """ Abstract class for forming connection to db and operating with db.
     provides working with different types of db
     """
     type: ClassVar[str] = ''
     """type of db. empty for base class"""
 
-    def __init__(self, db_path: str = '', db_name: str = '') -> None:
+    def __init__(self, db_name: str = '', db_path: str = '') -> None:
         """
         Checks parameters, defines local variables and connects to db
         :param db_path: path to db for initializing required connector
@@ -60,9 +61,11 @@ class Connector(ABC):
         if not db_path and not db_name:
             raise DBConnectorException('DB path or DB name must be set!')
 
+        self.settings_connector = self._get_settings_connector(db_name)
+
         if db_name:
-            self._db_path = ''
             self._db_name = db_name
+            self._db_path = self._get_db_path_by_name()
         else:
             self._db_path: str = db_path
             self._db_name: str = self._get_db_name_by_path()
@@ -70,19 +73,23 @@ class Connector(ABC):
         self._connection_string: str = self._form_connection_string()
         self._connect()
 
-    @abstractmethod
+
+    def _get_settings_connector(self, db_name: str = '') -> Optional['Connector']:
+        return Connector(db_name=SETTINGS_DB_NAME) if self._db_name != SETTINGS_DB_NAME else None
+
+
     def _form_connection_string(self) -> str:
         """ Abstract method
         Returns connection string to connect to db
         """
+        ...
 
-    @abstractmethod
     def _connect(self) -> bool:
         """ Abstract method
         Connects to db
         """
+        ...
 
-    @abstractmethod
     def get_line(self, collection_name: str, db_filter: Optional[db_filter_type] = None) -> Optional[dict]:
         """
         For getting one line in collection, supports filter or no filter.
@@ -94,8 +101,9 @@ class Connector(ABC):
         :param db_filter: optional, filter to find required line
         :return dict of db line
         """
+        ...
 
-    @abstractmethod
+
     def get_lines(self, collection_name: str, db_filter: Optional[db_filter_type] = None) -> list[dict]:
         """
         For getting lines in collection or all collection, supports filter or no filter
@@ -103,8 +111,8 @@ class Connector(ABC):
         :param db_filter: optional, filter to find required line
         :return list of db lines
         """
+        ...
 
-    @abstractmethod
     def set_line(self, collection_name: str, value: dict[str, Any], db_filter: Optional[db_filter_type] = None) -> bool:
         """
         For setting one line in collection, supports filter or no filter.
@@ -118,7 +126,8 @@ class Connector(ABC):
         :param collection_name: name of required collection
         :param value: value to set as line
         :param db_filter: filter to find required line
-    """
+        """
+        ...
 
     def set_lines(self, collection_name: str, value: list[dict[str, Any]],
                   db_filter: Optional[db_filter_type] = None) -> bool:
@@ -136,8 +145,9 @@ class Connector(ABC):
         :param db_filter: filter to find required line
         :return result of lines setting, True if successful
         """
+        ...
 
-    @abstractmethod
+
     def delete_lines(self, collection_name: str, db_filter: Optional[db_filter_type] = None) -> bool:
         """
         For deleting lines in collection or full collection, supports filter or no filter
@@ -148,14 +158,15 @@ class Connector(ABC):
         :param collection_name: name of required collection
         :param db_filter: optional, filter to find required lines to delete
         """
+        ...
 
-    @abstractmethod
     def get_count(self, collection_name: str, db_filter: Optional[db_filter_type] = None) -> int:
         """
         Returns number of documents in collection. Supports filter
         :param collection_name: name of required collection
         :param db_filter: optional, filter to find required lines to count
         """
+        ...
 
     def get_db_path(self) -> str:
         """ for getting db path from inner _db_path value
@@ -180,28 +191,40 @@ class Connector(ABC):
         return self._db_path
 
     def _get_db_name_by_path(self) -> str:
-        """ Gets db name by db path. USES DB_NAMES setting
+        """ Gets db name by db path. from special settings db.
         :return: db name string
         """
+        if not self._db_path:
+            return SETTINGS_DB_NAME
 
-        db_names = vm_settings.get_var('DB_NAMES')
-        if self._db_path in db_names:
-            db_name = db_names[self._db_path]
-        else:
-            db_name = self._generate_db_name_by_path()
-            db_names[self._db_path] = db_name
+        base_settings = self.settings_connector.get_line('bases', {'path': self._db_path})
 
-            vm_settings.set_var('DB_NAMES', db_names)
+        if not base_settings:
+            raise DBConnectorException('DB with path "{}" does not exist'.format(self._db_path))
 
-        return db_name
+        return base_settings['name']
 
-    def _generate_db_name_by_path(self) -> str:
-        """ Generates db name from db_path. Not random
+    def _get_db_path_by_name(self) -> str:
+        """ Gets db name by db path. from special settings db.
+        :return: db name string
+        """
+        if self._db_name == SETTINGS_DB_NAME:
+            return ''
+
+        base_settings = self.settings_connector.get_line('bases', {'name': self._db_name})
+
+        if not base_settings:
+            raise DBConnectorException('DB "{}" does not exist'.format(self._db_name))
+
+        return base_settings['path']
+
+    @staticmethod
+    def _generate_db_name() -> str:
+        """ Generates db name. Random
         :return: generated db name
         """
-        return 'vm_' + IdGenerator.get_id_by_name(self._db_path)
+        return 'db_{}'.format(IdGenerator.get_random_id()[-7:])
 
-    @abstractmethod
     def _get_filter_class(self) -> Type[DBFilter]:
         """ Returns db filter object to convert filter for db
         :return: db filter class
@@ -245,13 +268,33 @@ class Connector(ABC):
 
         return wrapper
 
-    @abstractmethod
+
     def get_collection_names(self) -> list[str]:
         """Method to copy current db,
         :return list of collection names of current db
         """
+        ...
 
-    @abstractmethod
+    def create_db(self, db_path: str) -> dict[str, Any]:
+        if self.db_name != SETTINGS_DB_NAME:
+            raise DBConnectorException('New db can be created only with settings db connector')
+
+        base_settings = self.get_line('bases', {'path': db_path})
+
+        if base_settings:
+            raise DBConnectorException('DB with path "{}" already exists'.format(db_path))
+
+        c_db_name = self._generate_db_name()
+        c_base_settings = {'name': c_db_name, 'path': db_path}
+
+        self.set_line('bases', c_base_settings, {'name': c_db_name})
+
+        return c_base_settings
+
     def drop_db(self) -> str:
-        """Method to drop current database
-        :return result of dropping"""
+        if self._db_name == SETTINGS_DB_NAME:
+            raise DBConnectorException('Settings DB cannot be dropped')
+
+        self.settings_connector.delete_lines('bases', {'name': self._db_name})
+
+        return 'DB "{}" is dropped'.format(self._db_name)

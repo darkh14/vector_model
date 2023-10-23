@@ -9,7 +9,7 @@
 import pymongo
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError, OperationFailure
 from typing import Optional, ClassVar, Callable, Type, Any
-from .base_connector import Connector, DBFilter, db_filter_type
+from .base_connector import Connector, DBFilter, db_filter_type, SETTINGS_DB_NAME
 from functools import wraps
 import vm_settings
 from vm_logging.exceptions import DBConnectorException
@@ -36,14 +36,17 @@ class MongoConnector(Connector):
     """
     type: ClassVar[str] = 'mongo_db'
 
-    def __init__(self, db_path: str = '', db_name: str = '') -> None:
+    def __init__(self, db_name: str = '', db_path: str = '') -> None:
         """
         Defines _connection and _db values. No need to connect while __init__
         :param db_path:
         """
-        super().__init__(db_path, db_name)
+        super().__init__(db_name=db_name, db_path=db_path)
         self._connection: pymongo.MongoClient = self._get_connection()
         self._db = self._get_db()  # pymongo.database.Database
+
+    def _get_settings_connector(self, db_name: str = '') -> Optional['Connector']:
+        return MongoConnector(db_name=SETTINGS_DB_NAME) if db_name != SETTINGS_DB_NAME else None
 
     def _form_connection_string(self) -> str:
         """Forms connection string from setting vars
@@ -239,12 +242,11 @@ class MongoConnector(Connector):
         """Method to drop current database
         :return result of dropping"""
 
-        collection_names = self.get_collection_names()
+        result = super().drop_db()
 
-        if not collection_names:
-            raise DBConnectorException('DB "{}" does not exist'.format(self.db_path))
+        collection_names = self.get_collection_names()
 
         for collection_name in collection_names:
             self.delete_lines(collection_name)
 
-        return 'DB "{}" is dropped'.format(self.db_path)
+        return result

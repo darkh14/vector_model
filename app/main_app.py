@@ -10,7 +10,7 @@ from vm_versions import get_version
 from vm_settings import controller as settings_controller
 from processor import Processor
 from vm_logging.exceptions import VMBaseException
-from db_processing import initialize_connector
+from db_processing import initialize_connector_by_name
 
 
 TEST_MODE: bool = bool(settings_controller.get_var('TEST_MODE'))
@@ -31,10 +31,12 @@ async def get():
 
 @app.middleware('http')
 def test(request: Request, call_next):
-
-    db_path = request.query_params.get('db', '')
-    if db_path:
-        initialize_connector(db_path)
+    db_name = ''
+    url_parts = request.url.path.split('/')
+    if len(url_parts) > 1 and url_parts[1].startswith('db_'):
+        db_name = url_parts[1]
+    if db_name:
+        initialize_connector_by_name(db_name)
     result = call_next(request)
     return result
 
@@ -56,7 +58,7 @@ def internal_exception_handler(request: fastapi.Request, exc: VMBaseException):
         http_headers = exc.get_http_headers()
 
     if not http_status:
-        http_status = fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR
+        http_status = fastapi.status.HTTP_400_BAD_REQUEST
 
     message = str(exc)
 

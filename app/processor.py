@@ -31,10 +31,8 @@ import actions
 import general
 #
 from vm_logging.exceptions import GeneralException, VMBaseException, UserNotFoundException
-from api_types import get_response_type
-from db_processing.controller import initialize_connector, drop_connector
+from db_processing.controller import initialize_connector_by_name, drop_connector
 from vm_security import User, get_current_user, get_authentication_enabled, get_use_authentication
-from vm_settings import get_var
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -66,18 +64,18 @@ class Processor:
 
                 api_method = method_descr['func']
                 api_method.__name__ = method_descr['name']
-                api_method = self._check_and_complete_method(method_descr['requires_db'],
+                api_method = self._check_and_complete_method(method_descr['path'],
                                                              method_descr.get('requires_authentication'))(api_method)
 
                 sig = inspect.signature(api_method)
 
                 parameters_list = list(sig.parameters.values())
 
-                parameter_db = inspect.Parameter('db',
-                                                 kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                                                 annotation=str)
-
-                parameters_list = [parameter_db] + parameters_list
+                if method_descr['path'].split('/')[0] == '{db_path}':
+                    db_parameter = inspect.Parameter('db_path',
+                                                     kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                                     annotation=str)
+                    parameters_list.append(db_parameter)
 
                 if get_use_authentication() and method_descr.get('requires_authentication'):
 
@@ -88,8 +86,7 @@ class Processor:
 
                     parameters_list.append(parameter_c_user)
 
-                sig = sig.replace(parameters=parameters_list,
-                                  return_annotation=get_response_type(sig.return_annotation))
+                sig = sig.replace(parameters=parameters_list)
 
                 api_method.__signature__ = sig
 
@@ -122,21 +119,22 @@ class Processor:
         return User.model_validate(user_dict) if user_dict else None
 
     @staticmethod
-    def _check_and_complete_method(need_to_initialize_db: bool, requires_authentication: bool) -> Callable:
+    def _check_and_complete_method(url_path: str, requires_authentication: bool) -> Callable:
         """
         Changes method description, checks method
         @return changed method
         """
+        need_to_initialize_db = url_path.split('/')[0] == '{db_path}'
+
         def decorator(func: Callable[[Any], Optional[dict]]) -> Callable:
 
             @wraps(func)
-            async def wrapper(db: str, *args, **kwargs) -> dict[str, Any]:
+            async def wrapper(*args, **kwargs) -> dict[str, Any]:
 
-                error_text = ''
-                status = 'OK'
+                db_name = kwargs.get('db_name')
 
                 if need_to_initialize_db:
-                    initialize_connector(db)
+                    initialize_connector_by_name(db_name)
 
                 if get_authentication_enabled() and requires_authentication:
                     user = kwargs.get('current_user')
@@ -159,11 +157,10 @@ class Processor:
                         print(str(exc))
                         raise exc
                     else:
-                        error_text += 'Error!\n' + traceback.format_exc()
+                        error_text = 'Error!\n' + traceback.format_exc()
                         final_exc = GeneralException
 
                         raise final_exc(error_text)
-                result = {'result': result, 'status': status, 'error_text': error_text}
 
                 if need_to_initialize_db:
                     drop_connector()
