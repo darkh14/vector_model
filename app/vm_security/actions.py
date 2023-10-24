@@ -16,7 +16,7 @@ from vm_settings import get_var
 from vm_logging.exceptions import SecurityException
 
 
-def _get_token(form_data: OAuth2PasswordRequestForm = Depends()) -> dict[str, Any]:
+def _get_token(form_data: OAuth2PasswordRequestForm = Depends()) -> api_types.OutputToken:
 
     users = controller.UsersController()
 
@@ -33,7 +33,7 @@ def _get_token(form_data: OAuth2PasswordRequestForm = Depends()) -> dict[str, An
 
     token = users.generate_token(form_data.username)
 
-    return {'access_token': token, 'token_type': 'bearer'}
+    return api_types.OutputToken.model_validate({'access_token': token, 'token_type': 'bearer'})
 
 
 def _set_use_authentication(use: bool) -> str:

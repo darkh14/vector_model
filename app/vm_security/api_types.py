@@ -10,3 +10,8 @@ class User(BaseModel):
 class InputUser(BaseModel):
     username: str
     password: str
+
+
+class OutputToken(BaseModel):
+    access_token: str
+    token_type: str
