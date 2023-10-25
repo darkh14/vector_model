@@ -72,7 +72,7 @@ def internal_exception_handler(request: fastapi.Request, exc: VMBaseException):
         http_headers = exc.get_http_headers()
 
     if not http_status:
-        http_status = fastapi.status.HTTP_400_BAD_REQUEST
+        http_status = fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR
 
     message = str(exc)
 
