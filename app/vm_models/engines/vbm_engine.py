@@ -66,7 +66,11 @@ class VbmNeuralNetwork(BaseEngine):
         return {'description': 'Fit OK', 'history': history.history}
 
     # noinspection PyMethodMayBeStatic
-    def check_fitting_parameters(self, fitting_parameters: dict[str, Any]) -> None:
+    def check_fitting_parameters(self, fitting_parameters: Optional[dict[str, Any]]) -> None:
+
+        if not fitting_parameters:
+            raise ModelException('Fitting parameters is not defined. '
+                                 'For Neural Network fitting parameters must be set!')
 
         if 'epochs' not in fitting_parameters:
             raise ModelException('Parameter "epochs" not found in fitting parameters')

@@ -20,7 +20,7 @@ __all__ = ['fit', 'predict', 'initialize', 'drop', 'get_info', 'drop_fitting', '
 
 
 @execute_in_background
-def fit(model_id: str, fitting_parameters: dict[str, Any], job_id: str = '') -> general_api_types.BackgroundJobResponse:
+def fit(model_id: str, fitting_parameters: Optional[dict[str, Any]], job_id: str = '') -> general_api_types.BackgroundJobResponse:
     """ For fitting model
     :param model_id: id of model to fit
     :param fitting_parameters:  parameters of fitting

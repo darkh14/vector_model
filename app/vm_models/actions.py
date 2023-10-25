@@ -13,7 +13,7 @@
 
 __all__ = ['get_actions']
 
-from typing import Any
+from typing import Any, Optional
 
 from . import controller
 from . import api_types
@@ -57,14 +57,15 @@ def get_actions() -> list[dict[str, Any]]:
     return result
 
 
-def _fit(id: str, fitting_parameters: api_types.FittingParameters,
+def _fit(id: str, fitting_parameters: Optional[api_types.FittingParameters] = None,
          background_job: bool = False) -> general_api_types.BackgroundJobResponse:
     """ For fitting model
     :param id: id of model to fit
     :param fitting_parameters: parameters of fitting
     :return: result of fitting
     """
-    return controller.fit(id, fitting_parameters.model_dump(), background_job=background_job)
+    fitting_parameters_parsed = fitting_parameters.model_dump() if fitting_parameters else None
+    return controller.fit(id, fitting_parameters_parsed, background_job=background_job)
 
 
 def _predict(id: str, inputs: data_api_types.Inputs) -> data_api_types.PredictedOutputs:

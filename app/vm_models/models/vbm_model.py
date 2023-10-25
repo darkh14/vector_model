@@ -94,7 +94,7 @@ class VbmModel(Model):
 
         return result_description
 
-    def calculate_feature_importances(self, fi_parameters: dict[str, Any], job_id: str = '') -> str:
+    def calculate_feature_importances(self, fi_parameters: Optional[dict[str, Any]], job_id: str = '') -> str:
         """
         For calculating feature importances and saving them to db
         :param fi_parameters: parameters for fi calculation
@@ -577,7 +577,7 @@ class VbmModel(Model):
         if self.fitting_parameters.fitting_status != FittingStatuses.Fit:
             raise ModelException('Model is not fit. Fit model before fi calculation')
 
-        if fi_parameters.get('job_id'):
+        if fi_parameters and fi_parameters.get('job_id'):
             if self.fitting_parameters.fi_status != FittingStatuses.PreStarted:
                 raise ModelException('Model is not prepared for feature importances calculation in background. ' +
                                      'Drop feature importances calculation and execute another fi calculation job')
@@ -1196,7 +1196,7 @@ def get_additional_actions() -> list[dict[str, Callable]]:
 
 
 # noinspection PyShadowingNames
-def _calculate_feature_importances(id: str, fi_parameters: api_types.FittingParameters,
+def _calculate_feature_importances(id: str, fi_parameters: Optional[api_types.FittingParameters] = None,
                                    background_job: bool = False) -> general_api_types.BackgroundJobResponse:
     """
     For calculating feature importances
@@ -1205,15 +1205,15 @@ def _calculate_feature_importances(id: str, fi_parameters: api_types.FittingPara
     :param background_job: True if fi calculating is in background
     :return: result (info) of calculating fi
     """
-
-    result = calculate_fi(id, fi_parameters.model_dump(), background_job=background_job)
+    fi_parameters_parsed = fi_parameters.model_dump() if fi_parameters else None
+    result = calculate_fi(id, fi_parameters_parsed, background_job=background_job)
 
     return general_api_types.BackgroundJobResponse.model_validate(result)
 
 
 # noinspection PyShadowingNames
 @execute_in_background
-def calculate_fi(model_id: str, fi_parameters: dict[str, Any], job_id: str = '') -> dict[str, Any]:
+def calculate_fi(model_id: str, fi_parameters: Optional[dict[str, Any]], job_id: str = '') -> dict[str, Any]:
     """
     For calculating feature importances
     :param model_id: id of model

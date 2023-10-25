@@ -109,7 +109,7 @@ class Model:
 
         return model_info
 
-    def fit(self, fitting_parameters: dict[str, Any], job_id: str = '') -> str:
+    def fit(self, fitting_parameters: Optional[dict[str, Any]], job_id: str = '') -> str:
         """
         For fitting model
         :param fitting_parameters: parameters of fitting (ex. epochs)
@@ -202,7 +202,7 @@ class Model:
         if self.fitting_parameters.fitting_status == FittingStatuses.Started:
             set_background_job_interrupted(self.fitting_parameters.fitting_job_id)
 
-    def _fit_model(self, fitting_parameters: dict[str, Any], job_id: str = '') -> dict[str, Any]:
+    def _fit_model(self, fitting_parameters: Optional[dict[str, Any]], job_id: str = '') -> dict[str, Any]:
         """
         For fitting model after checking, and preparing parameters,
         :param fitting_parameters: parameters of fitting
