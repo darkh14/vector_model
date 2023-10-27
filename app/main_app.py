@@ -96,12 +96,9 @@ async def validation_exception_handler(request: fastapi.Request,
     @return: json response of error (422 http status)
     """
 
-    content = jsonable_encoder({'status': 'error',
-                'error_text': 'Request validation error!', 'details': exc.errors()})
-
     return JSONResponse(
         status_code=fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=content)
+        content=exc.errors())
 
 
 http_processor = Processor()
