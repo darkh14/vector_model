@@ -7,6 +7,7 @@
     CACHE - for caching data
 """
 
+import os
 import keyring
 
 __all__ = ['set_password', 'get_password']
@@ -21,6 +22,7 @@ def set_password(service_name: str, user_name: str, password: str) -> None:
     :param password: password to set
     """
     keyring.set_password(service_name, user_name, password)
+    os.environ.update({service_name: password})
     CACHE[(service_name, user_name)] = password
 
 
@@ -32,7 +34,12 @@ def get_password(service_name: str, user_name: str) -> str:
     """
     if (service_name, user_name) in CACHE.keys():
         result = CACHE[(service_name, user_name)]
+    elif os.environ.get(service_name):
+        result = os.environ.get(service_name)
+        CACHE[(service_name, user_name)] = result
     else:
-        result = keyring.get_password(service_name, user_name)
+        result = keyring.get_password(service_name, user_name) or ''
+        os.environ.update({service_name: result})
+        CACHE[(service_name, user_name)] = result
 
     return result

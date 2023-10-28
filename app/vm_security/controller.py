@@ -54,9 +54,12 @@ class UsersController:
 
         jwt_secret = get_var('JWT_SECRET')
 
-        token = jwt.encode({'sub': username, 'db': get_connector().db_name,
-                            'exp': datetime.utcnow() + access_token_expires},
-                           jwt_secret, algorithm=TOKEN_ALGORITHM)
+        token_data = {'sub': username, 'exp': datetime.utcnow() + access_token_expires}
+
+        if username != get_var('ROOT_USER'):
+            token_data['db'] = get_connector().db_name
+
+        token = jwt.encode(token_data, jwt_secret, algorithm=TOKEN_ALGORITHM)
 
         return token
 
@@ -66,9 +69,14 @@ class UsersController:
             payload = jwt.decode(token, get_var('JWT_SECRET'), algorithms=['HS256'])
             username = payload.get('sub')
 
-            db_name = get_connector().db_name
-            if payload.get('db') != db_name:
-                raise exceptions.CredentialsException('Token is not allowed in db "{}"'.format(db_name))
+            if username != get_var('ROOT_USER'):
+                connector = get_connector()
+                if connector:
+                    db_name = get_connector().db_name
+                    if payload.get('db') != db_name:
+                        raise exceptions.CredentialsException('Token is not allowed in db "{}"'.format(db_name))
+                else:
+                    raise exceptions.CredentialsException('DB is not defined for token. Use correct DB or system user')
 
             if username is None:
                 raise exceptions.CredentialsException("Could not validate credentials")

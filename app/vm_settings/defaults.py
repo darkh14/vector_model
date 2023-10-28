@@ -40,7 +40,7 @@ def get_secret_keys() -> dict[str, str]:
     """Returns dict of secret keys (passwords) as keys of dict and user value keys as values of dict
     :return: names of secret vars (passwords) in settings
     """
-    return {'DB_PASSWORD': 'DB_USER'}
+    return {'DB_PASSWORD': 'DB_USER', 'ROOT_PASSWORD': 'ROOT_USER'}
 
 
 def get_var_special_types() -> dict[str, str]:
