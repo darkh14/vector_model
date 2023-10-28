@@ -185,7 +185,7 @@ def create_db(db_path: str) -> dict[str, Any]:
     return result
 
 
-def copy_db(db_copy_to: str) -> str:
+def copy_db(db_copy_to: str) -> dict[str, Any]:
     """
     For copying db,
     :param db_copy_to: db connection string copy to
@@ -193,7 +193,7 @@ def copy_db(db_copy_to: str) -> str:
     """
 
     connector_source = get_connector()
-    connector_source.settings_connector.create_db(db_copy_to)
+    new_db_dict = connector_source.settings_connector.create_db(db_copy_to)
     connector_receiver = get_connector_by_path(db_path=db_copy_to, without_caching=True)
 
     collection_names = connector_receiver.get_collection_names()
@@ -207,7 +207,7 @@ def copy_db(db_copy_to: str) -> str:
         current_collection = connector_source.get_lines(collection_name)
         connector_receiver.set_lines(collection_name, current_collection)
 
-    return 'DB is copied to "{}"'.format(db_copy_to)
+    return new_db_dict
 
 
 def get_db_list() -> list[dict[str, Any]]:

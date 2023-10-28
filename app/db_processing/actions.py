@@ -43,13 +43,13 @@ def _create_db(db_data: api_types.InputDB) -> api_types.OutputDB:
     return api_types.OutputDB.model_validate(create_db(db_data.path))
 
 
-def _copy_db(db_class: api_types.InputDB) -> str:
+def _copy_db(db_class: api_types.InputDB) -> api_types.OutputDB:
     """ For checking connection
     :param db_class: data model contains db connection string copy to
     :return: result of checking connection
     """
 
-    return copy_db(db_class.path)
+    return api_types.OutputDB.model_validate(copy_db(db_class.path))
 
 
 def _get_db_list() -> list[api_types.OutputDB]:
