@@ -157,7 +157,7 @@ class Processor:
                         print(str(exc))
                         raise exc
                     else:
-                        error_text = 'Error!\n' + traceback.format_exc()
+                        error_text = 'Error!\n ' + traceback.format_exc()
                         final_exc = GeneralException
 
                         raise final_exc(error_text)

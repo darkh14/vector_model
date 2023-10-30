@@ -1,9 +1,9 @@
 import fastapi
 import uvicorn
+import traceback
 
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
 from fastapi.requests import Request
 
 from vm_versions import get_version
@@ -30,7 +30,7 @@ async def get():
 
 
 @app.middleware('http')
-def set_db_connector(request: Request, call_next):
+async def set_db_connector(request: Request, call_next):
 
     processor = Processor()
     c_method_descr = processor.get_requests_methods_description()
@@ -50,8 +50,24 @@ def set_db_connector(request: Request, call_next):
     if len(url_parts) > 1 and '/'.join(url_parts[1:]) in methods_url_list:
         db_name = url_parts[0]
     if db_name:
-        initialize_connector_by_name(db_name)
-    result = call_next(request)
+        # noinspection PyBroadException
+        try:
+            initialize_connector_by_name(db_name)
+        except VMBaseException as exc:
+            error_text = str(exc)
+            print(error_text)
+            return JSONResponse(
+                status_code=exc.get_http_status() or fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content=error_text,
+                headers=exc.get_http_headers()
+            )
+        except Exception:
+            return JSONResponse(
+                status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content=traceback.format_exc()
+            )
+
+    result = await call_next(request)
     return result
 
 
