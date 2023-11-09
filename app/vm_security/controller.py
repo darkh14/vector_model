@@ -1,6 +1,6 @@
 """ Module for controlling users, passwords and tokens
 """
-
+import os
 from typing import Any, Optional
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 from db_processing import get_connector, get_connector_by_name, SETTINGS_DB_NAME
 from vm_settings import get_var, set_var
+from vm_settings import defaults as settings_defaults
 import vm_logging.exceptions as exceptions
 
 
@@ -192,9 +193,12 @@ class AuthenticationController:
         return bool(AUTHENTICATION_ENABLED)
 
     def create_root_user(self):
-        self._db_connector.set_line('users', {'name': get_var('ROOT_USER'),
-                                              'hashed_password': _get_hash(get_var('ROOT_PASSWORD'))},
-                                    {'name': get_var('ROOT_USER')})
+        user_name = get_var('ROOT_USER')
+        password = os.environ.get('ROOT_PASSWORD') or settings_defaults.ROOT_PASSWORD
+
+        self._db_connector.set_line('users', {'name': user_name,
+                                              'hashed_password': _get_hash(password)},
+                                    {'name': user_name})
 
     def get_root_user(self, include_password: bool = False) -> Optional[dict[str, Any]]:
         root_user = self._db_connector.get_line('users', {'name': get_var('ROOT_USER')})
