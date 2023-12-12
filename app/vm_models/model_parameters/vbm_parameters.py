@@ -5,13 +5,14 @@
         VbmFittingParameters - for fitting parameters
 """
 
-from typing import Any, Optional, ClassVar
+from typing import Any, Optional, ClassVar, Type
 from dataclasses import dataclass
 from datetime import datetime
 import os
+import sys, inspect
 
 from vm_logging.exceptions import ModelException
-from .base_parameters import ModelParameters, FittingParameters
+from .base_parameters import ModelParameters, FittingParameters, BaseModelStructure
 from .. import model_types
 
 __all__ = ['VbmModelParameters', 'VbmFittingParameters']
@@ -69,6 +70,16 @@ class VbmModelParameters(ModelParameters):
         result['y_indicators'] = self.y_indicators
 
         result['categorical_features'] = self.categorical_features
+
+        return result
+
+    def _get_model_structure_class(self) -> Optional[Type[BaseModelStructure]]:
+
+        result = super()._get_model_structure_class()
+
+        for name, obj in inspect.getmembers(sys.modules[__name__]):
+            if inspect.isclass(obj) and obj in BaseModelStructure.__subclasses__() and obj.type == self.type:
+                result = obj
 
         return result
 

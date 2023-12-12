@@ -25,6 +25,7 @@ from ..engines.base_engine import BaseEngine
 from ..model_types import ModelTypes
 from vm_logging.exceptions import ModelException
 from id_generator import IdGenerator
+from ..model_parameters import base_parameters
 
 
 class VbmNeuralNetwork(BaseEngine):
@@ -33,16 +34,16 @@ class VbmNeuralNetwork(BaseEngine):
     model_type: ClassVar[ModelTypes] = ModelTypes.NeuralNetwork
 
     def __init__(self, model_id: str, input_number: int, output_number: int, new_engine: bool = False,
-                 **kwargs) -> None:
+                 parameters: Optional[base_parameters.ModelParameters] = None) -> None:
         """
         Defines inner engine = None, _validation_split and reads from db if necessary
         :param model_id: id of model object
         :param input_number: number of inputs
         :param output_number: umber of outputs (labels)
         :param new_engine: if is True  - not need to read from db
-        :param kwargs: additional parameters
+        :param parameters: additional parameters
         """
-        super().__init__(model_id, input_number, output_number, new_engine, **kwargs)
+        super().__init__(model_id, input_number, output_number, new_engine, parameters)
 
         self._inner_engine: Optional[Sequential] = None
         self._validation_split: float = 0.0
@@ -193,7 +194,7 @@ class VbmNeuralNetwork(BaseEngine):
         for root, dirs, files in os.walk(path):
             if first_dir:
                 root_dir = root
-            c_dir = root
+            c_dir: str = root
             c_dir = 'tmp/' + c_dir[len(root_dir) + 1:]
 
             for file in files:
@@ -237,16 +238,16 @@ class VbmLinearModel(BaseEngine):
     model_type: ClassVar[ModelTypes] = ModelTypes.LinearRegression
 
     def __init__(self, model_id: str, input_number: int, output_number: int, new_engine: bool = False,
-                 **kwargs) -> None:
+                 parameters: Optional[base_parameters.ModelParameters] = None) -> None:
         """
         Defines inner engine = None, _validation_split and reads from db if necessary
         :param model_id: id of model object
         :param input_number: number of inputs
         :param output_number: umber of outputs (labels)
         :param new_engine: if is True  - not need to read from db
-        :param kwargs: additional parameters
+        :param parameters: additional parameters
         """
-        super().__init__(model_id, input_number, output_number, new_engine, **kwargs)
+        super().__init__(model_id, input_number, output_number, new_engine, parameters)
 
         self._inner_engine: Optional[LinearRegression] = None
 
@@ -343,6 +344,50 @@ class VbmPolynomialModel(VbmLinearModel):
     """
     model_type: ClassVar[ModelTypes] = ModelTypes.PolynomialRegression
 
+    def __init__(self, model_id: str, input_number: int, output_number: int, new_engine: bool = False,
+                 parameters: Optional[base_parameters.ModelParameters] = None) -> None:
+
+        self.power = parameters.power if parameters else 2
+        self._pf: Optional[PolynomialFeatures] = None
+
+        super().__init__(model_id, input_number, output_number, new_engine, parameters)
+
+    def _read_from_db(self) -> None:
+        """
+        For read inner engine from db and save it to self._inner_engine
+        """
+        if self._new_engine or not self._model_id:
+            self._inner_engine = self.create_inner_engine()
+            self._pf = self.create_pf()
+        else:
+            line_from_db = self._db_connector.get_line('engines', {'model_id': self._model_id})
+
+            if line_from_db:
+                self._inner_engine = self._get_inner_engine_from_binary_data(line_from_db['inner_engine'])
+                self._pf = self._get_inner_engine_from_binary_data(line_from_db['pf'])
+            else:
+                self._inner_engine = self.create_inner_engine()
+                self.create_pf()
+
+    def _write_to_db(self) -> None:
+        """
+        For writing inner engine object to db
+        """
+        if self._model_id:
+            line_to_db = {'model_id': self._model_id,
+                          'inner_engine': self._get_binary_data_from_inner_engine(),
+                          'pf': self._get_binary_data_from_pf()}
+            self._db_connector.set_line('engines', line_to_db, {'model_id': self._model_id})
+
+    def create_pf(self):
+        return PolynomialFeatures(degree=self.power, interaction_only=True, include_bias=True)
+
+    def _get_binary_data_from_pf(self) -> bytes:
+
+        pf_packed = pickle.dumps(self._pf, protocol=pickle.HIGHEST_PROTOCOL)
+
+        return pf_packed
+
     def _fit_engine(self, x: np.ndarray, y: np.ndarray, parameters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
         For fitting ML engine
@@ -352,9 +397,7 @@ class VbmPolynomialModel(VbmLinearModel):
         :return: history of fitting
         """
 
-        pf = PolynomialFeatures(degree=2, interaction_only=True)
-
-        x_pf = pf.fit_transform(x)
+        x_pf = self._pf.fit_transform(x)
 
         return super()._fit_engine(x_pf, y, parameters)
 
@@ -365,9 +408,7 @@ class VbmPolynomialModel(VbmLinearModel):
         :return: predicted output data
         """
 
-        pf = PolynomialFeatures(degree=2, interaction_only=True)
-
-        x_pf = pf.fit_transform(x)
+        x_pf = self._pf.fit_transform(x)
 
         return super().predict(x_pf)
 
@@ -376,18 +417,18 @@ class VbmPolynomialModel(VbmLinearModel):
         Returns special type of model engine to calculate feature importances
         @return: engine for fi
         """
-        return PolynomialRegressionForFI(self._inner_engine)
+        return PolynomialRegressionForFI(self._inner_engine, self._pf)
 
 
 class PolynomialRegressionForFI(LinearRegression):
     """ Model engine wrapper for linear and polynomial models.
     For calculating feature importances"""
-    def __init__(self, inner_engine: LinearRegression):
+    def __init__(self, inner_engine: LinearRegression, pf: PolynomialFeatures):
 
         super().__init__()
         self._inner_engine = inner_engine
 
-        self._pf = PolynomialFeatures(degree=2, interaction_only=True)
+        self._pf = pf
 
     def fit(self, x: np.ndarray, y: np.ndarray, **kwargs) -> object:
 

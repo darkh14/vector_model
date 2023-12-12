@@ -4,14 +4,50 @@
         FittingParameters - base dataclass for storing, saving and getting fitting parameters
 """
 
-from typing import Any, Optional, ClassVar
+from typing import Any, Optional, ClassVar, Type
 from dataclasses import dataclass
 from datetime import datetime
 import os
+import sys, inspect
 
 from ..model_filters import base_filter, get_fitting_filter_class
 from .. import model_types
 from vm_logging.exceptions import ModelException
+
+
+@dataclass
+class BaseModelStructure:
+    type: ClassVar[Optional[model_types.ModelTypes]] = None
+
+    def set_all(self, parameters: dict[str, Any]) -> None:
+
+        self._check_parameters(parameters)
+
+        for attr_name in self.__dict__:
+            if attr_name in parameters:
+                setattr(self, attr_name, parameters[attr_name])
+
+    def get_all(self):
+
+        return self.__dict__
+
+    def _check_parameters(self, parameters: dict[str, Any]) -> None:
+        ...
+
+
+@dataclass
+class PolynomialRegressionStructure(BaseModelStructure):
+    type: ClassVar[Optional[model_types.ModelTypes]] = model_types.ModelTypes.PolynomialRegression
+
+    power: int = 2
+
+    def _check_parameters(self, parameters: dict[str, Any]) -> None:
+
+        if parameters.get('power'):
+            if not isinstance(parameters['power'], int):
+                raise ModelException('Parameter "power" must be int from 2 to 5')
+            elif parameters['power'] < 2 or parameters['power'] > 5:
+                raise ModelException('Parameter "power" must be int from 2 to 5')
 
 
 @dataclass
@@ -29,6 +65,8 @@ class ModelParameters:
     type: model_types.ModelTypes = model_types.ModelTypes.NeuralNetwork
     data_filter: Optional[base_filter.FittingFilter] = None
 
+    model_structure: Optional[BaseModelStructure] = None
+
     def __post_init__(self) -> None:
         """
         Defines data filter object
@@ -45,6 +83,15 @@ class ModelParameters:
         self.type = parameters['type']
 
         self.data_filter = get_fitting_filter_class()(parameters.get('filter'))
+
+        if not self.model_structure:
+            model_structure_class = self._get_model_structure_class()
+
+            if model_structure_class:
+                self.model_structure = model_structure_class()
+                self.model_structure.set_all(parameters)
+        else:
+            self.model_structure.set_all(parameters)
 
     def get_data_filter_for_db(self) -> dict[str, Any]:
         """
@@ -64,7 +111,26 @@ class ModelParameters:
             'filter': self.data_filter
         }
 
+        if self.model_structure:
+            parameters.update(self.model_structure.get_all())
+
         return parameters
+
+    def _get_model_structure_class(self) -> Optional[Type[BaseModelStructure]]:
+
+        result = None
+
+        for name, obj in inspect.getmembers(sys.modules[__name__]):
+            if inspect.isclass(obj) and obj in BaseModelStructure.__subclasses__() and obj.type == self.type:
+                result = obj
+
+        return result
+
+    def __getattr__(self, item):
+        if self.model_structure and item in self.model_structure.__dict__:
+            return getattr(self.model_structure, item)
+        else:
+            raise AttributeError("{} object has no attribute {}".format(self.__name__, item))
 
 
 @dataclass

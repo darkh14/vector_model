@@ -3,7 +3,7 @@
 from typing import Optional, Any
 from . import base_api_types
 from .. import model_types
-from pydantic import BaseModel
+from pydantic import BaseModel, Extra
 from datetime import datetime
 
 
@@ -37,6 +37,9 @@ class Model(base_api_types.Model):
     y_indicators: list[IndicatorRow]
 
     categorical_features: Optional[list[str]] = None
+
+    class Config:
+        extra = Extra.allow
 
     def model_dump(self, *args, **kwargs) -> dict[str, Any]:
         result = super().model_dump(*args, **kwargs)

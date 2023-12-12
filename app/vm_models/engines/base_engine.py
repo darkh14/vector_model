@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 from db_processing import get_connector
 from db_processing.connectors.base_connector import Connector
 from ..model_types import ModelTypes
+from ..model_parameters import base_parameters
 
 
 class BaseEngine(ABC):
@@ -25,14 +26,14 @@ class BaseEngine(ABC):
     model_type: ClassVar[ModelTypes] = ModelTypes.NeuralNetwork
 
     def __init__(self, model_id: str, input_number: int, output_number: int, new_engine: bool = False,
-                 **kwargs) -> None:
+                 parameters: Optional[base_parameters.ModelParameters] = None) -> None:
         """
         Defines model_id, db connector, input, output number, _new_engine and metrics
         :param model_id: id of model class
         :param input_number: number of inputs
         :param output_number: number of outputs
         :param new_engine: is new engine (no need to read from db)
-        :param kwargs: additional parameters (for subclasses)
+        :param parameters: additional parameters (for subclasses)
         """
         self._model_id: str = model_id
 

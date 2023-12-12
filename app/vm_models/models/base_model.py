@@ -223,7 +223,8 @@ class Model:
         output_number = len(self.fitting_parameters.y_columns)
 
         self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number,
-                                                            self.fitting_parameters.is_first_fitting())
+                                                            self.fitting_parameters.is_first_fitting(),
+                                                            self.parameters)
         fitting_result = self._engine.fit(x, y, fitting_parameters)
         result_history = fitting_result['history']
 
@@ -450,7 +451,8 @@ class Model:
         input_number = len(self.fitting_parameters.x_columns)
         output_number = len(self.fitting_parameters.y_columns)
         if not self._engine:
-            self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number)
+            self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number,
+                                                                  parameters=self.parameters)
 
         y_pred = self._engine.predict(x)
 

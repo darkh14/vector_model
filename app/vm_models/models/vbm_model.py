@@ -694,7 +694,8 @@ class VbmModel(Model):
         output_number = len(self.fitting_parameters.y_columns)
 
         self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number,
-                                                              self.fitting_parameters.is_first_fitting() or for_fi)
+                                                              self.fitting_parameters.is_first_fitting() or for_fi,
+                                                              self.parameters)
 
         self._scaler = pipeline.named_steps['scaler']
 
