@@ -40,7 +40,8 @@ def _get_jobs_info(job_filter: Optional[api_types.FilterBody] = None) -> list[ap
 
 
 def _delete_background_job(id: str) -> str:
-    """ Removing job line from db
+    """ Removing job line from dbsu35s
+
     :param id: id of job to delete
     :return: result of job deleting
     """

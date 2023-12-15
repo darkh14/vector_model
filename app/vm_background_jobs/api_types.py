@@ -24,4 +24,4 @@ class FilterBody(BaseModel):
     """
     Data filter to choose data from DB
     """
-    data_filter: Optional[dict[str, Any]]
+    data_filter: Optional[dict[str, Any]] = None

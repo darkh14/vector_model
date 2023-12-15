@@ -5,13 +5,13 @@
 
 """
 
-from typing import Any
+from typing import Any, Optional
 from .background_jobs import BackgroundJob
 
 __all__ = ['get_jobs_info', 'delete_background_job', 'set_background_job_interrupted']
 
 
-def get_jobs_info(job_filter: dict[str, Any]) -> dict[str, Any]:
+def get_jobs_info(job_filter: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     """ For getting jobs info. return info of jobs according to filter
     :param job_filter: dict of filter to choose job
     :return: dict if job information

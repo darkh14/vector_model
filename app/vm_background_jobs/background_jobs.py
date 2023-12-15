@@ -221,7 +221,7 @@ class BackgroundJob:
                 self._error = 'Process termination error. {}'.format(str(ex))
 
     @classmethod
-    def get_jobs_info(cls, job_filter:  dict[str, Any]) -> list[dict[str, Any]]:
+    def get_jobs_info(cls, job_filter:  Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
         """ Class method for getting jobs inf. Can get info of many job according to filter.
         :param job_filter: filter to find required jobs
         :return: dict of jobs information
