@@ -38,7 +38,7 @@ def initialize_loading(loading_data: api_types.Loading) -> str:
 
     loading.initialize()
 
-    return 'Loading id "{}" is initialized'
+    return 'Loading id "{}" is initialized'.format(loading.get_id())
 
 
 @execute_in_background

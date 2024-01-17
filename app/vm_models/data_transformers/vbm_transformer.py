@@ -78,7 +78,11 @@ class VbmChecker(Checker):
                 error_names = []
                 for error_id in error_ids:
                     error_name_list = [el['name'] for el in all_indicators if el['id'] == error_id]
-                    error_names.append(error_name_list[0] if error_name_list else 'undefined indicator')
+
+                    if error_name_list:
+                        error_names.append(error_name_list[0])
+                    else:
+                        error_names.append(error_id)
 
                 error_names = ['"{}"'.format(el) for el in error_names]
 

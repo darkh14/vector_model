@@ -737,6 +737,9 @@ class Loading:
             for package in self._packages:
                 package.write_to_db()
 
+    def get_id(self) -> str:
+        return self._id
+
 
 def delete_all_data(data_filter: dict[str, Any]) -> bool:
     """ Deletes all data according to filter
