@@ -364,6 +364,24 @@ class VbmModel(Model):
 
         return result
 
+    def get_action_error_background_job(self, func_name: str,
+                                        args: tuple[Any],
+                                        kwargs: dict[str, Any]) -> Optional[Callable]:
+        """
+        Returns function which will be executed while error model fi calculating
+        @param func_name: name of fi calculating function
+        @param args: positional arguments of fi calculating function
+        @param kwargs: keyword arguments of fi calculating function.
+        @return: function to execute before fi calculating
+        """
+
+        if func_name == 'calculate_fi':
+            result = self.do_error_calculating_fi
+        else:
+            result = super().get_action_error_background_job(func_name, args, kwargs)
+
+        return result
+
     # noinspection PyUnusedLocal
     def do_before_calculating_fi(self, args: list[Any], kwargs: dict[str, Any]) -> None:
         """
@@ -375,6 +393,19 @@ class VbmModel(Model):
         """
         self.fitting_parameters.set_pre_start_fi_calculation(kwargs.get('job_id', ''))
         self._write_to_db()
+
+    # noinspection PyUnusedLocal
+    def do_error_calculating_fi(self, args: list[Any], kwargs: dict[str, Any]) -> None:
+        """
+        Function will be executed while error fi calculation
+        Sets error fi calculation status
+        @param args: positional arguments of fi calculating function
+        @param kwargs: keyword arguments of fi calculating function.
+        @return: None
+        """
+        if self.fitting_parameters.fi_status != FittingStatuses.Error:
+            self.fitting_parameters.set_error_fi_calculation(kwargs.get('error_text'))
+            self._write_to_db()
 
     def _prepare_input_data_for_sa(self, inputs_base: list[dict[str, Any]],
                                  ind_ids: list[str],
@@ -406,11 +437,21 @@ class VbmModel(Model):
 
                 pd_inputs_plus = self._set_coefficient_to_data_by_ind(inputs_base, ind_id, 1+dev)
                 suffix = 'ind_{}_plus_{}'.format(ind_id, str(dev).replace(' ', ''))
+                pd_inputs_plus['periodicity'] = pd_inputs_plus['scenario'].apply(lambda arg: [el['periodicity']
+                                                                                            for el in
+                                                                                            scenarios_description
+                                                                                            if el['id'] == arg][0])
+
                 pd_inputs_plus['scenario'] = pd_inputs_plus['scenario'].apply(lambda el: '_'.join((el, suffix)))
                 data_list_to_concat.append(pd_inputs_plus)
 
                 pd_inputs_minus = self._set_coefficient_to_data_by_ind(inputs_base, ind_id, 1-dev)
                 suffix = 'ind_{}_minus_{}'.format(ind_id, str(dev).replace(' ', ''))
+                pd_inputs_minus['periodicity'] = pd_inputs_minus['scenario'].apply(lambda arg: [el['periodicity']
+                                                                                              for el in
+                                                                                              scenarios_description
+                                                                                              if el['id'] == arg][0])
+
                 pd_inputs_minus['scenario'] = pd_inputs_minus['scenario'].apply(lambda el: '_'.join((el, suffix)))
 
                 data_list_to_concat.append(pd_inputs_minus)
@@ -1317,5 +1358,18 @@ def get_action_before_background_job(func_name: str, args: tuple[Any], kwargs: d
     """
     model = VbmModel(args[0])
     result = model.get_action_before_background_job(func_name, args, kwargs)
+
+    return result
+
+
+def get_action_error_background_job(func_name: str, args: tuple[Any], kwargs: dict[str, Any]) -> Optional[Callable]:
+    """Returns function which will be executed while error model fi calculating
+    @param func_name: name of fi calculating function
+    @param args: positional arguments of fi calculating function
+    @param kwargs: keyword arguments of fi calculating function.
+    @return: function to execute before fi calculating
+    """
+    model = VbmModel(args[0])
+    result = model.get_action_error_background_job(func_name, args, kwargs)
 
     return result

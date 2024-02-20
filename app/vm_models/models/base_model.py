@@ -116,12 +116,18 @@ class Model:
         :param job_id: id of job if fitting is background
         :return: fitting history
         """
-        self._check_before_fitting(job_id)
-
-        self.fitting_parameters.set_start_fitting(job_id)
-        self._write_to_db()
 
         try:
+            self._check_before_fitting(job_id)
+
+            if fitting_parameters:
+                all_parameters = self.fitting_parameters.get_all()
+                all_parameters.update(fitting_parameters)
+                self.fitting_parameters.set_all(all_parameters)
+
+            self.fitting_parameters.set_start_fitting(job_id)
+            self._write_to_db()
+
             self._fit_model(fitting_parameters)
         except Exception as ex:
             self.fitting_parameters.set_error_fitting(str(ex))
@@ -177,15 +183,30 @@ class Model:
     def get_action_before_background_job(self, func_name: str,
                                          args: tuple[Any],
                                          kwargs: dict[str, Any]) -> Optional[Callable]:
-        """Returns function which will be executed before model fi calculating
-        @param func_name: name of fi calculating function
-        @param args: positional arguments of fi calculating function
-        @param kwargs: keyword arguments of fi calculating function.
-        @return: function to execute before fi calculating
+        """Returns function which will be executed before model fit
+        @param func_name: name of fit function
+        @param args: positional arguments of fit function
+        @param kwargs: keyword arguments of fit function.
+        @return: function to execute before fit
         """
         result = None
         if func_name == 'fit':
             result = self.do_before_fit
+
+        return result
+
+    def get_action_error_background_job(self, func_name: str,
+                                        args: tuple[Any],
+                                        kwargs: dict[str, Any]) -> Optional[Callable]:
+        """Returns function which will be executed while error model fit
+        @param func_name: name of fit function
+        @param args: positional arguments of fit function
+        @param kwargs: keyword arguments of fit function.
+        @return: function to execute before fit
+        """
+        result = None
+        if func_name == 'fit':
+            result = self.do_error_fit
 
         return result
 
@@ -194,6 +215,13 @@ class Model:
 
         self.fitting_parameters.set_pre_start_fitting(kwargs.get('job_id', ''))
         self._write_to_db()
+
+    # noinspection PyUnusedLocal
+    def do_error_fit(self, args: tuple[Any], kwargs: dict[str, Any]) -> None:
+
+        if self.fitting_parameters.fitting_status != FittingStatuses.Error:
+            self.fitting_parameters.set_error_fitting(kwargs.get('error_text', ''))
+            self._write_to_db()
 
     def _interrupt_fitting_job(self) -> None:
         """

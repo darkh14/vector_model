@@ -724,75 +724,24 @@ class VbmScaler(Scaler):
     """ Transformer for data scaling (min-max scaling) """
     service_name: ClassVar[str] = 'vbm'
 
-    def fit(self, x: Optional[list[dict[str, Any]] | pd.DataFrame] = None,
-            y: Optional[list[dict[str, Any]] | pd.DataFrame] = None) -> VbmScalerClass:
-        """
-        Saves engine parameters to scale data
-        :param x: data to scale
-        :param y: None
-        :return: self scaling object
-        """
-
-        self._fitting_mode = True
-
-        if self._new_scaler:
-
-            non_categorical_columns = [el for el in self._fitting_parameters.x_columns +
-                                       self._fitting_parameters.y_columns
-                                       if el not in self._fitting_parameters.categorical_columns]
-
-            data = x[non_categorical_columns]
-
-            self._scaler_engine.fit(data)
-
-            self._write_to_db()
-
-        return self
-
-    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
-        """
-        Transforms data after saving scaler parameters
-        :param x: data before scaling
-        :return: data after scaling
-        """
-
-        result = x.copy()
-
-        if not self._fitting_mode:
-            result[self._fitting_parameters.y_columns] = 0
-
-        non_categorical_columns = [el for el in self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
-                                   if el not in self._fitting_parameters.categorical_columns]
-
-        result[non_categorical_columns] = self._scaler_engine.transform(result[non_categorical_columns])
-
-        if not self._fitting_mode:
-            result = result.drop(self._fitting_parameters.y_columns, axis=1)
-
-        return result
-
-    def inverse_transform(self, x: pd.DataFrame) -> pd.DataFrame:
-        """
-        Inverse transforms data after predicting to get real (unscaled) result
-        :param x: data before unscaling
-        :return: data after unscaling
-        """
-
-        result = x.copy()
-
-        non_categorical_columns = [el for el in self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
-                                   if el not in self._fitting_parameters.categorical_columns]
-
-        result[non_categorical_columns] = self._scaler_engine.inverse_transform(result[non_categorical_columns])
-
-        return result
-
     def _get_scaler_engine(self) -> object:
         """
         For getting scaler object of right type
         :return: inner scaler object
         """
         return MinMaxScaler()
+
+    def _get_columns_to_scale(self) -> list[str]:
+        all_columns = []
+        if self._fitting_parameters.need_to_x_scaling:
+            all_columns.extend(self._fitting_parameters.x_columns)
+
+        if self._fitting_parameters.need_to_y_scaling:
+            all_columns.extend(self._fitting_parameters.y_columns)
+
+        all_columns = [el for el in all_columns if el not in self._fitting_parameters.categorical_columns]
+
+        return all_columns
 
 
 class VbmShuffler(Shuffler):

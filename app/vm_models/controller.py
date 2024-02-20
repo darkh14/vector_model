@@ -106,13 +106,26 @@ def get_additional_actions() -> list[dict[str, Callable]]:
 
 
 def get_action_before_background_job(func_name: str, args: tuple[Any], kwargs: dict[str, Any]) -> Optional[Callable]:
-    """Returns function which will be executed before model fi calculating
-    @param func_name: name of fi calculating function
-    @param args: positional arguments of fi calculating function
-    @param kwargs: keyword arguments of fi calculating function.
-    @return: function to execute before fi calculating
+    """Returns function which will be executed before model fit
+    @param func_name: name of fit function
+    @param args: positional arguments of fit function
+    @param kwargs: keyword arguments of fit function.
+    @return: function to execute before fit
     """
     model = get_model_class()(args[0])
     result = model.get_action_before_background_job(func_name, args, kwargs)
+
+    return result
+
+
+def get_action_error_background_job(func_name: str, args: tuple[Any], kwargs: dict[str, Any]) -> Optional[Callable]:
+    """Returns function which will be executed while error model fit
+    @param func_name: name of fit function
+    @param args: positional arguments of fit function
+    @param kwargs: keyword arguments of fit function.
+    @return: function to execute before fit
+    """
+    model = get_model_class()(args[0])
+    result = model.get_action_error_background_job(func_name, args, kwargs)
 
     return result

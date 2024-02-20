@@ -4,6 +4,7 @@
         BackgroundJob
 """
 from typing import Any, Optional, Callable
+from types import ModuleType
 from datetime import datetime
 from importlib import import_module
 import os
@@ -62,7 +63,9 @@ class BackgroundJob:
                 _result - result of executing function
                 _pid - executed process id
                 _output - info from stdout of executing function
-                _temp_name - name of temp collection. filled when collection contains data
+                _imported_function - function to call in subprocess object
+                _imported_module - module object from function is imported in subprocess
+
                 # _temp_settings - defines what data saves in temp collection
                 :param job_id: id of current job
                 :param subprocess_mode: True if job launched in subprocess, else False
@@ -92,6 +95,9 @@ class BackgroundJob:
         self._pid: int = 0
         self._output: str = ''
 
+        self._imported_function: Optional[Callable] = None
+        self._imported_module: Optional[ModuleType] = None
+
         self._parameters: [dict[str, Any]] = {}
         self._initialize()
 
@@ -106,7 +112,7 @@ class BackgroundJob:
             self._id = IdGenerator.get_random_id()
             self._write_to_db()
 
-    def execute_function(self, func, args: tuple[Any],
+    def execute_function(self, func, args: [list[Any] | tuple[Any]],
                          kwargs: dict[str, Any]) -> general_api_types.BackgroundJobResponse:
         """ For executing function in initial mode
                 Parameters:
@@ -174,7 +180,7 @@ class BackgroundJob:
                 self._error = traceback.format_exc()
                 self._status = JobStatuses.ERROR
 
-        if self._error:
+        if self._status == JobStatuses.ERROR:
             sys.stderr.write(self._error)
 
             log_manager = JobContextLoggerManager(self._id)
@@ -185,6 +191,11 @@ class BackgroundJob:
 
             if self._db_connector:
                 self._write_to_db()
+
+            self._do_action_error_job()
+
+        self._imported_function = None
+        self._imported_module = None
 
     def delete(self) -> None:
         """ For deleting job from db. Also kills process, drops temp collections and clears logs"""
@@ -240,8 +251,7 @@ class BackgroundJob:
 
         return result
 
-    @staticmethod
-    def _do_action_before_job(func: Callable, args: tuple[Any], kwargs: dict[str, Any]) -> None:
+    def _do_action_before_job(self, func: Callable, args: list[Any], kwargs: dict[str, Any]) -> None:
         """
         Executes action (special function before starting background job)
         @param func: function which will be executed in background
@@ -252,12 +262,33 @@ class BackgroundJob:
         # noinspection PyUnresolvedReferences
         action_generator = func.__globals__.get('get_action_before_background_job')
 
+        c_kwargs = kwargs.copy() or {}
+        c_kwargs['job_id'] = self._id
         if action_generator:
 
             action_to_do = action_generator(func.__name__, args, kwargs)
 
             if action_to_do:
-                action_to_do(args, kwargs)
+                action_to_do(args, c_kwargs)
+
+    def _do_action_error_job(self) -> None:
+        """
+        Executes action (special function while error background job)
+        @return: None
+        """
+
+        kwargs = self._parameters['kwargs'].copy()
+        kwargs['error_text'] = self._error
+
+        # noinspection PyUnresolvedReferences
+        action_generator = self._imported_module.__dict__.get('get_action_error_background_job')
+
+        if action_generator:
+
+            action_to_do = action_generator(self._imported_function.__name__, self._parameters['args'], kwargs)
+
+            if action_to_do:
+                action_to_do(self._parameters['args'], kwargs)
 
     def _execute_function(self) -> Any:
         """ Executes function in subprocess inside try-except block
@@ -279,8 +310,8 @@ class BackgroundJob:
 
         module_name, function_name = self._get_module_function_from_name()
 
-        imported_module = import_module(module_name)
-        imported_function = imported_module.__dict__[function_name]
+        self._imported_module = import_module(module_name)
+        self._imported_function = self._imported_module.__dict__[function_name]
 
         self._parameters['job_id'] = self._id
 
@@ -289,7 +320,7 @@ class BackgroundJob:
 
         kwargs = self._parameters['kwargs'].copy()
         kwargs['job_id'] = self._parameters['job_id']
-        result = imported_function(*self._parameters['args'], **kwargs)
+        result = self._imported_function(*self._parameters['args'], **kwargs)
 
         self._status = JobStatuses.FINISHED
         self._end_date = datetime.utcnow()

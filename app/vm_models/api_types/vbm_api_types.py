@@ -92,12 +92,12 @@ class ModelInfo(base_api_types.ModelInfo):
     categorical_columns: list[str] = []
 
     fi_status: model_types.FittingStatuses
-    fi_date: Optional[datetime] = None
-    fi_start_date: Optional[datetime] = None
-    fi_error_text: str = ''
-    fi_error_date: Optional[datetime] = None
-    fi_job_id: str = ''
-    fi_job_pid: int = 0
+    fi_calculation_date: Optional[datetime] = None
+    fi_calculation_start_date: Optional[datetime] = None
+    fi_calculation_error_text: str = ''
+    fi_calculation_error_date: Optional[datetime] = None
+    fi_calculation_job_id: str = ''
+    fi_calculation_job_pid: int = 0
 
 
 class FittingParameters(base_api_types.FittingParameters):
@@ -106,3 +106,5 @@ class FittingParameters(base_api_types.FittingParameters):
     """
     epochs: int = 0
     filter: Optional[dict[str, Any]] = None
+    need_to_x_scaling: bool = True
+    need_to_y_scaling: bool = True

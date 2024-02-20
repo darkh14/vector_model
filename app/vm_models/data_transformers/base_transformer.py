@@ -221,6 +221,8 @@ class Scaler(BaseTransformer):
 
         self._read_from_db()
 
+        self._fitting_mode: bool = False
+
     def fit(self, x: Optional[list[dict[str, Any]] | pd.DataFrame] = None,
             y: Optional[list[dict[str, Any]] | pd.DataFrame] = None) -> BaseScalerClass:
         """
@@ -230,8 +232,16 @@ class Scaler(BaseTransformer):
         :return: self scaling object
         """
 
+        self._fitting_mode = True
+
         if self._new_scaler:
-            self._scaler_engine.fit(x)
+            all_columns = self._get_columns_to_scale()
+
+            if all_columns:
+
+                data = x[all_columns]
+                self._scaler_engine.fit(data)
+
             self._write_to_db()
 
         return self
@@ -243,7 +253,17 @@ class Scaler(BaseTransformer):
         :return: data after scaling
         """
 
-        result = self._scaler_engine.transform(x)
+        result = x.copy()
+
+        if not self._fitting_mode:
+            result[self._fitting_parameters.y_columns] = 0
+
+        all_columns = self._get_columns_to_scale()
+        if all_columns:
+            result[all_columns] = self._scaler_engine.transform(result[all_columns])
+
+        if not self._fitting_mode:
+            result = result.drop(self._fitting_parameters.y_columns, axis=1)
 
         return result
 
@@ -253,7 +273,13 @@ class Scaler(BaseTransformer):
         :param x: data before unscaling
         :return: data after unscaling
         """
-        result = self._scaler_engine.inverse_transform(x)
+
+        result = x.copy()
+
+        all_columns = self._get_columns_to_scale()
+
+        if all_columns:
+            result[all_columns] = self._scaler_engine.inverse_transform(result[all_columns])
 
         return result
 
@@ -288,6 +314,16 @@ class Scaler(BaseTransformer):
         :return: inner scaler object
         """
         return StandardScaler()
+
+    def _get_columns_to_scale(self) -> list[str]:
+        all_columns = []
+        if self._fitting_parameters.need_to_x_scaling:
+            all_columns.extend(self._fitting_parameters.x_columns)
+
+        if self._fitting_parameters.need_to_y_scaling:
+            all_columns.extend(self._fitting_parameters.y_columns)
+
+        return all_columns
 
 
 class Shuffler(BaseTransformer):

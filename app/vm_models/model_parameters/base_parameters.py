@@ -158,6 +158,9 @@ class FittingParameters:
     x_columns: Optional[list[str]] = None
     y_columns: Optional[list[str]] = None
 
+    need_to_x_scaling: bool = True
+    need_to_y_scaling: bool = True
+
     categorical_columns: Optional[list[str]] = None
 
     fitting_job_id: str = ''
@@ -196,6 +199,9 @@ class FittingParameters:
         self.x_columns = parameters.get('x_columns', [])
         self.y_columns = parameters.get('y_columns', [])
 
+        self.need_to_x_scaling = parameters.get('need_to_x_scaling', True)
+        self.need_to_y_scaling = parameters.get('need_to_y_scaling', True)
+
         self.categorical_columns = parameters.get('categorical_columns', [])
 
         self.metrics = parameters.get('metrics', {})
@@ -218,6 +224,10 @@ class FittingParameters:
 
             'x_columns': self.x_columns,
             'y_columns': self.y_columns,
+
+            'need_to_x_scaling': self.need_to_x_scaling,
+            'need_to_y_scaling': self.need_to_y_scaling,
+
             'categorical_columns': self.categorical_columns,
             'metrics': self.metrics
         }
@@ -305,6 +315,9 @@ class FittingParameters:
         self.x_columns = []
         self.y_columns = []
 
+        self.need_to_x_scaling = True
+        self.need_to_y_scaling = True
+
         self.categorical_columns = []
 
         self.metrics = {}
@@ -326,6 +339,9 @@ class FittingParameters:
         if self._first_fitting:
             self.x_columns = []
             self.y_columns = []
+
+            self.need_to_x_scaling = True
+            self.need_to_y_scaling = True
 
             self.categorical_columns = []
 
