@@ -7,8 +7,8 @@
 
 __all__ = ['get_actions']
 
-from typing import Any
-from .controller import check_connection, copy_db, drop_db, create_db, get_db_list
+from typing import Any, Optional
+from .controller import check_connection, copy_db, drop_db, create_db, get_db_list, set_collection, get_collection
 from . import api_types
 
 
@@ -29,6 +29,11 @@ def get_actions() -> list[dict[str, Any]]:
                    'http_method': 'get', 'requires_authentication': True})
     result.append({'name': 'db_drop', 'path': '{db_name}/db/drop', 'func': _drop_db,
                    'http_method': 'get', 'requires_authentication': True})
+    result.append({'name': 'db_get_collection', 'path': '{db_name}/db/get_collection', 'func': _get_collection,
+                   'http_method': 'post', 'requires_authentication': True})
+    result.append({'name': 'db_set_collection', 'path': '{db_name}/db/set_collection', 'func': _set_collection,
+                   'http_method': 'post', 'requires_authentication': True})
+
     return result
 
 
@@ -63,3 +68,23 @@ def _drop_db() -> str:
     :return: str result of checking
     """
     return drop_db()
+
+
+def _set_collection(collection_name: str, data: api_types.Collection, replace: Optional[bool] = False):
+    data_dict = data.model_dump()
+
+    result = set_collection(collection_name, data_dict['data'], replace)
+
+    return result
+
+
+def _get_collection(collection_name: str, data_filter_body: Optional[api_types.DataFilterBody] = None) -> (
+        api_types.Collection):
+
+    data_filter = None
+    if data_filter_body is not None:
+        data_filter = data_filter_body.model_dump()['data_filter']
+
+    result = get_collection(collection_name, data_filter)
+
+    return api_types.Collection.model_validate({'data': result})

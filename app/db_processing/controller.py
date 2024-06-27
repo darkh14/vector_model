@@ -25,10 +25,12 @@ __all__ = ['get_connector_by_path',
            'create_db',
            'drop_db',
            'get_db_list',
+           'set_collection',
+           'get_collection',
            'SETTINGS_DB_NAME']
 
 
-def get_connector():
+def get_connector() -> Connector:
     return CURRENT_CONNECTOR
 
 
@@ -226,3 +228,30 @@ def drop_db() -> str:
     result = connector.drop_db()
 
     return result
+
+
+def get_collection(collection_name: str, data_filter: dict[str, Any]) -> list[dict[str, Any]]:
+    """
+    To set any collection in db manually
+    :return: str result of setting
+    """
+    connector = get_connector()
+
+    result = connector.get_lines(collection_name, db_filter=data_filter)
+
+    return result
+
+
+def set_collection(collection_name: str, data: list[dict[str, Any]], replace: bool = False) -> str:
+    """
+    To set any collection in db manually
+    :return: str result of setting
+    """
+    connector = get_connector()
+
+    if replace:
+        connector.delete_lines(collection_name)
+
+    connector.set_lines(collection_name, data)
+
+    return 'collection "{}" is set'.format(collection_name)
