@@ -242,7 +242,7 @@ def get_collection(collection_name: str, data_filter: dict[str, Any]) -> list[di
     return result
 
 
-def set_collection(collection_name: str, data: list[dict[str, Any]], replace: bool = False) -> str:
+def set_collection(collection_name: str, data: list[dict[str, Any]], replace: bool = False, write_dates=False) -> str:
     """
     To set any collection in db manually
     :return: str result of setting

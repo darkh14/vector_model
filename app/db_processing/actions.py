@@ -7,6 +7,9 @@
 
 __all__ = ['get_actions']
 
+import pandas as pd
+import datetime
+
 from typing import Any, Optional
 from .controller import check_connection, copy_db, drop_db, create_db, get_db_list, set_collection, get_collection
 from . import api_types
@@ -70,10 +73,32 @@ def _drop_db() -> str:
     return drop_db()
 
 
-def _set_collection(collection_name: str, data: api_types.Collection, replace: Optional[bool] = False):
+def _dict_to_date(sr):
+
+    return datetime.datetime.strptime(sr['$date'], '%Y-%m-%dT%H:%M:%S.%fZ')
+
+
+def _set_collection(collection_name: str, data: api_types.Collection, replace: Optional[bool] = False,
+                    write_dates: Optional[bool] = False):
     data_dict = data.model_dump()
 
-    result = set_collection(collection_name, data_dict['data'], replace)
+    if write_dates and data_dict['data']:
+        pd_data = pd.DataFrame(data_dict['data'])
+
+        data_str = dict(pd_data.iloc[0])
+
+        date_fields = []
+
+        for key, value in data_str.items():
+            if isinstance(value, dict) and '$date' in value.keys():
+                date_fields.append(key)
+
+        for date_field in date_fields:
+            pd_data[date_field] = pd_data[date_field].apply(_dict_to_date)
+
+        data_dict = {'data': pd_data.to_dict(orient='records')}
+
+    result = set_collection(collection_name, data_dict['data'], replace=replace, write_dates=write_dates)
 
     return result
 
