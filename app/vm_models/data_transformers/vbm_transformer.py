@@ -55,38 +55,38 @@ class VbmChecker(Checker):
             raise ModelException('There are no data to {} model. Check loading data, '.format('fit'
                                   if self._fitting_mode else 'predict') + 'model settings and filter')
 
-        if self._fitting_mode and self._fitting_parameters.is_first_fitting():
-
-            indicator_ids = list(x['indicator'].unique())
-
-            model_indicators = self._model_parameters.x_indicators + self._model_parameters.y_indicators
-
-            model_indicator_ids = [el['id'] for el in model_indicators]
-
-            model_indicator_ids = set(model_indicator_ids)
-
-            error_ids = []
-
-            for el in model_indicator_ids:
-                if el not in indicator_ids:
-                    error_ids.append(el)
-
-            if error_ids:
-
-                all_indicators = self._db_connector.get_lines('indicators')
-
-                error_names = []
-                for error_id in error_ids:
-                    error_name_list = [el['name'] for el in all_indicators if el['id'] == error_id]
-
-                    if error_name_list:
-                        error_names.append(error_name_list[0])
-                    else:
-                        error_names.append(error_id)
-
-                error_names = ['"{}"'.format(el) for el in error_names]
-
-                raise ModelException('Indicator(s) {} are not in fitting data'.format(', '.join(error_names)))
+        # if self._fitting_mode and self._fitting_parameters.is_first_fitting():
+        #
+        #     indicator_ids = list(x['indicator'].unique())
+        #
+        #     model_indicators = self._model_parameters.x_indicators + self._model_parameters.y_indicators
+        #
+        #     model_indicator_ids = [el['id'] for el in model_indicators]
+        #
+        #     model_indicator_ids = set(model_indicator_ids)
+        #
+        #     error_ids = []
+        #
+        #     for el in model_indicator_ids:
+        #         if el not in indicator_ids:
+        #             error_ids.append(el)
+        #
+        #     if error_ids:
+        #
+        #         all_indicators = self._db_connector.get_lines('indicators')
+        #
+        #         error_names = []
+        #         for error_id in error_ids:
+        #             error_name_list = [el['name'] for el in all_indicators if el['id'] == error_id]
+        #
+        #             if error_name_list:
+        #                 error_names.append(error_name_list[0])
+        #             else:
+        #                 error_names.append(error_id)
+        #
+        #         error_names = ['"{}"'.format(el) for el in error_names]
+        #
+        #         raise ModelException('Indicator(s) {} are not in fitting data'.format(', '.join(error_names)))
 
         return x
 
