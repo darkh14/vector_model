@@ -377,9 +377,9 @@ class VbmRowColumnTransformer(RowColumnTransformer):
             if self._is_y_indicator(indicator_parameters):
                 if column_name not in self._fitting_parameters.y_columns:
                     raise ModelException('Column name "{}" not in y columns'.format(column_name))
-            else:
-                if column_name not in self._fitting_parameters.x_columns:
-                    raise ModelException('Column name "{}" not in x columns'.format(column_name))
+            # else:
+            #     if column_name not in self._fitting_parameters.x_columns:
+            #         raise ModelException('Column name "{}" not in x columns'.format(column_name))
 
     def _process_data_periods(self, data: pd.DataFrame, indicator_parameters: dict[str, Any]) -> pd.DataFrame:
         """
