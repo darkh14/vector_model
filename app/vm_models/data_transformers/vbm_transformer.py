@@ -693,27 +693,27 @@ class VbmNanProcessor(NanProcessor):
             if x[self._fitting_parameters.y_columns].empty:
                 raise ModelException('All labels are empty. Fitting is impossible')
 
-            if self._fitting_parameters.is_first_fitting():
-
-                all_columns = self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
-
-                cols_to_delete = []
-                for d_col in all_columns:
-                    if x[d_col].isnull().all():
-                        cols_to_delete.append(d_col)
-                        if d_col in self._fitting_parameters.x_columns:
-                            self._fitting_parameters.x_columns.remove(d_col)
-
-                        if d_col in self._fitting_parameters.y_columns:
-                            self._fitting_parameters.y_columns.remove(d_col)
-
-                if not self._fitting_parameters.x_columns:
-                    raise ModelException('All x columns are empty. Fitting is impossible')
-
-                if not self._fitting_parameters.y_columns:
-                    raise ModelException('All y columns are empty. Fitting is impossible')
-
-                x = x.drop(cols_to_delete, axis=1)
+            # if self._fitting_parameters.is_first_fitting():
+            #
+            #     all_columns = self._fitting_parameters.x_columns + self._fitting_parameters.y_columns
+            #
+            #     cols_to_delete = []
+            #     for d_col in all_columns:
+            #         if x[d_col].isnull().all():
+            #             cols_to_delete.append(d_col)
+            #             if d_col in self._fitting_parameters.x_columns:
+            #                 self._fitting_parameters.x_columns.remove(d_col)
+            #
+            #             if d_col in self._fitting_parameters.y_columns:
+            #                 self._fitting_parameters.y_columns.remove(d_col)
+            #
+            #     if not self._fitting_parameters.x_columns:
+            #         raise ModelException('All x columns are empty. Fitting is impossible')
+            #
+            #     if not self._fitting_parameters.y_columns:
+            #         raise ModelException('All y columns are empty. Fitting is impossible')
+            #
+            #     x = x.drop(cols_to_delete, axis=1)
 
         x = x.fillna(0)
 
