@@ -93,6 +93,22 @@ class BaseEngine(ABC):
         """
         return self._inner_engine
 
+    @property
+    def inner_engine(self) -> object:
+        """
+        Property for self._inner_engine
+        :return: value of self._inner_engine
+        """
+        return self._inner_engine
+
+    @inner_engine.setter
+    def inner_engine(self, value) -> object:
+        """
+        Property for self._inner_engine
+        :return: value of self._inner_engine
+        """
+        self._inner_engine = value
+
     # noinspection PyMethodMayBeStatic
     def _check_fitting_parameters(self, parameters: dict[str, Any]) -> None:
         pass

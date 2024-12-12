@@ -153,6 +153,21 @@ class VbmNeuralNetwork(BaseEngine):
             line_to_db = {'model_id': self._model_id, 'inner_engine': self._get_binary_data_from_inner_engine()}
             self._db_connector.set_line('engines', line_to_db, {'model_id': self._model_id})
 
+
+    @property
+    def inner_engine(self) -> object:
+        """
+        Property for self._inner_engine
+        :return: value of self._inner_engine
+        """
+        return self._inner_engine
+
+    @inner_engine.setter
+    def inner_engine(self, value):
+
+        self._inner_engine = value
+        self._write_to_db()
+
     def _get_binary_data_from_inner_engine(self, use_pickle: bool = False) -> bytes:
         """
         Gets binary data of inner engine object from inner object itself
@@ -212,14 +227,6 @@ class VbmNeuralNetwork(BaseEngine):
         """
         engine.compile(optimizer=Adam(learning_rate=0.001), loss='MeanSquaredError',
                       metrics=['RootMeanSquaredError'])
-
-    @property
-    def inner_engine(self) -> Sequential:
-        """
-        Property for self._inner_engine
-        :return: value of self._inner_engine
-        """
-        return self._inner_engine
 
     def get_engine_for_fi(self) -> object:
         """

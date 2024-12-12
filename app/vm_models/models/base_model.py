@@ -4,11 +4,18 @@
         Model - base model class, provides fitting and predicting. Saves itself to db
 """
 import enum
+import os
+import shutil
 from typing import Any, Callable, Optional, ClassVar
+
+import tempfile
+import zipfile
+import pickle
 
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
+from tensorflow.keras.models import save_model, load_model
 
 from vm_logging.exceptions import ModelException
 from vm_models.model_parameters import get_model_parameters_class
@@ -17,7 +24,7 @@ from db_processing import get_connector as get_db_connector
 from db_processing.connectors import base_connector
 from ..data_transformers import get_transformer_class, base_transformer
 from ..engines import get_engine_class, base_engine
-from ..model_types import DataTransformersTypes, FittingStatuses
+from ..model_types import DataTransformersTypes, FittingStatuses, ModelTypes
 from vm_background_jobs.controller import set_background_job_interrupted
 from data_processing.loading_engines import get_engine_class as get_loading_engine_class
 
@@ -223,6 +230,96 @@ class Model:
             self.fitting_parameters.set_error_fitting(kwargs.get('error_text', ''))
             self._write_to_db()
 
+
+    def get_model_engine_file(self) -> str:
+
+        if self.parameters.type != ModelTypes.NeuralNetwork:
+            raise ModelException('This model is not neural network. Only NN models can be loaded.')
+
+        self._scaler = get_transformer_class(DataTransformersTypes.SCALER, self.parameters.type)(self.parameters,
+                                                    self.fitting_parameters, model_id=self._id,
+                                                    new_scaler=False)
+
+        input_number = len(self.fitting_parameters.x_columns)
+        output_number = len(self.fitting_parameters.y_columns)
+        if not self._engine:
+            self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number,
+                                                                  parameters=self.parameters)
+
+        if not self._scaler:
+            raise ModelException('Scaler of this model is not defined yet. Fit model or load model before')
+
+        if not self._engine:
+            raise ModelException('Engine of this model is not defined yet. Fit model or load model before')
+
+        path_scaler = 'scaler_{}.pkl'.format(self.id)
+        path_engine = 'engine_{}.keras'.format(self.id)
+
+        self._engine.inner_engine.save(path_engine)
+
+        path_zip = 'model_{}.zip'.format(self.id)
+
+        with open(path_scaler, 'wb') as fp:
+            pickle.dump(self._scaler.scaler_engine, fp)
+
+        zip_object = zipfile.ZipFile(path_zip, 'w')
+
+        zip_object.write(path_scaler, arcname='scaler.pkl', compress_type=zipfile.ZIP_DEFLATED)
+        zip_object.write(path_engine, arcname='model.keras', compress_type=zipfile.ZIP_DEFLATED)
+
+        zip_object.close()
+
+        os.remove(path_scaler)
+        os.remove(path_engine)
+
+        return path_zip
+
+    def load_model_from_binary(self, model_data: tempfile.SpooledTemporaryFile, filename: str):
+
+        if os.path.splitext(filename)[1] != '.zip':
+            raise ModelException('Model file must be zip archive with two files - model.keras and scaler.pkl')
+
+        path_zip = 'model_{}.zip'.format(self.id)
+
+        with open(path_zip, 'wb+') as fp:
+            content = model_data.read()
+            fp.write(content)
+
+        zip_object = zipfile.ZipFile(path_zip, 'r')
+        zipped_files = [el.filename for el in zip_object.filelist]
+
+        if set(zipped_files) != set(['scaler.pkl', 'model.keras']):
+            raise ModelException('Model file must be zip archive with two files - model.keras and scaler.pkl')
+
+        path_folder = 'model_{}_temp'.format(self.id)
+        path_scaler = os.path.join(path_folder, 'scaler.pkl')
+        path_engine = os.path.join(path_folder, 'model.keras')
+
+        zip_object.extract('scaler.pkl', path=path_folder)
+        zip_object.extract('model.keras', path=path_folder)
+
+        zip_object.close()
+
+        self._scaler = get_transformer_class(DataTransformersTypes.SCALER, self.parameters.type)(self.parameters,
+                                                    self.fitting_parameters, model_id=self._id,
+                                                    new_scaler=False)
+
+        with open(path_scaler, 'rb') as fp:
+            self._scaler.scaler_engine = pickle.load(fp)
+
+        input_number = len(self.fitting_parameters.x_columns)
+        output_number = len(self.fitting_parameters.y_columns)
+        if not self._engine:
+            self._engine = get_engine_class(self.parameters.type)(self._id, input_number, output_number,
+                                                                  parameters=self.parameters)
+
+        self._engine.inner_engine = load_model(path_engine)
+        self._write_to_db()
+
+        os.remove(path_zip)
+        shutil.rmtree(path_folder)
+
+
     def _interrupt_fitting_job(self) -> None:
         """
         Interrupts fitting job process when fitting is launched in background mode
@@ -259,15 +356,7 @@ class Model:
         self._scaler = pipeline.named_steps['scaler']
 
         y_pred = self._engine.predict(x)
-
-        data_predicted = data.copy()
-        data_predicted[self.fitting_parameters.y_columns] = y_pred
-
-        data = self._scaler.inverse_transform(data)
-        data_predicted = self._scaler.inverse_transform(data_predicted)
-
         y = data[self.fitting_parameters.y_columns].to_numpy()
-        y_pred = data_predicted[self.fitting_parameters.y_columns].to_numpy()
 
         self.fitting_parameters.metrics = self._get_metrics(y, y_pred)
 
@@ -303,9 +392,8 @@ class Model:
 
         result[self.fitting_parameters.y_columns] = y
 
-        numeric_columns = self.fitting_parameters.x_columns + self.fitting_parameters.y_columns
-
-        result[numeric_columns] = self._scaler.inverse_transform(result[numeric_columns])
+        result[self.fitting_parameters.x_columns] = (
+            self._scaler.inverse_transform(result[self.fitting_parameters.x_columns]))
 
         return result
 

@@ -315,13 +315,20 @@ class Scaler(BaseTransformer):
         """
         return StandardScaler()
 
-    def _get_columns_to_scale(self) -> list[str]:
-        all_columns = []
-        if self._fitting_parameters.need_to_x_scaling:
-            all_columns.extend(self._fitting_parameters.x_columns)
+    @property
+    def scaler_engine(self):
 
-        if self._fitting_parameters.need_to_y_scaling:
-            all_columns.extend(self._fitting_parameters.y_columns)
+        self._read_from_db()
+        return self._scaler_engine
+
+    @scaler_engine.setter
+    def scaler_engine(self, value):
+
+        self._scaler_engine = value
+        self._write_to_db()
+
+    def _get_columns_to_scale(self) -> list[str]:
+        all_columns = self._fitting_parameters.x_columns
 
         return all_columns
 

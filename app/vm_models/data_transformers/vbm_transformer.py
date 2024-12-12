@@ -732,12 +732,7 @@ class VbmScaler(Scaler):
         return MinMaxScaler()
 
     def _get_columns_to_scale(self) -> list[str]:
-        all_columns = []
-        if self._fitting_parameters.need_to_x_scaling:
-            all_columns.extend(self._fitting_parameters.x_columns)
-
-        if self._fitting_parameters.need_to_y_scaling:
-            all_columns.extend(self._fitting_parameters.y_columns)
+        all_columns = self._fitting_parameters.x_columns
 
         all_columns = [el for el in all_columns if el not in self._fitting_parameters.categorical_columns]
 

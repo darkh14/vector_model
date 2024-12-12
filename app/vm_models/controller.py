@@ -9,12 +9,16 @@
 """
 
 from typing import Any, Callable, Optional
+import os
 
 from vm_models.models import get_model_class
 from vm_models.models import get_additional_actions as model_get_actions
 from vm_background_jobs.decorators import execute_in_background
 from . import api_types
 import api_types as general_api_types
+from starlette.background import BackgroundTask
+from fastapi.responses import FileResponse
+from fastapi import UploadFile
 
 __all__ = ['fit', 'predict', 'initialize', 'drop', 'get_info', 'drop_fitting', 'get_additional_actions']
 
@@ -129,3 +133,21 @@ def get_action_error_background_job(func_name: str, args: tuple[Any], kwargs: di
     result = model.get_action_error_background_job(func_name, args, kwargs)
 
     return result
+
+
+def save_model_file(model_id: str) -> str:
+
+    model = get_model_class()(model_id)
+    result = model.get_model_engine_file()
+
+    return FileResponse(path=result, filename='model_{}.zip'.format(model.id), media_type='multipart/form-data',
+                        background=BackgroundTask(os.remove, result))
+
+
+def load_model_from_file(model_id: str, model_data: UploadFile) -> str:
+
+    model = get_model_class()(model_id)
+    model.load_model_from_binary(model_data.file, model_data.filename)
+
+    return 'model loaded'
+

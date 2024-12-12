@@ -106,5 +106,3 @@ class FittingParameters(base_api_types.FittingParameters):
     """
     epochs: int = 0
     filter: Optional[dict[str, Any]] = None
-    need_to_x_scaling: bool = True
-    need_to_y_scaling: bool = True

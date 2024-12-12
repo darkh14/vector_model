@@ -13,12 +13,14 @@
 
 __all__ = ['get_actions']
 
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
 from . import controller
 from . import api_types
 import api_types as general_api_types
 from data_processing import api_types as data_api_types
+from fastapi.responses import FileResponse
+from fastapi import UploadFile
 
 
 def get_actions() -> list[dict[str, Any]]:
@@ -51,6 +53,14 @@ def get_actions() -> list[dict[str, Any]]:
     result.append({'name': 'model_drop_fitting', 'path': '{db_name}/model/drop_fitting',
                    'func': _drop_fitting,
                    'http_method': 'get', 'requires_authentication': True})
+
+    result.append({'name': 'model_save', 'path': '{db_name}/model/save',
+                   'func': _save_model,
+                   'http_method': 'get', 'requires_authentication': True})
+
+    result.append({'name': 'model_load', 'path': '{db_name}/model/load',
+                   'func': _load_model,
+                   'http_method': 'post', 'requires_authentication': True})
 
     result.extend(controller.get_additional_actions())
 
@@ -108,3 +118,31 @@ def _drop_fitting(id: str) -> str:
     :return: result of dropping
     """
     return controller.drop_fitting(id)
+
+
+def create_temp_file():
+    fd, path = tempfile.mkstemp(suffix='.txt')
+    with os.fdopen(fd, 'w') as f:
+        f.write('TEST\n')
+    try:
+        yield path
+    finally:
+        os.unlink(path)
+
+
+def _save_model(id: str) -> FileResponse:
+    """ Saves ML model as file
+    :param id: id of model
+    :return: file, contains ML model
+    """
+
+    return controller.save_model_file(id)
+
+
+def _load_model(id: str, model: UploadFile) -> str:
+    """ Loads ML model from file
+    :param id: id of model
+    :param body: file of model
+    :return: result of loading
+    """
+    return controller.load_model_from_file(id, model)
