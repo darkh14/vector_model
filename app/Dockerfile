@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.14.0rc1
+FROM tensorflow/tensorflow:2.14.0
 LABEL authors="dark_h14"
 
 WORKDIR /app

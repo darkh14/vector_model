@@ -15,7 +15,7 @@ from sklearn.metrics import mean_squared_error
 
 from scikeras.wrappers import KerasRegressor
 from keras.models import Sequential
-# from eli5.sklearn import PermutationImportance
+from eli5.sklearn import PermutationImportance
 import plotly.graph_objects as go
 
 from .base_model import Model
@@ -801,7 +801,7 @@ class VbmModel(Model):
         :param x: inputs to calculate fi
         :param y: outputs to calculate fi
         """
-        perm = None # PermutationImportance(fi_model, random_state=42).fit(x, y)
+        perm = PermutationImportance(fi_model, random_state=42).fit(x, y)
 
         fi = pd.DataFrame(perm.feature_importances_, columns=['error_delta'])
         fi['feature'] = self.fitting_parameters.x_columns
