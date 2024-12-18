@@ -298,7 +298,9 @@ class VbmModel(Model):
 
         for ind_id in indicators:
 
-            indicator_names.append([el['name'] for el in indicators_descr if el['id'] == ind_id][0])
+            c_ind_names = [el['name'] for el in indicators_descr if el['id'] == ind_id]
+
+            indicator_names.append(c_ind_names[0] if c_ind_names else ind_id)
 
             element_data = graph_data.loc[graph_data['indicator'] == ind_id].copy()
 
@@ -324,7 +326,7 @@ class VbmModel(Model):
 
         font_size = 10
 
-        fig.update_layout(title=dict(text='Анализ на чувствительность', font=dict(size=font_size+1)), showlegend=True,
+        fig.update_layout(title=dict(text='Анализ на чувствительность', font=dict(size=font_size+1)), showlegend=False,
                           xaxis_title=dict(text="Отклонения входного показателя, %", font=dict(size=font_size)),
                           yaxis_title=dict(text="Отклонения выходного показателя, %", font=dict(size=font_size)),
                           paper_bgcolor='White',
