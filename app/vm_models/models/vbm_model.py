@@ -1018,6 +1018,8 @@ class VbmModel(Model):
         output_indicator_descr = self._db_connector.get_line('indicators', {'id': out_indicator})
 
         x_list = list(values['title'])
+
+        x_list_fa = [el[:30] + '...' if len(el) > 30 else el for el in x_list]
         y_list = list(values['value'])
 
         text_list = []
@@ -1030,7 +1032,7 @@ class VbmModel(Model):
             else:
                 text_list.append('{0:,.0f}'.format(y_list[index]).replace(',', ' '))
 
-            hover_value = '{0:,.0f}'.format(item).replace(',', ' ')
+            hover_value = '{}<br>'.format(x_list[index]) + '{0:,.0f}'.format(item).replace(',', ' ')
 
             if index in (0, len(y_list)-1):
                 hover_text_list.append('{}'.format(hover_value))
@@ -1071,7 +1073,7 @@ class VbmModel(Model):
         fig = go.Figure(go.Waterfall(
             name="Factor analysis", orientation="v",
             measure=["absolute", *(values.shape[0]-2) * ["relative"], "total"],
-            x=x_list,
+            x=x_list_fa,
             y=y_list,
             text=text_list,
             textposition="outside",
