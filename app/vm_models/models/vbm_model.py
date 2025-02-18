@@ -17,6 +17,7 @@ from scikeras.wrappers import KerasRegressor
 from keras.models import Sequential
 from eli5.sklearn import PermutationImportance
 import plotly.graph_objects as go
+import plotly.express as px
 
 from .base_model import Model
 from vm_logging.exceptions import ModelException
@@ -245,12 +246,14 @@ class VbmModel(Model):
             data_all_grouped = data_all_grouped.loc[data_all_grouped['indicator'].isin(filtered_indicators)]
             data_all = data_all.loc[data_all['indicator'].isin(filtered_indicators)]
 
+        colors_dict = None
         if get_graph:
-            graph_string = self._get_sa_graph_html(data_all_grouped)
+            colors_dict = self._get_colors_for_data(data_all_grouped)
+            graph_string = self._get_sa_graph_html(data_all_grouped, colors_dict)
         else:
             graph_string = ''
 
-        description = self._form_sa_output_description(data_all)
+        description = self._form_sa_output_description(data_all, colors_dict)
 
         result = dict()
         result['outputs'] = (data_all.to_dict(orient='records') if expand_by_periods
@@ -261,7 +264,7 @@ class VbmModel(Model):
 
         return result
 
-    def _form_sa_output_description(self, data: pd.DataFrame) -> dict[str, Any]:
+    def _form_sa_output_description(self, data: pd.DataFrame, colors_dict: Optional[dict]) -> dict[str, Any]:
         """
         Forms and gets output columns description
         :return: formed description
@@ -274,12 +277,18 @@ class VbmModel(Model):
         result_description['scenarios'] = self._db_connector.get_lines('scenarios',
                                                 {'id': {'$in': list(data['scenario'].unique())}})
 
-        result_description['indicators'] = self._db_connector.get_lines('indicators',
+        indicators_dict = self._db_connector.get_lines('indicators',
                                                 {'id': {'$in': list(data['indicator'].unique())}})
+
+        if colors_dict:
+            for ind_descr in indicators_dict:
+                ind_descr['color'] = colors_dict[ind_descr['id']]
+
+        result_description['indicators'] = indicators_dict
 
         return result_description
 
-    def _get_sa_graph_html(self, graph_data: pd.DataFrame) -> str:
+    def _get_sa_graph_html(self, graph_data: pd.DataFrame, colors_dict: dict) -> str:
         """
         Forms sensitivity analysis graph html
         @param graph_data: sensitivity analysis data
@@ -321,8 +330,11 @@ class VbmModel(Model):
 
         fig = go.Figure()
 
+        colors = self._get_plotly_colors()
+
         for ind, y in enumerate(y_list):
-            fig.add_trace(go.Scatter(x=x, y=y, name=indicator_names[ind]))
+            fig.add_trace(go.Scatter(x=x, y=y, name=indicator_names[ind],
+                                     line=dict(color=colors_dict[indicators[ind]])))
 
         font_size = 10
 
@@ -347,6 +359,29 @@ class VbmModel(Model):
         graph_html = fig.to_html()
 
         return graph_html
+
+    def _get_colors_for_data(self, graph_data: pd.DataFrame):
+        colors = self._get_plotly_colors()
+        indicators = list(graph_data['indicator'].unique())
+
+        colors_dict = {}
+        for idx, indicator in enumerate(indicators):
+            color_idx = idx
+            while True:
+                if color_idx < len(colors):
+                    break
+                else:
+                    color_idx -= len(colors)
+            colors_dict[indicator] = colors[idx]
+
+        return colors_dict
+
+    @staticmethod
+    def _get_plotly_colors():
+        return (px.colors.qualitative.Plotly +
+                px.colors.qualitative.Alphabet +
+                px.colors.qualitative.Dark24 +
+                px.colors.qualitative.Light24)
 
     def get_action_before_background_job(self, func_name: str,
                                          args: tuple[Any],

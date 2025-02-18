@@ -2,7 +2,7 @@
 
 from typing import Final
 
-VERSION: Final = '3.9.0.3'
+VERSION: Final = '3.9.1.0'
 """ Current version of service """
 
 __all__ = ['get_version']

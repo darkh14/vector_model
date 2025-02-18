@@ -64,6 +64,7 @@ class Indicator(BaseModel):
     id: str
     name: str
     description: Optional[Any] = None
+    color: Optional[str] = None
 
 
 class Analytics(BaseModel):
